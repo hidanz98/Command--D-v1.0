@@ -1,0 +1,37 @@
+{
+  "cookies": [
+    {
+      "name": "auth_test_client",
+      "value": "1",
+      "domain": "localhost",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "http://localhost:8081",
+      "localStorage": [
+        {
+          "name": "bil_cinema_user",
+          "value": "{\"id\":\"client-mock-123\",\"name\":\"João Silva\",\"email\":\"joao.silva@email.com\",\"phone\":\"(31) 99999-9999\",\"document\":\"123.456.789-10\",\"address\":\"Rua das Flores, 123 - Centro, BH - MG\",\"role\":\"client\"}"
+        },
+        {
+          "name": "token",
+          "value": "MOCK.eyJ1c2VySWQiOiJjbGllbnQtbW9jay0xMjMiLCJlbWFpbCI6ImpvYW8uc2lsdmFAZW1haWwuY29tIiwicm9sZSI6IkNMSUVOVCIsImV4cCI6MTc2MDA2MTIwNTE3Nn0=.TEST"
+        },
+        {
+          "name": "auth_test",
+          "value": "1"
+        },
+        {
+          "name": "is_authenticated",
+          "value": "true"
+        }
+      ]
+    }
+  ]
+}

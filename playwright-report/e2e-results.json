@@ -1,0 +1,991 @@
+{
+  "config": {
+    "configFile": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\playwright.config.ts",
+    "rootDir": "C:/Users/fnune/OneDrive/Documentos/GitHub/Locadora-multi-tenant--main/Sistema-Command-D/tests",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 3
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "html",
+        {
+          "outputFolder": "playwright-report",
+          "open": "never"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "playwright-report/e2e-results.json"
+        }
+      ],
+      [
+        "list",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "C:/Users/fnune/OneDrive/Documentos/GitHub/Locadora-multi-tenant--main/Sistema-Command-D/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 3
+        },
+        "id": "owner",
+        "name": "owner",
+        "testDir": "C:/Users/fnune/OneDrive/Documentos/GitHub/Locadora-multi-tenant--main/Sistema-Command-D/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/.*owner\\.flow\\.spec\\.ts/"
+        ],
+        "timeout": 240000
+      },
+      {
+        "outputDir": "C:/Users/fnune/OneDrive/Documentos/GitHub/Locadora-multi-tenant--main/Sistema-Command-D/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 3
+        },
+        "id": "employee",
+        "name": "employee",
+        "testDir": "C:/Users/fnune/OneDrive/Documentos/GitHub/Locadora-multi-tenant--main/Sistema-Command-D/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/.*employee\\.flow\\.spec\\.ts/"
+        ],
+        "timeout": 240000
+      },
+      {
+        "outputDir": "C:/Users/fnune/OneDrive/Documentos/GitHub/Locadora-multi-tenant--main/Sistema-Command-D/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 3
+        },
+        "id": "client",
+        "name": "client",
+        "testDir": "C:/Users/fnune/OneDrive/Documentos/GitHub/Locadora-multi-tenant--main/Sistema-Command-D/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/.*client\\.flow\\.spec\\.ts/"
+        ],
+        "timeout": 240000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.56.0",
+    "workers": 8,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "e2e\\owner.flow.spec.ts",
+      "file": "e2e/owner.flow.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Fluxo Dono/Admin (Camada 3)",
+          "file": "e2e/owner.flow.spec.ts",
+          "line": 12,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Dono: Cadastrar produtos e verificar visibilidade",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "owner",
+                  "projectName": "owner",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 8383,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "\n👑 [DONO] Gerenciando catálogo de produtos...\n\n"
+                        },
+                        {
+                          "text": "✅ Navegou para: /painel-admin\n"
+                        },
+                        {
+                          "text": "⚠️  Seção de produtos não encontrada (pode estar em outra aba)\n"
+                        },
+                        {
+                          "text": "⚠️  Não foi possível criar produto (botão/formulário não encontrado)\n"
+                        },
+                        {
+                          "text": "✅ Navegou para /equipamentos (visão cliente)\n"
+                        },
+                        {
+                          "text": "✅ 200 produtos visíveis para clientes\n"
+                        },
+                        {
+                          "text": "\n✅ Fluxo Dono completado\n\n"
+                        },
+                        {
+                          "text": "📝 Nota: Produtos cadastrados aqui devem aparecer em /equipamentos para clientes\n\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-09T01:53:27.961Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-owner.flow-Fluxo-Dono--59c3a-os-e-verificar-visibilidade-owner\\video.webm"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-owner.flow-Fluxo-Dono--59c3a-os-e-verificar-visibilidade-owner\\trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cfdaa7aad516f4512e97-c627d009f370ebeca97a",
+              "file": "e2e/owner.flow.spec.ts",
+              "line": 14,
+              "column": 3
+            },
+            {
+              "title": "Dono: Escanear botões em páginas administrativas",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "owner",
+                  "projectName": "owner",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 65209,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "\n🔍 [DONO] Escaneando botões...\n\n"
+                        },
+                        {
+                          "text": "\n🔍 Escaneando botões em: /\n"
+                        },
+                        {
+                          "text": "   ✅ Painel Admin\n"
+                        },
+                        {
+                          "text": "   ✅ Editor Inline\n"
+                        },
+                        {
+                          "text": "   ✅ Área Cliente\n"
+                        },
+                        {
+                          "text": "   ✅ Sair\n"
+                        },
+                        {
+                          "text": "   ✅ Adicionar\n"
+                        },
+                        {
+                          "text": "   ✅ [button:6]\n"
+                        },
+                        {
+                          "text": "   ✅ Detalhes\n"
+                        },
+                        {
+                          "text": "\n📊 Total: 7 botões | ✅ 7 OK | ❌ 0 Erros\n\n"
+                        },
+                        {
+                          "text": "\n🔍 Escaneando botões em: /login\n"
+                        },
+                        {
+                          "text": "   ✅ LOGIN\n"
+                        },
+                        {
+                          "text": "   ✅ Carrinho\n1\n"
+                        },
+                        {
+                          "text": "   ✅ [button:3]\n"
+                        },
+                        {
+                          "text": "\n📊 Total: 3 botões | ✅ 3 OK | ❌ 0 Erros\n\n"
+                        },
+                        {
+                          "text": "\n🔍 Escaneando botões em: /equipamentos\n"
+                        },
+                        {
+                          "text": "   ✅ LOGIN\n"
+                        },
+                        {
+                          "text": "   ✅ Carrinho\n"
+                        },
+                        {
+                          "text": "   ✅ 🎬 Ver Equipamentos\n"
+                        },
+                        {
+                          "text": "   ✅ Nome\n"
+                        },
+                        {
+                          "text": "   ✅ Todas\n"
+                        },
+                        {
+                          "text": "   ✅ Câmeras\n"
+                        },
+                        {
+                          "text": "   ✅ Lentes\n"
+                        },
+                        {
+                          "text": "   ✅ Monitores\n"
+                        },
+                        {
+                          "text": "   ✅ Eletrônicos\n"
+                        },
+                        {
+                          "text": "   ✅ Iluminação\n"
+                        },
+                        {
+                          "text": "   ✅ Áudio\n"
+                        },
+                        {
+                          "text": "   ✅ Suportes\n"
+                        },
+                        {
+                          "text": "   ✅ [button:13]\n"
+                        },
+                        {
+                          "text": "   ✅ Ver mais\n"
+                        },
+                        {
+                          "text": "\n📊 Total: 14 botões | ✅ 14 OK | ❌ 0 Erros\n\n"
+                        },
+                        {
+                          "text": "\n🔍 Escaneando botões em: /pedidos\n"
+                        },
+                        {
+                          "text": "\n📊 Total: 0 botões | ✅ 0 OK | ❌ 0 Erros\n\n"
+                        },
+                        {
+                          "text": "\n🔍 Escaneando botões em: /clientes\n"
+                        },
+                        {
+                          "text": "\n📊 Total: 0 botões | ✅ 0 OK | ❌ 0 Erros\n\n"
+                        },
+                        {
+                          "text": "📁 Resultados salvos: C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\playwright-report\\e2e-results.jsonl\n"
+                        },
+                        {
+                          "text": "📁 Relatório HTML salvo: C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\playwright-report\\e2e-summary.html\n"
+                        },
+                        {
+                          "text": "\n✅ Escaneamento Dono completado\n\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-09T01:53:36.615Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-owner.flow-Fluxo-Dono--c0b80--em-páginas-administrativas-owner\\video.webm"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-owner.flow-Fluxo-Dono--c0b80--em-páginas-administrativas-owner\\trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cfdaa7aad516f4512e97-47eaf89858a4d051d4a1",
+              "file": "e2e/owner.flow.spec.ts",
+              "line": 162,
+              "column": 3
+            },
+            {
+              "title": "RBAC: Dono deve acessar todas as rotas",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "owner",
+                  "projectName": "owner",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 8076,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "\n🔐 [DONO] Testando RBAC (acesso total)...\n\n"
+                        },
+                        {
+                          "text": "✅ /painel-admin: Acesso permitido (correto para Dono)\n"
+                        },
+                        {
+                          "text": "✅ /pedidos: Acesso permitido (correto para Dono)\n"
+                        },
+                        {
+                          "text": "✅ /clientes: Acesso permitido (correto para Dono)\n"
+                        },
+                        {
+                          "text": "✅ /equipamentos: Acesso permitido (correto para Dono)\n"
+                        },
+                        {
+                          "text": "✅ /area-cliente: Acesso permitido (correto para Dono)\n"
+                        },
+                        {
+                          "text": "\n✅ Teste RBAC Dono completado\n\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-09T01:54:43.199Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-owner.flow-Fluxo-Dono--9469d-deve-acessar-todas-as-rotas-owner\\video.webm"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-owner.flow-Fluxo-Dono--9469d-deve-acessar-todas-as-rotas-owner\\trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cfdaa7aad516f4512e97-47ffbbf4168803a7d47f",
+              "file": "e2e/owner.flow.spec.ts",
+              "line": 195,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "e2e\\employee.flow.spec.ts",
+      "file": "e2e/employee.flow.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Fluxo Funcionário (Camada 2)",
+          "file": "e2e/employee.flow.spec.ts",
+          "line": 12,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Funcionário: Verificar e gerenciar pedidos de clientes",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "employee",
+                  "projectName": "employee",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 5011,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "\n📋 [FUNCIONÁRIO] Verificando pedidos de clientes...\n\n"
+                        },
+                        {
+                          "text": "✅ Navegou para: /painel-admin\n"
+                        },
+                        {
+                          "text": "✅ Lista de pedidos encontrada: text=/Cliente/i\n"
+                        },
+                        {
+                          "text": "⚠️  Nenhum pedido encontrado para abrir (pode não haver pedidos ainda)\n"
+                        },
+                        {
+                          "text": "\n✅ Fluxo Funcionário completado\n\n"
+                        },
+                        {
+                          "text": "📝 Nota: Pedidos de clientes devem aparecer aqui para aprovação/gestão\n\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-09T01:53:27.961Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-employee.flow-Fluxo-Fu-ec3eb-renciar-pedidos-de-clientes-employee\\video.webm"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-employee.flow-Fluxo-Fu-ec3eb-renciar-pedidos-de-clientes-employee\\trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "6b61ca75e271f831916d-367d692401516b55f00b",
+              "file": "e2e/employee.flow.spec.ts",
+              "line": 14,
+              "column": 3
+            },
+            {
+              "title": "Funcionário: Escanear botões em páginas de gestão",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "employee",
+                  "projectName": "employee",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 17245,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "\n🔍 [FUNCIONÁRIO] Escaneando botões...\n\n"
+                        },
+                        {
+                          "text": "\n🔍 Escaneando botões em: /login\n"
+                        },
+                        {
+                          "text": "   ✅ Área Cliente\n"
+                        },
+                        {
+                          "text": "   ✅ Sair\n"
+                        },
+                        {
+                          "text": "   ✅ [button:3]\n"
+                        },
+                        {
+                          "text": "   ✅ Detalhes\n"
+                        },
+                        {
+                          "text": "\n📊 Total: 4 botões | ✅ 4 OK | ❌ 0 Erros\n\n"
+                        },
+                        {
+                          "text": "\n🔍 Escaneando botões em: /pedidos\n"
+                        },
+                        {
+                          "text": "\n📊 Total: 0 botões | ✅ 0 OK | ❌ 0 Erros\n\n"
+                        },
+                        {
+                          "text": "\n🔍 Escaneando botões em: /aprovacoes\n"
+                        },
+                        {
+                          "text": "\n📊 Total: 0 botões | ✅ 0 OK | ❌ 0 Erros\n\n"
+                        },
+                        {
+                          "text": "📁 Resultados salvos: C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\playwright-report\\e2e-results.jsonl\n"
+                        },
+                        {
+                          "text": "📁 Relatório HTML salvo: C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\playwright-report\\e2e-summary.html\n"
+                        },
+                        {
+                          "text": "\n✅ Escaneamento Funcionário completado\n\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-09T01:53:33.178Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-employee.flow-Fluxo-Fu-644f5-botões-em-páginas-de-gestão-employee\\video.webm"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-employee.flow-Fluxo-Fu-644f5-botões-em-páginas-de-gestão-employee\\trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "6b61ca75e271f831916d-60e1b34ebfd1165e087b",
+              "file": "e2e/employee.flow.spec.ts",
+              "line": 118,
+              "column": 3
+            },
+            {
+              "title": "RBAC: Funcionário pode acessar gestão mas não configurações de Dono",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "employee",
+                  "projectName": "employee",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 4751,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "\n🔐 [FUNCIONÁRIO] Testando RBAC...\n\n"
+                        },
+                        {
+                          "text": "✅ /painel-admin: Acesso permitido corretamente\n"
+                        },
+                        {
+                          "text": "✅ /pedidos: Acesso permitido corretamente\n"
+                        },
+                        {
+                          "text": "\n✅ Teste RBAC Funcionário completado\n\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-09T01:53:50.932Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-employee.flow-Fluxo-Fu-51bfd-s-não-configurações-de-Dono-employee\\video.webm"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-employee.flow-Fluxo-Fu-51bfd-s-não-configurações-de-Dono-employee\\trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "6b61ca75e271f831916d-88bfec835c4cf3ce011d",
+              "file": "e2e/employee.flow.spec.ts",
+              "line": 149,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "e2e\\client.flow.spec.ts",
+      "file": "e2e/client.flow.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Fluxo Cliente (Camada 1)",
+          "file": "e2e/client.flow.spec.ts",
+          "line": 22,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Cliente: Criar pedido e verificar na área cliente",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 17898,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "\n🛒 [CLIENTE João Silva] Entrou na loja...\n\n"
+                        },
+                        {
+                          "text": "   🚶 Navegando para /equipamentos...\n"
+                        },
+                        {
+                          "text": "   ✅ Chegou em: /equipamentos\n"
+                        },
+                        {
+                          "text": "   💭 Olhando outras coisas na página...\n"
+                        },
+                        {
+                          "text": "\n   👀 Olhando os produtos disponíveis...\n"
+                        },
+                        {
+                          "text": "   👀 Olhando 24 produtos disponíveis...\n"
+                        },
+                        {
+                          "text": "   😕 Não encontrou produtos para adicionar\n"
+                        },
+                        {
+                          "text": "   😕 Tentativa de \"Buscar produtos\" não funcionou como esperado\n"
+                        },
+                        {
+                          "text": "\n   🛒 Indo para o carrinho...\n"
+                        },
+                        {
+                          "text": "   ✅ Chegou no carrinho: /carrinho\n"
+                        },
+                        {
+                          "text": "   📋 Revisando itens no carrinho...\n"
+                        },
+                        {
+                          "text": "\n   🤔 Decidindo se finaliza o pedido...\n"
+                        },
+                        {
+                          "text": "   🤔 Pensando sobre: finalizar pedido...\n"
+                        },
+                        {
+                          "text": "   ⚠️  Botão de finalizar não encontrado\n"
+                        },
+                        {
+                          "text": "   😕 Tentativa de \"Finalizar pedido\" não funcionou como esperado\n"
+                        },
+                        {
+                          "text": "\n   👋 Cliente João Silva saiu do sistema\n\n"
+                        },
+                        {
+                          "text": "   📝 Nota para Funcionário: Este pedido deve aparecer no painel admin\n\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-09T01:53:27.927Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-client.flow-Fluxo-Clie-f916f-e-verificar-na-área-cliente-client\\video.webm"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-client.flow-Fluxo-Clie-f916f-e-verificar-na-área-cliente-client\\trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2dcab5ce9c16abf298c3-5e031f4f9faf6ec59375",
+              "file": "e2e/client.flow.spec.ts",
+              "line": 24,
+              "column": 3
+            },
+            {
+              "title": "Cliente: Escanear botões em páginas principais",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 68842,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "\n🔍 [CLIENTE] Escaneando botões...\n\n"
+                        },
+                        {
+                          "text": "\n🔍 Escaneando botões em: /\n"
+                        },
+                        {
+                          "text": "   ✅ Área Cliente\n"
+                        },
+                        {
+                          "text": "   ✅ Sair\n"
+                        },
+                        {
+                          "text": "   ✅ [button:3]\n"
+                        },
+                        {
+                          "text": "   ✅ Detalhes\n"
+                        },
+                        {
+                          "text": "\n📊 Total: 4 botões | ✅ 4 OK | ❌ 0 Erros\n\n"
+                        },
+                        {
+                          "text": "\n🔍 Escaneando botões em: /equipamentos\n"
+                        },
+                        {
+                          "text": "   ✅ LOGIN\n"
+                        },
+                        {
+                          "text": "   ✅ Carrinho\n"
+                        },
+                        {
+                          "text": "   ✅ 🎬 Ver Equipamentos\n"
+                        },
+                        {
+                          "text": "   ✅ Nome\n"
+                        },
+                        {
+                          "text": "   ✅ Todas\n"
+                        },
+                        {
+                          "text": "   ✅ Câmeras\n"
+                        },
+                        {
+                          "text": "   ✅ Lentes\n"
+                        },
+                        {
+                          "text": "   ✅ Monitores\n"
+                        },
+                        {
+                          "text": "   ✅ Eletrônicos\n"
+                        },
+                        {
+                          "text": "   ✅ Iluminação\n"
+                        },
+                        {
+                          "text": "   ✅ Áudio\n"
+                        },
+                        {
+                          "text": "   ✅ Suportes\n"
+                        },
+                        {
+                          "text": "   ✅ [button:13]\n"
+                        },
+                        {
+                          "text": "   ✅ Ver mais\n"
+                        },
+                        {
+                          "text": "\n📊 Total: 14 botões | ✅ 14 OK | ❌ 0 Erros\n\n"
+                        },
+                        {
+                          "text": "\n🔍 Escaneando botões em: /carrinho\n"
+                        },
+                        {
+                          "text": "   ✅ Voltar\n"
+                        },
+                        {
+                          "text": "\n📊 Total: 1 botões | ✅ 1 OK | ❌ 0 Erros\n\n"
+                        },
+                        {
+                          "text": "\n🔍 Escaneando botões em: /login\n"
+                        },
+                        {
+                          "text": "   ✅ LOGIN\n"
+                        },
+                        {
+                          "text": "   ✅ Carrinho\n"
+                        },
+                        {
+                          "text": "   ✅ 🎬 Ver Equipamentos\n"
+                        },
+                        {
+                          "text": "   ✅ Nome\n"
+                        },
+                        {
+                          "text": "   ✅ Todas\n"
+                        },
+                        {
+                          "text": "   ✅ Câmeras\n"
+                        },
+                        {
+                          "text": "   ✅ Lentes\n"
+                        },
+                        {
+                          "text": "   ✅ Todas\n"
+                        },
+                        {
+                          "text": "   ✅ Nome\n"
+                        },
+                        {
+                          "text": "\n📊 Total: 9 botões | ✅ 9 OK | ❌ 0 Erros\n\n"
+                        },
+                        {
+                          "text": "📁 Resultados salvos: C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\playwright-report\\e2e-results.jsonl\n"
+                        },
+                        {
+                          "text": "📁 Relatório HTML salvo: C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\playwright-report\\e2e-summary.html\n"
+                        },
+                        {
+                          "text": "\n✅ Escaneamento Cliente completado\n\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-09T01:53:46.247Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-client.flow-Fluxo-Clie-095de-otões-em-páginas-principais-client\\video.webm"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-client.flow-Fluxo-Clie-095de-otões-em-páginas-principais-client\\trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2dcab5ce9c16abf298c3-d40a24d04ff8a7c8e736",
+              "file": "e2e/client.flow.spec.ts",
+              "line": 196,
+              "column": 3
+            },
+            {
+              "title": "RBAC: Cliente NÃO deve acessar rotas de Admin",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 4937,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "\n🔐 [CLIENTE] Testando RBAC...\n\n"
+                        },
+                        {
+                          "text": "✅ /painel-admin: Acesso bloqueado corretamente\n"
+                        },
+                        {
+                          "text": "⚠️  /admin: Possível falha de RBAC (não bloqueado)\n"
+                        },
+                        {
+                          "text": "⚠️  /dashboard: Possível falha de RBAC (não bloqueado)\n"
+                        },
+                        {
+                          "text": "\n✅ Teste RBAC Cliente completado\n\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-09T01:54:56.107Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-client.flow-Fluxo-Clie-e3269-deve-acessar-rotas-de-Admin-client\\video.webm"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-client.flow-Fluxo-Clie-e3269-deve-acessar-rotas-de-Admin-client\\trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2dcab5ce9c16abf298c3-2d3b2540c4c3d2ad00af",
+              "file": "e2e/client.flow.spec.ts",
+              "line": 228,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-10-09T01:53:26.802Z",
+    "duration": 94580.233,
+    "expected": 9,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

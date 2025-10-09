@@ -1,0 +1,37 @@
+{
+  "cookies": [
+    {
+      "name": "auth_test",
+      "value": "1",
+      "domain": "localhost",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "http://localhost:8081",
+      "localStorage": [
+        {
+          "name": "bil_cinema_user",
+          "value": "{\"id\":\"test-admin-123\",\"name\":\"Admin Teste (Mock)\",\"email\":\"cabecadeefeitocine@gmail.com\",\"phone\":\"(31) 3568-8485\",\"document\":\"12.345.678/0001-90\",\"address\":\"Mock Address for Testing\",\"role\":\"admin\"}"
+        },
+        {
+          "name": "token",
+          "value": "MOCK.eyJ1c2VySWQiOiJ0ZXN0LWFkbWluLTEyMyIsImVtYWlsIjoiY2FiZWNhZGVlZmVpdG9jaW5lQGdtYWlsLmNvbSIsInJvbGUiOiJhZG1pbiIsImV4cCI6MTc2MDA1ODY5NTkzMH0=.TEST"
+        },
+        {
+          "name": "auth_test",
+          "value": "1"
+        },
+        {
+          "name": "is_authenticated",
+          "value": "true"
+        }
+      ]
+    }
+  ]
+}

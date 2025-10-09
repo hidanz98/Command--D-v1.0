@@ -1,0 +1,373 @@
+// ==============================================
+// SCHEMA MASTER - SERVIDOR DO OTÁVIO
+// ==============================================
+// Este banco é SEPARADO do banco das locadoras
+// Apenas o Otávio tem acesso a este banco
+// Contém: Licenças, Billing, Parcerias, Monitoramento
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client-master"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("MASTER_DATABASE_URL")
+}
+
+// ==============================================
+// LICENCIAMENTO (CORE DO SAAS)
+// ==============================================
+
+model LicenseHolder {
+  id              String   @id @default(cuid())
+  
+  // Informações da Locadora
+  companyName     String
+  cnpj            String?  @unique
+  ownerName       String
+  ownerEmail      String   @unique
+  ownerPhone      String
+  ownerAddress    String?
+  
+  // Licença
+  licenseKey      String   @unique
+  licenseStatus   LicenseStatus  @default(TRIAL)
+  licenseExpiry   DateTime?
+  trialEndsAt     DateTime?
+  
+  // Plano
+  plan            PlanType       @default(BASIC)
+  monthlyFee      Float
+  maxUsers        Int            @default(3)
+  maxProducts     Int            @default(100)
+  
+  // Servidor/Instância (cada locadora tem seu servidor AWS)
+  subdomain       String   @unique // Ex: bilscinema
+  serverUrl       String?  // Ex: https://bilscinema.command-d.com.br
+  serverIp        String?  // IP do servidor AWS
+  databaseUrl     String?  // Conexão com DB da locadora (criptografado)
+  apiKey          String   @unique // Chave pública para identificar
+  apiSecret       String   // Chave privada (hash)
+  
+  // Status Técnico
+  isActive        Boolean  @default(false)
+  lastHeartbeat   DateTime?
+  version         String?  // Versão do sistema instalado
+  systemHealth    Json?    // Métricas de saúde (CPU, RAM, Disk)
+  
+  // Financeiro (suas cobranças)
+  paymentStatus   PaymentStatus  @default(PENDING)
+  lastPayment     DateTime?
+  nextPayment     DateTime?
+  totalRevenue    Float          @default(0) // Quanto você recebeu desta locadora
+  
+  // Features habilitadas
+  enabledFeatures Json?    // { "nfse": true, "erp": true, "partnerships": false }
+  
+  // Parcerias
+  partnershipsFrom Partnership[]  @relation("PartnerFrom")
+  partnershipsTo   Partnership[]  @relation("PartnerTo")
+  
+  // Histórico de pagamentos
+  payments        Payment[]
+  invoices        Invoice[]
+  
+  // Auditoria
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdBy       String?  // ID do Otávio ou outro admin
+  notes           String?  // Observações internas
+  
+  @@map("license_holders")
+  @@index([licenseStatus])
+  @@index([subdomain])
+  @@index([apiKey])
+}
+
+enum LicenseStatus {
+  TRIAL       // 30 dias grátis
+  ACTIVE      // Pago e funcionando
+  SUSPENDED   // Não pagou - bloqueado
+  CANCELLED   // Cancelado pelo cliente
+  EXPIRED     // Trial expirou
+  BLOCKED     // Bloqueado por violação
+}
+
+enum PlanType {
+  TRIAL       // Grátis 30 dias
+  BASIC       // R$ 200/mês - 3 usuários, 100 produtos
+  PRO         // R$ 500/mês - 10 usuários, 500 produtos
+  ENTERPRISE  // R$ 1000/mês - Ilimitado
+  CUSTOM      // Preço customizado
+}
+
+enum PaymentStatus {
+  PENDING     // Aguardando pagamento
+  PAID        // Pago
+  OVERDUE     // Atrasado
+  CANCELLED   // Cancelado
+  REFUNDED    // Reembolsado
+}
+
+// ==============================================
+// FINANCEIRO (SEUS RECEBIMENTOS)
+// ==============================================
+
+model Payment {
+  id                String   @id @default(cuid())
+  
+  licenseHolderId   String
+  licenseHolder     LicenseHolder  @relation(fields: [licenseHolderId], references: [id], onDelete: Cascade)
+  
+  // Pagamento
+  amount            Float
+  referenceMonth    DateTime // Mês de referência (2024-01-01)
+  dueDate           DateTime
+  paidAt            DateTime?
+  
+  status            PaymentStatus @default(PENDING)
+  
+  // Método
+  paymentMethod     String?  // PIX, Boleto, Cartão
+  transactionId     String?  // ID da transação
+  
+  // Notas
+  notes             String?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@map("payments")
+  @@index([licenseHolderId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+model Invoice {
+  id                String   @id @default(cuid())
+  
+  licenseHolderId   String
+  licenseHolder     LicenseHolder  @relation(fields: [licenseHolderId], references: [id], onDelete: Cascade)
+  
+  // Nota Fiscal
+  invoiceNumber     String   @unique
+  referenceMonth    DateTime
+  amount            Float
+  
+  // Status
+  status            String   @default("pending") // pending, sent, paid
+  sentAt            DateTime?
+  paidAt            DateTime?
+  
+  // Arquivo
+  pdfUrl            String?
+  xmlUrl            String?
+  
+  createdAt         DateTime @default(now())
+  
+  @@map("invoices")
+  @@index([licenseHolderId])
+}
+
+// ==============================================
+// SISTEMA DE PARCERIAS (OPCIONAL)
+// ==============================================
+// Permite que 2 locadoras compartilhem APENAS cadastro de clientes
+// Histórico de locações NUNCA é compartilhado
+
+model Partnership {
+  id              String   @id @default(cuid())
+  
+  // Locadoras Parceiras
+  partnerFromId   String
+  partnerFrom     LicenseHolder  @relation("PartnerFrom", fields: [partnerFromId], references: [id], onDelete: Cascade)
+  
+  partnerToId     String
+  partnerTo       LicenseHolder  @relation("PartnerTo", fields: [partnerToId], references: [id], onDelete: Cascade)
+  
+  // Status da Parceria
+  status          PartnershipStatus  @default(PENDING)
+  
+  // Configurações
+  shareClientData       Boolean  @default(true)   // Compartilhar dados básicos de clientes
+  allowCrossRental      Boolean  @default(false)  // Cliente pode alugar na outra loja
+  
+  // Comissões (se houver)
+  referralCommission    Float    @default(0)      // % de comissão por indicação
+  
+  // Auditoria
+  requestedBy     String?   // ID do admin que solicitou
+  approvedBy      String?   // ID do Otávio
+  approvedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  
+  @@unique([partnerFromId, partnerToId])
+  @@map("partnerships")
+  @@index([status])
+}
+
+enum PartnershipStatus {
+  PENDING     // Aguardando aprovação do Otávio
+  ACTIVE      // Ativa
+  SUSPENDED   // Suspensa temporariamente
+  CANCELLED   // Cancelada
+}
+
+// ==============================================
+// ATUALIZAÇÕES DO SISTEMA
+// ==============================================
+
+model SystemUpdate {
+  id              String   @id @default(cuid())
+  
+  version         String   @unique
+  changelog       String   // Markdown com mudanças
+  isMandatory     Boolean  @default(false)
+  isSecurity      Boolean  @default(false)
+  
+  // Deploy
+  deployedAt      DateTime?
+  deployedBy      String?
+  
+  // Status por locadora
+  deployments     UpdateDeployment[]
+  
+  createdAt       DateTime @default(now())
+  
+  @@map("system_updates")
+}
+
+model UpdateDeployment {
+  id              String   @id @default(cuid())
+  
+  updateId        String
+  update          SystemUpdate  @relation(fields: [updateId], references: [id], onDelete: Cascade)
+  
+  licenseHolderId String
+  
+  status          DeployStatus  @default(PENDING)
+  startedAt       DateTime?
+  completedAt     DateTime?
+  error           String?
+  logs            String?
+  
+  createdAt       DateTime @default(now())
+  
+  @@map("update_deployments")
+  @@index([licenseHolderId])
+  @@index([status])
+}
+
+enum DeployStatus {
+  PENDING       // Aguardando deploy
+  IN_PROGRESS   // Fazendo deploy
+  COMPLETED     // Sucesso
+  FAILED        // Erro
+  ROLLED_BACK   // Revertido
+  SKIPPED       // Pulado
+}
+
+// ==============================================
+// AUDITORIA E LOGS (MASTER)
+// ==============================================
+
+model MasterAuditLog {
+  id              String   @id @default(cuid())
+  
+  // O quê
+  action          String   // "license_created", "payment_received", "system_blocked"
+  entity          String   // "license", "payment", "partnership"
+  entityId        String?
+  
+  // Quem
+  userId          String?  // ID do Otávio ou admin
+  userEmail       String?
+  
+  // Detalhes
+  details         Json?
+  ipAddress       String?
+  userAgent       String?
+  
+  // Quando
+  createdAt       DateTime @default(now())
+  
+  @@map("master_audit_logs")
+  @@index([action])
+  @@index([entity])
+  @@index([createdAt])
+}
+
+// ==============================================
+// CONFIGURAÇÕES GLOBAIS
+// ==============================================
+
+model MasterConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  type      String   @default("string") // string, number, boolean, json
+  
+  // Exemplos de configs:
+  // - "trial_days": "30"
+  // - "grace_period_days": "7"
+  // - "payment_gateway": "stripe"
+  // - "support_email": "suporte@command-d.com.br"
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("master_configs")
+}
+
+// ==============================================
+// SUPORTE E TICKETS (OPCIONAL)
+// ==============================================
+
+model SupportTicket {
+  id                String   @id @default(cuid())
+  
+  licenseHolderId   String
+  
+  subject           String
+  description       String
+  status            TicketStatus @default(OPEN)
+  priority          TicketPriority @default(MEDIUM)
+  
+  // Contato
+  contactName       String
+  contactEmail      String
+  contactPhone      String?
+  
+  // Resposta
+  response          String?
+  respondedBy       String?
+  respondedAt       DateTime?
+  
+  // Resolução
+  resolvedAt        DateTime?
+  resolution        String?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@map("support_tickets")
+  @@index([licenseHolderId])
+  @@index([status])
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_RESPONSE
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+

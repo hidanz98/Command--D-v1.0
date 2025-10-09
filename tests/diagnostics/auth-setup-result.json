@@ -1,0 +1,15 @@
+{
+  "timestamp": "2025-10-09T01:11:36.415Z",
+  "baseURL": "http://localhost:8081",
+  "credentials": {
+    "email": "cabecadeefeitocine@gmail.com",
+    "password": "***123"
+  },
+  "result": {
+    "success": true,
+    "method": "mock-storage",
+    "message": "Mock de autenticação criado. Testes podem prosseguir com dados fake."
+  },
+  "realLoginAttempted": true,
+  "realLoginError": "{\"success\":false,\"error\":\"\\nInvalid `prisma.user.findUnique()` invocation:\\n\\n\\nCannot fetch data from service:\\nfetch failed\"}"
+}

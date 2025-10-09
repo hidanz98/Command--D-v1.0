@@ -1,0 +1,259 @@
+// ==============================================
+// EXTENSÃO DO SCHEMA: CADASTRO COM APROVAÇÃO
+// ==============================================
+// Este arquivo mostra as alterações necessárias no schema.prisma principal
+
+// ADICIONAR ao model Client:
+model Client {
+  // ... campos existentes ...
+  
+  // Status de Aprovação
+  registrationStatus   RegistrationStatus  @default(PENDING)
+  approvedBy           String?
+  approvedAt           DateTime?
+  rejectedBy           String?
+  rejectedAt           DateTime?
+  rejectionReason      String?
+  
+  // Documentos
+  documents            ClientDocument[]
+  
+  // Validações
+  documentsValidated   Boolean            @default(false)
+  addressValidated     Boolean            @default(false)
+  identityValidated    Boolean            @default(false)
+  
+  // ClearSale (futuro)
+  clearSaleScore       Float?
+  clearSaleStatus      String?
+  clearSaleAnalysisId  String?
+  clearSaleCheckedAt   DateTime?
+  
+  // Notas Internas
+  internalNotes        String?            // Notas visíveis apenas para funcionários
+}
+
+enum RegistrationStatus {
+  PENDING              // Aguardando aprovação
+  DOCUMENTS_PENDING    // Aguardando envio de documentos
+  UNDER_REVIEW         // Em análise
+  APPROVED             // Aprovado
+  REJECTED             // Rejeitado
+  INCOMPLETE           // Incompleto (falta documentos)
+}
+
+// ==============================================
+// NOVO MODEL: DOCUMENTOS DO CLIENTE
+// ==============================================
+
+model ClientDocument {
+  id                String   @id @default(cuid())
+  
+  // Relacionamento
+  clientId          String
+  client            Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  // Tipo de Documento
+  type              DocumentType
+  category          DocumentCategory
+  
+  // Dados do Documento
+  documentNumber    String?  // CPF, RG, CNH, etc
+  issuer            String?  // Orgão emissor
+  issueDate         DateTime?
+  expiryDate        DateTime?
+  
+  // Arquivo
+  fileName          String
+  fileSize          Int
+  filePath          String   // Caminho criptografado
+  fileHash          String   // SHA-256 do arquivo
+  mimeType          String   // Deve ser application/pdf
+  
+  // Validação
+  isValidated       Boolean  @default(false)
+  validatedBy       String?
+  validatedAt       DateTime?
+  validationNotes   String?
+  
+  // QR Code / Verificação Oficial
+  hasQRCode         Boolean  @default(false)
+  qrCodeData        String?  // Dados do QR Code
+  qrCodeVerified    Boolean  @default(false)
+  qrCodeVerifiedAt  DateTime?
+  
+  // Gov.br / Fonte Oficial
+  isFromGovSource   Boolean  @default(false)  // PDF gerado pelo gov.br
+  govSourceUrl      String?
+  
+  // Metadados
+  uploadedAt        DateTime @default(now())
+  uploadedBy        String?
+  
+  // Auditoria
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@map("client_documents")
+  @@index([clientId])
+  @@index([type])
+  @@index([isValidated])
+}
+
+enum DocumentType {
+  // Pessoa Física
+  CPF                   // CPF (PDF do gov.br)
+  RG                    // RG Digital (PDF com QR Code)
+  CNH                   // CNH Digital (PDF com QR Code)
+  PROOF_OF_ADDRESS      // Comprovante de Endereço (PDF)
+  
+  // Pessoa Jurídica
+  CNPJ                  // CNPJ (PDF Receita Federal)
+  SOCIAL_CONTRACT       // Contrato Social
+  STATE_REGISTRATION    // Inscrição Estadual
+  
+  // Outros
+  OTHER
+}
+
+enum DocumentCategory {
+  IDENTITY              // Identidade (CPF, RG, CNH)
+  ADDRESS               // Comprovante de Endereço
+  COMPANY               // Documentos da Empresa
+  TAX                   // Documentos Fiscais
+  OTHER
+}
+
+// ==============================================
+// NOVO MODEL: LOG DE APROVAÇÕES
+// ==============================================
+
+model ApprovalLog {
+  id                String   @id @default(cuid())
+  
+  // Relacionamento
+  clientId          String
+  tenantId          String
+  
+  // Ação
+  action            ApprovalAction
+  status            RegistrationStatus
+  
+  // Quem fez
+  performedBy       String   // ID do usuário
+  performedByName   String   // Nome do usuário
+  performedByEmail  String   // Email do usuário
+  
+  // Detalhes
+  reason            String?
+  notes             String?
+  
+  // Metadados
+  ipAddress         String?
+  userAgent         String?
+  
+  // Timestamp
+  createdAt         DateTime @default(now())
+  
+  @@map("approval_logs")
+  @@index([clientId])
+  @@index([tenantId])
+  @@index([performedBy])
+  @@index([createdAt])
+}
+
+enum ApprovalAction {
+  SUBMITTED         // Cliente submeteu cadastro
+  DOCUMENTS_UPLOADED // Cliente enviou documentos
+  UNDER_REVIEW      // Colocado em análise
+  APPROVED          // Aprovado
+  REJECTED          // Rejeitado
+  REQUESTED_CHANGES // Solicitou alterações
+  RESUBMITTED       // Cliente reenviou
+}
+
+// ==============================================
+// NOVO MODEL: NOTIFICAÇÕES DE CADASTRO
+// ==============================================
+
+model RegistrationNotification {
+  id                String   @id @default(cuid())
+  
+  // Relacionamento
+  clientId          String
+  tenantId          String
+  
+  // Tipo
+  type              NotificationType
+  
+  // Destinatários
+  recipientEmail    String
+  recipientName     String?
+  
+  // Conteúdo
+  subject           String
+  message           String
+  
+  // Status
+  sent              Boolean  @default(false)
+  sentAt            DateTime?
+  error             String?
+  
+  // Metadados
+  createdAt         DateTime @default(now())
+  
+  @@map("registration_notifications")
+  @@index([clientId])
+  @@index([sent])
+}
+
+enum NotificationType {
+  REGISTRATION_RECEIVED     // Cadastro recebido
+  DOCUMENTS_REQUESTED       // Documentos solicitados
+  UNDER_REVIEW             // Em análise
+  APPROVED                 // Aprovado
+  REJECTED                 // Rejeitado
+  ADDITIONAL_INFO_NEEDED   // Mais informações necessárias
+}
+
+// ==============================================
+// CONFIGURAÇÕES DE APROVAÇÃO POR TENANT
+// ==============================================
+
+model ApprovalSettings {
+  id                        String   @id @default(cuid())
+  tenantId                  String   @unique
+  
+  // Documentos Obrigatórios
+  requireCPF                Boolean  @default(true)
+  requireRG                 Boolean  @default(false)
+  requireCNH                Boolean  @default(false)
+  requireProofOfAddress     Boolean  @default(true)
+  requireCNPJ               Boolean  @default(false)  // Se for PJ
+  
+  // Validações
+  validateQRCode            Boolean  @default(true)
+  requireGovSource          Boolean  @default(true)   // PDF deve ser do gov.br
+  maxFileSizeMB             Int      @default(10)
+  
+  // Aprovação
+  requireManagerApproval    Boolean  @default(true)
+  autoApproveAfterDays      Int?                      // Null = sem auto-aprovação
+  
+  // ClearSale (futuro)
+  useClearSale              Boolean  @default(false)
+  clearSaleApiKey           String?
+  clearSaleMinScore         Float?
+  
+  // Notificações
+  notifyOnSubmit            Boolean  @default(true)
+  notifyOnApproval          Boolean  @default(true)
+  notifyOnRejection         Boolean  @default(true)
+  
+  // Timestamps
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+  
+  @@map("approval_settings")
+}
+

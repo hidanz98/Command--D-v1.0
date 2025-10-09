@@ -1,0 +1,37 @@
+{
+  "cookies": [
+    {
+      "name": "auth_test_owner",
+      "value": "1",
+      "domain": "localhost",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "http://localhost:8081",
+      "localStorage": [
+        {
+          "name": "bil_cinema_user",
+          "value": "{\"id\":\"owner-mock-123\",\"name\":\"Dono da Locadora\",\"email\":\"cabecadeefeitocine@gmail.com\",\"phone\":\"(31) 3568-8485\",\"document\":\"12.345.678/0001-90\",\"address\":\"Admin Address\",\"role\":\"admin\"}"
+        },
+        {
+          "name": "token",
+          "value": "MOCK.eyJ1c2VySWQiOiJvd25lci1tb2NrLTEyMyIsImVtYWlsIjoiY2FiZWNhZGVlZmVpdG9jaW5lQGdtYWlsLmNvbSIsInJvbGUiOiJBRE1JTiIsImV4cCI6MTc2MDA2MTIwMDI4MH0=.TEST"
+        },
+        {
+          "name": "auth_test",
+          "value": "1"
+        },
+        {
+          "name": "is_authenticated",
+          "value": "true"
+        }
+      ]
+    }
+  ]
+}

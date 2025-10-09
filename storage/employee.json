@@ -1,0 +1,37 @@
+{
+  "cookies": [
+    {
+      "name": "auth_test_employee",
+      "value": "1",
+      "domain": "localhost",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "http://localhost:8081",
+      "localStorage": [
+        {
+          "name": "bil_cinema_user",
+          "value": "{\"id\":\"employee-mock-123\",\"name\":\"Funcionário Teste\",\"email\":\"funcionario@empresa.com\",\"phone\":\"(31) 98888-8888\",\"document\":\"987.654.321-00\",\"address\":\"Employee Address\",\"role\":\"funcionario\"}"
+        },
+        {
+          "name": "token",
+          "value": "MOCK.eyJ1c2VySWQiOiJlbXBsb3llZS1tb2NrLTEyMyIsImVtYWlsIjoiZnVuY2lvbmFyaW9AZW1wcmVzYS5jb20iLCJyb2xlIjoiRU1QTE9ZRUUiLCJleHAiOjE3NjAwNjEyMDI4OTl9.TEST"
+        },
+        {
+          "name": "auth_test",
+          "value": "1"
+        },
+        {
+          "name": "is_authenticated",
+          "value": "true"
+        }
+      ]
+    }
+  ]
+}

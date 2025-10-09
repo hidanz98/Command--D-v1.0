@@ -1,0 +1,115 @@
+# 🚀 Deploy Automático para AWS EC2
+# Toda vez que fizer push na branch main, deploys automático!
+
+name: Deploy to AWS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Permite deploy manual pela interface do GitHub
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout do código
+        uses: actions/checkout@v3
+
+      - name: 🟢 Setup Node.js 20
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📦 Instalar dependências
+        run: npm ci
+
+      - name: 🔨 Build do projeto
+        run: npm run build
+
+      - name: 🚀 Deploy para EC2 via SSH
+        env:
+          PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+          HOST: ${{ secrets.EC2_HOST }}
+          USER: ${{ secrets.EC2_USER }}
+        run: |
+          echo "🚀 Iniciando deploy para AWS EC2..."
+          
+          # Salvar chave SSH
+          echo "$PRIVATE_KEY" > private_key.pem
+          chmod 600 private_key.pem
+          
+          # Criar arquivo de deploy (excluir node_modules, testes, etc)
+          echo "📦 Criando pacote de deploy..."
+          tar -czf deploy.tar.gz \
+            --exclude='node_modules' \
+            --exclude='.git' \
+            --exclude='test-results' \
+            --exclude='playwright-report' \
+            --exclude='.env' \
+            dist/ package*.json server/ prisma/ shared/
+          
+          echo "📤 Enviando para servidor..."
+          # Enviar para EC2
+          scp -i private_key.pem -o StrictHostKeyChecking=no \
+            deploy.tar.gz $USER@$HOST:/home/ubuntu/
+          
+          echo "🔄 Executando comandos no servidor..."
+          # Executar comandos no servidor
+          ssh -i private_key.pem -o StrictHostKeyChecking=no $USER@$HOST << 'ENDSSH'
+            cd /home/ubuntu
+            
+            # Criar diretório se não existe
+            mkdir -p sistema-command-d
+            cd sistema-command-d
+            
+            # Backup do .env atual
+            if [ -f .env ]; then
+              cp .env .env.backup
+            fi
+            
+            # Extrair novo código
+            tar -xzf ../deploy.tar.gz
+            
+            # Restaurar .env
+            if [ -f .env.backup ]; then
+              cp .env.backup .env
+              rm .env.backup
+            fi
+            
+            # Instalar dependências de produção
+            npm install --production
+            
+            # Rodar migrations Prisma
+            npx prisma generate 2>/dev/null || true
+            npx prisma db push 2>/dev/null || true
+            
+            # Reiniciar aplicação com PM2
+            pm2 restart command-d || pm2 start npm --name command-d -- start
+            
+            # Status
+            pm2 status
+            
+            # Limpar arquivo de deploy
+            rm ../deploy.tar.gz
+            
+            echo "✅ Deploy concluído com sucesso!"
+          ENDSSH
+          
+          # Limpar chave local
+          rm private_key.pem deploy.tar.gz
+
+      - name: ✅ Deploy bem-sucedido!
+        if: success()
+        run: |
+          echo "🎉 Deploy realizado com sucesso!"
+          echo "🌐 URL: http://${{ secrets.EC2_HOST }}:8080"
+          echo "✅ Aplicação atualizada e rodando!"
+
+      - name: ❌ Deploy falhou
+        if: failure()
+        run: |
+          echo "😢 Deploy falhou! Verifique os logs acima."
+

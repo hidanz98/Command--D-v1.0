@@ -1,0 +1,483 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==============================================
+// MULTI-TENANT SYSTEM
+// ==============================================
+
+model Tenant {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  logo        String?
+  settings    Json?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  users       User[]
+  products    Product[]
+  orders      Order[]
+  clients     Client[]
+  employees   Employee[]
+  categories  Category[]
+  tenantSettings TenantSettings?
+  payments    Payment[]
+  timesheets  Timesheet[]
+  activities  Activity[]
+  notifications Notification[]
+
+  @@map("tenants")
+}
+
+model TenantSettings {
+  id       String @id @default(cuid())
+  tenantId String @unique
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Site Settings
+  siteName        String?
+  siteDescription String?
+  primaryColor    String? @default("#3B82F6")
+  secondaryColor  String? @default("#1E40AF")
+  logo            String?
+  favicon         String?
+
+  // Business Settings
+  businessName    String?
+  businessEmail   String?
+  businessPhone   String?
+  businessAddress String?
+  cnpj            String?
+  ie              String?
+
+  // System Settings
+  timezone        String? @default("America/Sao_Paulo")
+  currency        String? @default("BRL")
+  dateFormat      String? @default("DD/MM/YYYY")
+  timeFormat      String? @default("24h")
+
+  // Features
+  enableGPS       Boolean @default(true)
+  enablePayroll   Boolean @default(true)
+  enableInventory Boolean @default(true)
+  enableReports   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("tenant_settings")
+}
+
+// ==============================================
+// USER MANAGEMENT
+// ==============================================
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      UserRole @default(CLIENT)
+  isActive  Boolean  @default(true)
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  employees Employee?
+
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  CLIENT
+  EMPLOYEE
+  MASTER_ADMIN
+}
+
+// ==============================================
+// CLIENT MANAGEMENT
+// ==============================================
+
+model Client {
+  id          String      @id @default(cuid())
+  name        String
+  email       String?
+  phone       String?
+  document    String? // CPF/CNPJ
+  type        ClientType  @default(INDIVIDUAL)
+  company     String?
+  address     String?
+  city        String?
+  state       String?
+  zipCode     String?
+  isActive    Boolean     @default(true)
+  tenantId    String
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  orders      Order[]
+
+  @@map("clients")
+}
+
+enum ClientType {
+  INDIVIDUAL
+  COMPANY
+  SUPPLIER
+  BOTH
+}
+
+// ==============================================
+// EMPLOYEE MANAGEMENT
+// ==============================================
+
+model Employee {
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  phone       String?
+  position    String?
+  department  String?
+  salary      Float?
+  hireDate    DateTime?
+  isActive    Boolean  @default(true)
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId      String?  @unique
+  user        User?    @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  timesheets  Timesheet[]
+  activities  Activity[]
+
+  @@map("employees")
+}
+
+// ==============================================
+// PRODUCT MANAGEMENT
+// ==============================================
+
+model Product {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  sku         String?
+  categoryId  String?
+  category    Category?   @relation(fields: [categoryId], references: [id])
+  brand       String?
+  model       String?
+  
+  // Pricing
+  dailyPrice    Float
+  weeklyPrice   Float?
+  monthlyPrice  Float?
+  
+  // Inventory
+  quantity      Int        @default(0)
+  minQuantity   Int        @default(0)
+  status        ProductStatus @default(AVAILABLE)
+  
+  // Ownership
+  ownerType     OwnerType  @default(COMPANY)
+  ownerId       String?    // ID do cliente se for fornecedor
+  
+  // Metadata
+  images        String[]   @default([])
+  tags          String[]   @default([])
+  specifications Json?
+  
+  isActive    Boolean     @default(true)
+  tenantId    String
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  orderItems  OrderItem[]
+
+  @@map("products")
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  color       String?  @default("#3B82F6")
+  icon        String?
+  isActive    Boolean  @default(true)
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  products    Product[]
+
+  @@map("categories")
+}
+
+enum ProductStatus {
+  AVAILABLE
+  RENTED
+  MAINTENANCE
+  INACTIVE
+}
+
+enum OwnerType {
+  COMPANY
+  SUPPLIER
+}
+
+// ==============================================
+// ORDER MANAGEMENT
+// ==============================================
+
+model Order {
+  id          String      @id @default(cuid())
+  orderNumber String      @unique
+  status      OrderStatus @default(PENDING)
+  
+  // Customer Info
+  clientId    String
+  client      Client      @relation(fields: [clientId], references: [id])
+  
+  // Dates
+  startDate   DateTime
+  endDate     DateTime?
+  returnDate  DateTime?
+  
+  // Pricing
+  subtotal    Float
+  discount    Float       @default(0)
+  tax         Float       @default(0)
+  total       Float
+  
+  // Additional Info
+  notes       String?
+  deliveryAddress String?
+  pickupAddress   String?
+  
+  tenantId    String
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  items       OrderItem[]
+  payments    Payment[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  
+  quantity  Int
+  unitPrice Float
+  totalPrice Float
+  
+  // Rental specific
+  startDate DateTime?
+  endDate   DateTime?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("order_items")
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  RETURNED
+}
+
+// ==============================================
+// PAYMENT MANAGEMENT
+// ==============================================
+
+model Payment {
+  id          String        @id @default(cuid())
+  orderId     String
+  order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  amount      Float
+  method      PaymentMethod
+  status      PaymentStatus @default(PENDING)
+  
+  // Payment Details
+  transactionId String?
+  notes         String?
+  
+  paidAt      DateTime?
+  tenantId    String
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("payments")
+}
+
+enum PaymentMethod {
+  CASH
+  CREDIT_CARD
+  DEBIT_CARD
+  PIX
+  BANK_TRANSFER
+  CHECK
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+// ==============================================
+// TIMESHEET SYSTEM
+// ==============================================
+
+model Timesheet {
+  id          String        @id @default(cuid())
+  employeeId  String
+  employee    Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  date        DateTime
+  clockIn     DateTime?
+  clockOut    DateTime?
+  breakStart  DateTime?
+  breakEnd    DateTime?
+  
+  // GPS Data
+  clockInLocation  Json?
+  clockOutLocation Json?
+  
+  // Status
+  status      TimesheetStatus @default(PENDING)
+  isApproved  Boolean         @default(false)
+  approvedBy  String?
+  approvedAt  DateTime?
+  
+  // Notes
+  notes       String?
+  
+  tenantId    String
+  tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@map("timesheets")
+}
+
+enum TimesheetStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  AUTO_APPROVED
+}
+
+// ==============================================
+// ACTIVITY TRACKING
+// ==============================================
+
+model Activity {
+  id          String       @id @default(cuid())
+  employeeId  String
+  employee    Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  action      String       // "login", "order_created", "product_updated", etc.
+  description String?
+  metadata    Json?
+  
+  // Location
+  location    Json?
+  ipAddress   String?
+  userAgent   String?
+  
+  tenantId    String
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+
+  @@map("activities")
+}
+
+// ==============================================
+// NOTIFICATIONS
+// ==============================================
+
+model Notification {
+  id          String             @id @default(cuid())
+  title       String
+  message     String
+  type        NotificationType
+  isRead      Boolean            @default(false)
+  
+  // Target
+  userId      String?
+  tenantId    String
+  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  // Metadata
+  metadata    Json?
+  actionUrl   String?
+  
+  createdAt   DateTime           @default(now())
+  readAt      DateTime?
+
+  @@map("notifications")
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+  ORDER
+  PAYMENT
+  TIMESHEET
+  SYSTEM
+}
+
+// ==============================================
+// SYSTEM CONFIGURATION
+// ==============================================
+
+model SystemConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  type      String   @default("string") // string, number, boolean, json
+  tenantId  String?  // null for global configs
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("system_configs")
+}
