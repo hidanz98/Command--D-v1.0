@@ -435,7 +435,7 @@ const generateMockTransactions = (): Transaction[] => {
     currentInstallment: 1,
     totalInstallments: 1,
           recurrent: true,
-          recurrentPeriod: expense.frequency,
+          recurrentPeriod: expense.frequency as "monthly" | "quarterly" | "annual",
           tags: [expense.category.toLowerCase(), "recorrente"],
           notes: "Despesa recorrente mensal",
           costCenter: "administrativo",
@@ -650,7 +650,6 @@ export const FinancialERP: React.FC = () => {
   ]);
   const [newCostCenter, setNewCostCenter] = useState<Partial<CostCenter>>({
     name: "",
-    code: "",
     description: "",
     budget: 0,
     responsible: "",
@@ -997,6 +996,7 @@ export const FinancialERP: React.FC = () => {
       costCenter: newTransaction.costCenter || "",
       attachments: newTransaction.attachments || [],
       approval: newTransaction.approval || { required: false, approved: false },
+      invoiceNumber: `INV-${Date.now()}`,
     };
 
     setTransactions([...transactions, transaction]);
@@ -1050,7 +1050,6 @@ export const FinancialERP: React.FC = () => {
       workHours: newEmployee.workHours || 220,
       overtime: newEmployee.overtime || 0,
       hasContract: newEmployee.hasContract || false,
-      lastLogin: undefined,
       isOnline: false,
     };
 
@@ -1078,8 +1077,8 @@ export const FinancialERP: React.FC = () => {
 
   // Função para salvar centro de custo
   const handleSaveCostCenter = () => {
-    if (!newCostCenter.name || !newCostCenter.code) {
-      alert("Por favor, preencha nome e código do centro de custo");
+    if (!newCostCenter.name) {
+      alert("Por favor, preencha o nome do centro de custo");
       return;
     }
 
@@ -1088,7 +1087,6 @@ export const FinancialERP: React.FC = () => {
       const updatedCostCenter: CostCenter = {
         ...editingCostCenter,
         name: newCostCenter.name || "",
-        code: newCostCenter.code || "",
         description: newCostCenter.description || "",
         budget: newCostCenter.budget || 0,
         responsible: newCostCenter.responsible || "",
@@ -1106,7 +1104,6 @@ export const FinancialERP: React.FC = () => {
       const costCenter: CostCenter = {
         id: Date.now().toString(),
         name: newCostCenter.name || "",
-        code: newCostCenter.code || "",
         description: newCostCenter.description || "",
         budget: newCostCenter.budget || 0,
         responsible: newCostCenter.responsible || "",
@@ -1123,7 +1120,6 @@ export const FinancialERP: React.FC = () => {
 
     setNewCostCenter({
       name: "",
-      code: "",
       description: "",
       budget: 0,
       responsible: "",
@@ -1139,7 +1135,6 @@ export const FinancialERP: React.FC = () => {
     setEditingCostCenter(costCenter);
     setNewCostCenter({
       name: costCenter.name,
-      code: costCenter.code || "",
       description: costCenter.description,
       budget: costCenter.budget,
       responsible: costCenter.responsible,
@@ -2536,15 +2531,6 @@ export const FinancialERP: React.FC = () => {
                     />
                   </div>
 
-                  <div>
-                    <Label className="text-white">Código *</Label>
-                    <Input
-                      value={newCostCenter.code}
-                      onChange={(e) => setNewCostCenter({...newCostCenter, code: e.target.value})}
-                      className="bg-cinema-dark-lighter border-cinema-gray-light text-white"
-                      placeholder="Código único"
-                    />
-                  </div>
 
                   <div className="md:col-span-2">
                     <Label className="text-white">Descrição</Label>
@@ -2619,7 +2605,6 @@ export const FinancialERP: React.FC = () => {
                       setEditingCostCenter(null);
                       setNewCostCenter({
                         name: "",
-                        code: "",
                         description: "",
                         budget: 0,
                         responsible: "",

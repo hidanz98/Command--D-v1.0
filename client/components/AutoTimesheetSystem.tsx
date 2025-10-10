@@ -27,6 +27,7 @@ import {
   RefreshCw,
   Trash2,
   Plus,
+  Bell,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { GPSDiagnostic } from "./GPSDiagnostic";
