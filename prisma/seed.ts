@@ -188,15 +188,8 @@ async function main() {
 
   for (const [index, p] of products.entries()) {
     const daily = p.daily;
-    await prisma.product.upsert({
-      where: {
-        sku_tenantId: {
-          sku: `REF-${String(index + 1).padStart(3, '0')}`,
-          tenantId: defaultTenant.id,
-        }
-      },
-      update: {},
-      create: {
+    await prisma.product.create({
+      data: {
         name: p.name,
         description: 'Equipamento de iluminação profissional para cinema/foto. Valores por diária.',
         sku: `REF-${String(index + 1).padStart(3, '0')}`,
