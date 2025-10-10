@@ -75,29 +75,27 @@ async function main() {
 
   console.log('✅ Created admin user');
 
-  // Create sample client
-  const sampleClient = await prisma.client.upsert({
-    where: { 
-      email_tenantId: {
-        email: 'cliente@exemplo.com',
-        tenantId: defaultTenant.id
-      }
-    },
-    update: {},
-    create: {
-      name: 'Cliente Exemplo',
-      email: 'cliente@exemplo.com',
-      phone: '(11) 88888-8888',
-      document: '123.456.789-00',
-      type: 'INDIVIDUAL',
-      address: 'Rua Exemplo, 123',
-      city: 'São Paulo',
-      state: 'SP',
-      zipCode: '01234-567',
-      tenantId: defaultTenant.id,
-      isActive: true
-    }
+  // Create sample client (Client has no unique email; use find/create)
+  let sampleClient = await prisma.client.findFirst({
+    where: { email: 'cliente@exemplo.com', tenantId: defaultTenant.id }
   });
+  if (!sampleClient) {
+    sampleClient = await prisma.client.create({
+      data: {
+        name: 'Cliente Exemplo',
+        email: 'cliente@exemplo.com',
+        phone: '(11) 88888-8888',
+        document: '123.456.789-00',
+        type: 'INDIVIDUAL',
+        address: 'Rua Exemplo, 123',
+        city: 'São Paulo',
+        state: 'SP',
+        zipCode: '01234-567',
+        tenantId: defaultTenant.id,
+        isActive: true
+      }
+    });
+  }
 
   console.log('✅ Created sample client');
 
@@ -181,6 +179,13 @@ async function main() {
     { name: 'PAVOTUBE II 30X RGBW - NANLITE (120 cm) - LED TUBO', brand: 'Nanlite', model: 'PavoTube II 30X', daily: 150 },
   ];
 
+  const makeImages = (brand?: string, model?: string) => {
+    const q = [brand, model, 'video light'].filter(Boolean).join(',');
+    const url = `https://source.unsplash.com/800x600/?${encodeURIComponent(q)}`;
+    const url2 = `https://source.unsplash.com/1200x800/?${encodeURIComponent(q)}`;
+    return [url, url2];
+  };
+
   for (const [index, p] of products.entries()) {
     const daily = p.daily;
     await prisma.product.upsert({
@@ -200,13 +205,14 @@ async function main() {
         dailyPrice: daily,
         weeklyPrice: weeklyFromDaily(daily),
         monthlyPrice: monthlyFromDaily(daily),
-        quantity: 5,
+        quantity: p.specifications && (p.specifications as any).isKit ? 5 : 10,
         status: 'AVAILABLE',
         ownerType: 'COMPANY',
         tenantId: defaultTenant.id,
         categoryId: reflectorsCategory.id,
         specifications: p.specifications ? p.specifications as any : undefined,
-        tags: ['REFLETORES']
+        tags: ['REFLETORES'],
+        images: makeImages(p.brand, p.model)
       }
     });
   }
