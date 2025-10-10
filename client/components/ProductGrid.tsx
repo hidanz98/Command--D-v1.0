@@ -129,7 +129,7 @@ export default function ProductGrid({
     })();
   }, []);
 
-  let base = apiProducts && apiProducts.length ? apiProducts : sampleProducts;
+  let base = apiProducts && apiProducts.length ? apiProducts : [];
   let products = showFeaturedOnly ? base.filter((p) => p.featured) : base;
 
   if (maxItems) {

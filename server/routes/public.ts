@@ -18,7 +18,8 @@ export const getPublicProducts: RequestHandler = async (_req, res) => {
       images: p.images && p.images.length > 0 ? p.images : ['/placeholder.svg'],
       tags: p.tags ?? [],
       available: p.status === 'AVAILABLE',
-      featured: (p.tags ?? []).includes('featured'),
+      // Considerar destaque se tiver tag 'featured' ou se estiver na categoria REFLETORES
+      featured: (p.tags ?? []).includes('featured') || (p.category?.name ?? '').toUpperCase() === 'REFLETORES',
       description: p.description ?? '',
     }));
 

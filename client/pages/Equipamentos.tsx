@@ -417,7 +417,7 @@ export default function Equipamentos() {
   }, [categoria, subcategoria]);
 
   const filteredProducts = useMemo(() => {
-    let filtered = apiProducts.length ? apiProducts : allProducts;
+    let filtered = apiProducts ?? [] as Product[];
 
     // Filter by category
     if (selectedCategory !== "Todas") {
