@@ -1101,6 +1101,7 @@ export default function PainelAdmin() {
       owner: "CLI-002", // Maria Santos (Produtora Santos)
     },
   */
+  /*
     {
       id: 4,
       name: "Atomos Ninja V",
@@ -1208,6 +1209,7 @@ export default function PainelAdmin() {
         "SmallHD Monitor",
       ],
     },
+  */
   ]);
 
   // Stock search and filtering state
