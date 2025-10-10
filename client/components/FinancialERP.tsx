@@ -220,6 +220,42 @@ interface Report {
   downloadUrl?: string;
 }
 
+// Interfaces para Contas Bancárias e Pluggy
+interface BankAccount {
+  id: string;
+  name: string;
+  bank: string;
+  accountNumber: string;
+  accountType: "checking" | "savings" | "business";
+  balance: number;
+  currency: string;
+  isActive: boolean;
+  pluggyConnectionId?: string;
+  lastSync?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface PluggyCredentials {
+  id: string;
+  clientId: string;
+  clientSecret: string;
+  sandbox: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface PluggyConnection {
+  id: string;
+  bankAccountId: string;
+  pluggyItemId: string;
+  status: "active" | "error" | "expired" | "disconnected";
+  lastSync: string;
+  errorMessage?: string;
+  createdAt: string;
+}
+
 // Mock Data
 const MOCK_COMPANY_CONFIG: CompanyConfig = {
   cnpj: "12.345.678/0001-90",
@@ -267,6 +303,62 @@ const MOCK_DEPARTMENTS: Department[] = [
     active: true
   }
 ];
+
+// Mock data para Contas Bancárias e Pluggy
+const MOCK_BANK_ACCOUNTS: BankAccount[] = [
+  {
+    id: "1",
+    name: "Conta Corrente Principal",
+    bank: "Banco do Brasil",
+    accountNumber: "12345-6",
+    accountType: "checking",
+    balance: 125680.50,
+    currency: "BRL",
+    isActive: true,
+    pluggyConnectionId: "conn_001",
+    lastSync: "2024-01-10T10:30:00Z",
+    createdAt: "2024-01-01T00:00:00Z",
+    updatedAt: "2024-01-10T10:30:00Z"
+  },
+  {
+    id: "2",
+    name: "Conta Poupança",
+    bank: "Caixa Econômica Federal",
+    accountNumber: "54321-0",
+    accountType: "savings",
+    balance: 45000.00,
+    currency: "BRL",
+    isActive: true,
+    pluggyConnectionId: "conn_002",
+    lastSync: "2024-01-10T09:15:00Z",
+    createdAt: "2024-01-01T00:00:00Z",
+    updatedAt: "2024-01-10T09:15:00Z"
+  },
+  {
+    id: "3",
+    name: "Conta Empresarial",
+    bank: "Itaú",
+    accountNumber: "98765-4",
+    accountType: "business",
+    balance: 95000.00,
+    currency: "BRL",
+    isActive: true,
+    pluggyConnectionId: "conn_003",
+    lastSync: "2024-01-10T11:45:00Z",
+    createdAt: "2024-01-01T00:00:00Z",
+    updatedAt: "2024-01-10T11:45:00Z"
+  }
+];
+
+const MOCK_PLUGGY_CREDENTIALS: PluggyCredentials = {
+  id: "1",
+  clientId: "client_123456789",
+  clientSecret: "secret_987654321",
+  sandbox: true,
+  isActive: true,
+  createdAt: "2024-01-01T00:00:00Z",
+  updatedAt: "2024-01-01T00:00:00Z"
+};
 
 const MOCK_EMPLOYEES: Employee[] = [
   {
@@ -638,6 +730,7 @@ export const FinancialERP: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>(MOCK_EMPLOYEES);
   const [transactions, setTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(MOCK_BANK_ACCOUNTS);
+  const [pluggyCredentials, setPluggyCredentials] = useState<PluggyCredentials>(MOCK_PLUGGY_CREDENTIALS);
   const [costCenters, setCostCenters] = useState<CostCenter[]>(MOCK_COST_CENTERS);
   const [departments, setDepartments] = useState<Department[]>(MOCK_DEPARTMENTS);
   const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
@@ -670,6 +763,24 @@ export const FinancialERP: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterPeriod, setFilterPeriod] = useState("current_month");
   const [searchTerm, setSearchTerm] = useState("");
+  
+  // Estados para Contas Bancárias
+  const [newBankAccount, setNewBankAccount] = useState<Partial<BankAccount>>({
+    name: "",
+    bank: "",
+    accountNumber: "",
+    accountType: "checking",
+    balance: 0,
+    currency: "BRL",
+    isActive: true
+  });
+  const [editingBankAccount, setEditingBankAccount] = useState<BankAccount | null>(null);
+  const [newPluggyCredentials, setNewPluggyCredentials] = useState<Partial<PluggyCredentials>>({
+    clientId: "",
+    clientSecret: "",
+    sandbox: true,
+    isActive: true
+  });
 
   // Debug: Monitorar mudanças no showModal
   useEffect(() => {
@@ -1290,6 +1401,7 @@ export const FinancialERP: React.FC = () => {
             { id: "receivables", name: "Contas a Receber", icon: TrendingUp },
             { id: "payables", name: "Contas a Pagar", icon: TrendingDown },
             { id: "cashflow", name: "Fluxo de Caixa", icon: DollarSign },
+            { id: "bank-accounts", name: "Contas Bancárias", icon: CreditCard },
             { id: "employees", name: "Funcionários", icon: Users },
             { id: "timesheet", name: "Folha de Ponto", icon: Clock },
             { id: "payroll", name: "Folha Pagamento", icon: Receipt },
@@ -1658,6 +1770,161 @@ export const FinancialERP: React.FC = () => {
             getStatusColor={getStatusColor}
             getStatusIcon={getStatusIcon}
           />
+        )}
+
+        {/* Bank Accounts Tab */}
+        {activeTab === "bank-accounts" && (
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold text-white">Contas Bancárias</h2>
+                <p className="text-gray-400">Gerencie suas contas bancárias e integração com Pluggy</p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => setShowModal("pluggy-credentials")}
+                  variant="outline"
+                  className="bg-cinema-dark border-cinema-gray-light text-white hover:bg-cinema-dark-lighter"
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  Configurar Pluggy
+                </Button>
+                <Button
+                  onClick={() => setShowModal("add-bank-account")}
+                  className="bg-cinema-yellow text-cinema-dark hover:bg-cinema-yellow-dark"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nova Conta
+                </Button>
+              </div>
+            </div>
+
+            {/* Pluggy Status */}
+            <Card className="bg-cinema-dark border-cinema-gray-light">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center">
+                  <CreditCard className="w-5 h-5 mr-2" />
+                  Status da Integração Pluggy
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-3 h-3 rounded-full ${pluggyCredentials.isActive ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                    <span className="text-white">
+                      {pluggyCredentials.isActive ? 'Conectado' : 'Desconectado'}
+                    </span>
+                  </div>
+                  <div className="text-gray-400">
+                    <span className="text-sm">Ambiente: </span>
+                    <span className="font-medium">{pluggyCredentials.sandbox ? 'Sandbox' : 'Produção'}</span>
+                  </div>
+                  <div className="text-gray-400">
+                    <span className="text-sm">Client ID: </span>
+                    <span className="font-medium">{pluggyCredentials.clientId}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Bank Accounts List */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {bankAccounts.map((account) => (
+                <Card key={account.id} className="bg-cinema-dark border-cinema-gray-light">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className="text-white text-lg">{account.name}</CardTitle>
+                        <p className="text-gray-400 text-sm">{account.bank}</p>
+                        <p className="text-gray-500 text-xs">Conta: {account.accountNumber}</p>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setEditingBankAccount(account);
+                            setShowModal("edit-bank-account");
+                          }}
+                          className="text-gray-400 hover:text-white"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            if (confirm('Tem certeza que deseja excluir esta conta?')) {
+                              setBankAccounts(bankAccounts.filter(acc => acc.id !== account.id));
+                            }
+                          }}
+                          className="text-gray-400 hover:text-red-400"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Saldo:</span>
+                        <span className="text-white font-bold">
+                          R$ {account.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Tipo:</span>
+                        <span className="text-white">
+                          {account.accountType === 'checking' ? 'Corrente' : 
+                           account.accountType === 'savings' ? 'Poupança' : 'Empresarial'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Status:</span>
+                        <span className={`font-medium ${account.isActive ? 'text-green-400' : 'text-red-400'}`}>
+                          {account.isActive ? 'Ativa' : 'Inativa'}
+                        </span>
+                      </div>
+                      {account.pluggyConnectionId && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Pluggy:</span>
+                          <span className="text-green-400 text-sm">Conectado</span>
+                        </div>
+                      )}
+                      {account.lastSync && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Última Sync:</span>
+                          <span className="text-gray-400 text-sm">
+                            {new Date(account.lastSync).toLocaleString('pt-BR')}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Empty State */}
+            {bankAccounts.length === 0 && (
+              <Card className="bg-cinema-dark border-cinema-gray-light">
+                <CardContent className="p-8 text-center">
+                  <CreditCard className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-white text-lg font-medium mb-2">Nenhuma conta bancária cadastrada</h3>
+                  <p className="text-gray-400 mb-4">Adicione suas contas bancárias para começar a usar a integração</p>
+                  <Button
+                    onClick={() => setShowModal("add-bank-account")}
+                    className="bg-cinema-yellow text-cinema-dark hover:bg-cinema-yellow-dark"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Adicionar Primeira Conta
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         )}
 
         {/* Employees Tab */}
@@ -2665,6 +2932,398 @@ export const FinancialERP: React.FC = () => {
                     className="bg-cinema-yellow text-cinema-dark mt-4"
                   >
                     Fechar Modal
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Bank Account Modal */}
+        {showModal === "add-bank-account" && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <Card className="bg-cinema-dark border-cinema-gray-light w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="text-white">Nova Conta Bancária</CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowModal(null)}
+                    className="text-gray-400 hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-white">Nome da Conta *</Label>
+                    <Input
+                      value={newBankAccount.name}
+                      onChange={(e) => setNewBankAccount({...newBankAccount, name: e.target.value})}
+                      className="bg-cinema-dark-lighter border-cinema-gray-light text-white"
+                      placeholder="Ex: Conta Corrente Principal"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-white">Banco *</Label>
+                    <Input
+                      value={newBankAccount.bank}
+                      onChange={(e) => setNewBankAccount({...newBankAccount, bank: e.target.value})}
+                      className="bg-cinema-dark-lighter border-cinema-gray-light text-white"
+                      placeholder="Ex: Banco do Brasil"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-white">Número da Conta *</Label>
+                    <Input
+                      value={newBankAccount.accountNumber}
+                      onChange={(e) => setNewBankAccount({...newBankAccount, accountNumber: e.target.value})}
+                      className="bg-cinema-dark-lighter border-cinema-gray-light text-white"
+                      placeholder="Ex: 12345-6"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-white">Tipo da Conta *</Label>
+                    <Select
+                      value={newBankAccount.accountType}
+                      onValueChange={(value) => setNewBankAccount({...newBankAccount, accountType: value as any})}
+                    >
+                      <SelectTrigger className="bg-cinema-dark-lighter border-cinema-gray-light text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="checking">Conta Corrente</SelectItem>
+                        <SelectItem value="savings">Conta Poupança</SelectItem>
+                        <SelectItem value="business">Conta Empresarial</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-white">Saldo Inicial</Label>
+                    <Input
+                      type="number"
+                      value={newBankAccount.balance}
+                      onChange={(e) => setNewBankAccount({...newBankAccount, balance: parseFloat(e.target.value) || 0})}
+                      className="bg-cinema-dark-lighter border-cinema-gray-light text-white"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-white">Moeda</Label>
+                    <Select
+                      value={newBankAccount.currency}
+                      onValueChange={(value) => setNewBankAccount({...newBankAccount, currency: value})}
+                    >
+                      <SelectTrigger className="bg-cinema-dark-lighter border-cinema-gray-light text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="BRL">Real (BRL)</SelectItem>
+                        <SelectItem value="USD">Dólar (USD)</SelectItem>
+                        <SelectItem value="EUR">Euro (EUR)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="isActive"
+                    checked={newBankAccount.isActive}
+                    onChange={(e) => setNewBankAccount({...newBankAccount, isActive: e.target.checked})}
+                    className="rounded"
+                  />
+                  <Label htmlFor="isActive" className="text-white">Conta ativa</Label>
+                </div>
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowModal(null)}
+                    className="border-cinema-gray-light text-white hover:bg-cinema-dark-lighter"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      if (!newBankAccount.name || !newBankAccount.bank || !newBankAccount.accountNumber) {
+                        alert("Por favor, preencha todos os campos obrigatórios");
+                        return;
+                      }
+                      const account: BankAccount = {
+                        id: Date.now().toString(),
+                        name: newBankAccount.name || "",
+                        bank: newBankAccount.bank || "",
+                        accountNumber: newBankAccount.accountNumber || "",
+                        accountType: newBankAccount.accountType || "checking",
+                        balance: newBankAccount.balance || 0,
+                        currency: newBankAccount.currency || "BRL",
+                        isActive: newBankAccount.isActive !== false,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                      };
+                      setBankAccounts([...bankAccounts, account]);
+                      setNewBankAccount({
+                        name: "",
+                        bank: "",
+                        accountNumber: "",
+                        accountType: "checking",
+                        balance: 0,
+                        currency: "BRL",
+                        isActive: true
+                      });
+                      setShowModal(null);
+                      alert("Conta bancária adicionada com sucesso!");
+                    }}
+                    className="bg-cinema-yellow text-cinema-dark hover:bg-cinema-yellow-dark"
+                  >
+                    Salvar
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Edit Bank Account Modal */}
+        {showModal === "edit-bank-account" && editingBankAccount && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <Card className="bg-cinema-dark border-cinema-gray-light w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="text-white">Editar Conta Bancária</CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setEditingBankAccount(null);
+                      setShowModal(null);
+                    }}
+                    className="text-gray-400 hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-white">Nome da Conta *</Label>
+                    <Input
+                      value={editingBankAccount.name}
+                      onChange={(e) => setEditingBankAccount({...editingBankAccount, name: e.target.value})}
+                      className="bg-cinema-dark-lighter border-cinema-gray-light text-white"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-white">Banco *</Label>
+                    <Input
+                      value={editingBankAccount.bank}
+                      onChange={(e) => setEditingBankAccount({...editingBankAccount, bank: e.target.value})}
+                      className="bg-cinema-dark-lighter border-cinema-gray-light text-white"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-white">Número da Conta *</Label>
+                    <Input
+                      value={editingBankAccount.accountNumber}
+                      onChange={(e) => setEditingBankAccount({...editingBankAccount, accountNumber: e.target.value})}
+                      className="bg-cinema-dark-lighter border-cinema-gray-light text-white"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-white">Tipo da Conta *</Label>
+                    <Select
+                      value={editingBankAccount.accountType}
+                      onValueChange={(value) => setEditingBankAccount({...editingBankAccount, accountType: value as any})}
+                    >
+                      <SelectTrigger className="bg-cinema-dark-lighter border-cinema-gray-light text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="checking">Conta Corrente</SelectItem>
+                        <SelectItem value="savings">Conta Poupança</SelectItem>
+                        <SelectItem value="business">Conta Empresarial</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-white">Saldo</Label>
+                    <Input
+                      type="number"
+                      value={editingBankAccount.balance}
+                      onChange={(e) => setEditingBankAccount({...editingBankAccount, balance: parseFloat(e.target.value) || 0})}
+                      className="bg-cinema-dark-lighter border-cinema-gray-light text-white"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-white">Moeda</Label>
+                    <Select
+                      value={editingBankAccount.currency}
+                      onValueChange={(value) => setEditingBankAccount({...editingBankAccount, currency: value})}
+                    >
+                      <SelectTrigger className="bg-cinema-dark-lighter border-cinema-gray-light text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="BRL">Real (BRL)</SelectItem>
+                        <SelectItem value="USD">Dólar (USD)</SelectItem>
+                        <SelectItem value="EUR">Euro (EUR)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="isActiveEdit"
+                    checked={editingBankAccount.isActive}
+                    onChange={(e) => setEditingBankAccount({...editingBankAccount, isActive: e.target.checked})}
+                    className="rounded"
+                  />
+                  <Label htmlFor="isActiveEdit" className="text-white">Conta ativa</Label>
+                </div>
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setEditingBankAccount(null);
+                      setShowModal(null);
+                    }}
+                    className="border-cinema-gray-light text-white hover:bg-cinema-dark-lighter"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      if (!editingBankAccount.name || !editingBankAccount.bank || !editingBankAccount.accountNumber) {
+                        alert("Por favor, preencha todos os campos obrigatórios");
+                        return;
+                      }
+                      setBankAccounts(bankAccounts.map(acc => 
+                        acc.id === editingBankAccount.id 
+                          ? {...editingBankAccount, updatedAt: new Date().toISOString()}
+                          : acc
+                      ));
+                      setEditingBankAccount(null);
+                      setShowModal(null);
+                      alert("Conta bancária atualizada com sucesso!");
+                    }}
+                    className="bg-cinema-yellow text-cinema-dark hover:bg-cinema-yellow-dark"
+                  >
+                    Salvar
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Pluggy Credentials Modal */}
+        {showModal === "pluggy-credentials" && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <Card className="bg-cinema-dark border-cinema-gray-light w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="text-white">Configuração Pluggy</CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowModal(null)}
+                    className="text-gray-400 hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+                  <h4 className="text-blue-400 font-medium mb-2">ℹ️ Informações Importantes</h4>
+                  <ul className="text-blue-300 text-sm space-y-1">
+                    <li>• Cada locadora deve ter suas próprias credenciais Pluggy</li>
+                    <li>• As credenciais são cobradas diretamente pela Pluggy</li>
+                    <li>• Use o ambiente Sandbox para testes</li>
+                    <li>• Mantenha suas credenciais seguras</li>
+                  </ul>
+                </div>
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <Label className="text-white">Client ID *</Label>
+                    <Input
+                      value={newPluggyCredentials.clientId}
+                      onChange={(e) => setNewPluggyCredentials({...newPluggyCredentials, clientId: e.target.value})}
+                      className="bg-cinema-dark-lighter border-cinema-gray-light text-white"
+                      placeholder="Seu Client ID da Pluggy"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-white">Client Secret *</Label>
+                    <Input
+                      type="password"
+                      value={newPluggyCredentials.clientSecret}
+                      onChange={(e) => setNewPluggyCredentials({...newPluggyCredentials, clientSecret: e.target.value})}
+                      className="bg-cinema-dark-lighter border-cinema-gray-light text-white"
+                      placeholder="Seu Client Secret da Pluggy"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="sandbox"
+                    checked={newPluggyCredentials.sandbox}
+                    onChange={(e) => setNewPluggyCredentials({...newPluggyCredentials, sandbox: e.target.checked})}
+                    className="rounded"
+                  />
+                  <Label htmlFor="sandbox" className="text-white">Usar ambiente Sandbox (recomendado para testes)</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="isActivePluggy"
+                    checked={newPluggyCredentials.isActive}
+                    onChange={(e) => setNewPluggyCredentials({...newPluggyCredentials, isActive: e.target.checked})}
+                    className="rounded"
+                  />
+                  <Label htmlFor="isActivePluggy" className="text-white">Ativar integração</Label>
+                </div>
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowModal(null)}
+                    className="border-cinema-gray-light text-white hover:bg-cinema-dark-lighter"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      if (!newPluggyCredentials.clientId || !newPluggyCredentials.clientSecret) {
+                        alert("Por favor, preencha Client ID e Client Secret");
+                        return;
+                      }
+                      setPluggyCredentials({
+                        id: "1",
+                        clientId: newPluggyCredentials.clientId,
+                        clientSecret: newPluggyCredentials.clientSecret,
+                        sandbox: newPluggyCredentials.sandbox !== false,
+                        isActive: newPluggyCredentials.isActive !== false,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                      });
+                      setNewPluggyCredentials({
+                        clientId: "",
+                        clientSecret: "",
+                        sandbox: true,
+                        isActive: true
+                      });
+                      setShowModal(null);
+                      alert("Credenciais Pluggy configuradas com sucesso!");
+                    }}
+                    className="bg-cinema-yellow text-cinema-dark hover:bg-cinema-yellow-dark"
+                  >
+                    Salvar Configuração
                   </Button>
                 </div>
               </CardContent>
