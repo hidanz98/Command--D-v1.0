@@ -37,11 +37,6 @@ export const TimesheetNotifications: React.FC<Props> = ({
   const [notifications, setNotifications] = useState<TimesheetNotification[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  // Don't show timesheet notifications for admin users
-  if (isAdmin) {
-    return null;
-  }
-
   // Update current time every minute
   useEffect(() => {
     const timer = setInterval(() => {
@@ -280,6 +275,11 @@ export const TimesheetNotifications: React.FC<Props> = ({
         return <Bell className="w-5 h-5 text-cinema-yellow" />;
     }
   };
+
+  // Don't show timesheet notifications for admin users
+  if (isAdmin) {
+    return null;
+  }
 
   if (notifications.length === 0) return null;
 
