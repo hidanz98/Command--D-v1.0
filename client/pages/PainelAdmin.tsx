@@ -1054,7 +1054,8 @@ export default function PainelAdmin() {
     })();
   }, []);
   // Legacy mock removed
-  /*{
+  /*
+    {
       id: 1,
       name: "Sony FX6 Full Frame",
       code: "SFX6-001",
@@ -1068,7 +1069,7 @@ export default function PainelAdmin() {
       isKit: false,
       kitItems: [],
       owner: "empresa",
-    },*/
+    },
     {
       id: 2,
       name: "Canon EOS R5C",
@@ -1099,6 +1100,7 @@ export default function PainelAdmin() {
       kitItems: [],
       owner: "CLI-002", // Maria Santos (Produtora Santos)
     },
+  */
     {
       id: 4,
       name: "Atomos Ninja V",
