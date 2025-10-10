@@ -120,89 +120,98 @@ async function main() {
 
   console.log('✅ Created sample employee');
 
-  // Create sample categories
-  const categories = [
-    { name: 'Câmeras', description: 'Câmeras profissionais', color: '#3B82F6' },
-    { name: 'Lentes', description: 'Lentes para câmeras', color: '#10B981' },
-    { name: 'Áudio', description: 'Equipamentos de áudio', color: '#F59E0B' },
-    { name: 'Iluminação', description: 'Equipamentos de iluminação', color: '#EF4444' },
-    { name: 'Suportes', description: 'Suportes e tripés', color: '#8B5CF6' }
+  // Clear existing catalog for this tenant
+  await prisma.product.deleteMany({ where: { tenantId: defaultTenant.id } });
+  await prisma.category.deleteMany({ where: { tenantId: defaultTenant.id } });
+
+  // Create REFLETORES category
+  const reflectorsCategory = await prisma.category.create({
+    data: {
+      name: 'REFLETORES',
+      description: 'Refletores, painéis e tubos LED para cinema e vídeo',
+      color: '#F59E0B',
+      tenantId: defaultTenant.id,
+      isActive: true,
+    }
+  });
+
+  console.log('✅ Categoria REFLETORES criada');
+
+  // Helper for weekly/monthly pricing
+  const weeklyFromDaily = (d: number) => Number((d * 5).toFixed(2));
+  const monthlyFromDaily = (d: number) => Number((d * 20).toFixed(2));
+
+  // Products list (quantity 5 each, including kits)
+  const products = [
+    // AMARAN
+    { name: 'AMARAN 60X (BICOLOR) - REFLETOR', brand: 'Amaran', model: '60X', daily: 180 },
+    { name: 'AMARAN 100X (BICOLOR) - REFLETOR', brand: 'Amaran', model: '100X', daily: 210 },
+    { name: 'AMARAN 200X (BICOLOR) - REFLETOR', brand: 'Amaran', model: '200X', daily: 250 },
+    { name: 'AMARAN 300C (RGBW) - REFLETOR', brand: 'Amaran', model: '300C', daily: 350 },
+    { name: 'AMARAN P60C (RGB) - PAINEL C/ DIFUSOR E COMEIA', brand: 'Amaran', model: 'P60C', daily: 200, specifications: { accessories: ['Difusor', 'Colmeia (grid)'] } },
+    { name: 'AMARAN CARPETE LED F22C (RGBWW)', brand: 'Amaran', model: 'F22C', daily: 600 },
+
+    // APUTURE
+    { name: 'APUTURE 300X (BICOLOR) - REFLETOR', brand: 'Aputure', model: '300X', daily: 400 },
+    { name: 'APUTURE 600X (BICOLOR) - REFLETOR', brand: 'Aputure', model: '600X', daily: 800 },
+    { name: 'APUTURE 600C (RGBW) - REFLETOR', brand: 'Aputure', model: '600C', daily: 900 },
+    { name: 'APUTURE 1.200D PRO - REFLETOR', brand: 'Aputure', model: '1200D Pro', daily: 1500 },
+    { name: 'APUTURE NOVA P300C RGBW - PAINEL', brand: 'Aputure', model: 'NOVA P300C', daily: 550 },
+    { name: 'APUTURE P600C RGBW - PAINEL', brand: 'Aputure', model: 'P600C', daily: 800 },
+    { name: 'APUTURE ELECTRO STORM XT26', brand: 'Aputure', model: 'Electro Storm XT26', daily: 3000 },
+
+    // FRESNEL / PAR
+    { name: 'FRESNEL 5.000w Arri', brand: 'Arri', model: '5K Fresnel', daily: 350 },
+    { name: 'FRESNEL 2.000w Desisti', brand: 'Desisti', model: '2K Fresnel', daily: 140 },
+    { name: 'FRESNEL 1.000w Desisti', brand: 'Desisti', model: '1K Fresnel', daily: 90 },
+    { name: 'FRESNEL 650w Filmgear', brand: 'Filmgear', model: '650w Fresnel', daily: 80 },
+    { name: 'FRESNEL 300w Filmgear', brand: 'Filmgear', model: '300w Fresnel', daily: 70 },
+    { name: 'FRESNEL 150w Filmgear', brand: 'Filmgear', model: '150w Fresnel', daily: 60 },
+
+    { name: 'PAR 64 - 1K (FOCO 2)', brand: 'Generic', model: 'PAR64 1K', daily: 60 },
+
+    // KITS
+    { name: 'APUTURE BULBO B7C - KIT MALETA COM 8 UNIDADES', brand: 'Aputure', model: 'B7c Kit', daily: 350, specifications: { isKit: true, kitItems: ['Bulbo B7c x8', 'Maleta/carregador'], notes: 'Conjunto de lâmpadas RGBWW com carregamento na maleta' } },
+    { name: 'APTURE MC KIT 4 LEDS (Quadrado peq. c/ 2 difusões silicone)', brand: 'Aputure', model: 'MC 4-Light Kit', daily: 250, specifications: { isKit: true, kitItems: ['Aputure MC x4', 'Difusores de silicone x2', 'Case'], notes: 'Leds RGBWW portáteis' } },
+
+    // Tubos / barras
+    { name: 'APUTURE MT PRO RGBW (30 cm) - LED TUBO', brand: 'Aputure', model: 'MT Pro', daily: 100 },
+    { name: 'AMARAN PT 2C (60 cm) - TUBO LED RGBWW', brand: 'Amaran', model: 'PT2c', daily: 120 },
+    { name: 'AMARAN PT 4C (120 cm) - TUBO LED RGBWW', brand: 'Amaran', model: 'PT4c', daily: 150 },
+    { name: 'PAVOTUBE II 30X RGBW - NANLITE (120 cm) - LED TUBO', brand: 'Nanlite', model: 'PavoTube II 30X', daily: 150 },
   ];
 
-  for (const categoryData of categories) {
-    await prisma.category.upsert({
+  for (const [index, p] of products.entries()) {
+    const daily = p.daily;
+    await prisma.product.upsert({
       where: {
-        name_tenantId: {
-          name: categoryData.name,
-          tenantId: defaultTenant.id
+        sku_tenantId: {
+          sku: `REF-${String(index + 1).padStart(3, '0')}`,
+          tenantId: defaultTenant.id,
         }
       },
       update: {},
       create: {
-        ...categoryData,
+        name: p.name,
+        description: 'Equipamento de iluminação profissional para cinema/foto. Valores por diária.',
+        sku: `REF-${String(index + 1).padStart(3, '0')}`,
+        brand: p.brand,
+        model: p.model,
+        dailyPrice: daily,
+        weeklyPrice: weeklyFromDaily(daily),
+        monthlyPrice: monthlyFromDaily(daily),
+        quantity: 5,
+        status: 'AVAILABLE',
+        ownerType: 'COMPANY',
         tenantId: defaultTenant.id,
-        isActive: true
+        categoryId: reflectorsCategory.id,
+        specifications: p.specifications ? p.specifications as any : undefined,
+        tags: ['REFLETORES']
       }
     });
   }
 
-  console.log('✅ Created sample categories');
-
-  // Create sample products
-  const cameraCategory = await prisma.category.findFirst({
-    where: { name: 'Câmeras', tenantId: defaultTenant.id }
-  });
-
-  if (cameraCategory) {
-    const products = [
-      {
-        name: 'Canon EOS R5',
-        description: 'Câmera mirrorless profissional 45MP',
-        sku: 'CAM-001',
-        brand: 'Canon',
-        model: 'EOS R5',
-        dailyPrice: 150.00,
-        weeklyPrice: 800.00,
-        monthlyPrice: 2500.00,
-        quantity: 2,
-        status: 'AVAILABLE',
-        ownerType: 'COMPANY',
-        tenantId: defaultTenant.id
-      },
-      {
-        name: 'Sony FX6',
-        description: 'Câmera de cinema 4K',
-        sku: 'CAM-002',
-        brand: 'Sony',
-        model: 'FX6',
-        dailyPrice: 200.00,
-        weeklyPrice: 1000.00,
-        monthlyPrice: 3500.00,
-        quantity: 1,
-        status: 'AVAILABLE',
-        ownerType: 'COMPANY',
-        tenantId: defaultTenant.id
-      }
-    ];
-
-    for (const productData of products) {
-      await prisma.product.upsert({
-        where: {
-          sku_tenantId: {
-            sku: productData.sku,
-            tenantId: defaultTenant.id
-          }
-        },
-        update: {},
-        create: {
-          ...productData,
-          categoryId: cameraCategory.id
-        }
-      });
-    }
-
-    console.log('✅ Created sample products');
-  }
+  console.log('✅ Produtos REFLETORES cadastrados');
 
   // Create sample order
   const sampleOrder = await prisma.order.create({
