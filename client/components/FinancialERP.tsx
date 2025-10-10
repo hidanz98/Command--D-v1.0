@@ -3222,6 +3222,33 @@ export const FinancialERP: React.FC = () => {
                     />
                   </div>
                 </div>
+                {/* Tutorial / Ajuda */}
+                <div className="flex items-center justify-between bg-cinema-dark-lighter/50 border border-cinema-gray-light/40 rounded-lg p-3">
+                  <div className="text-gray-300 text-sm">
+                    Precisa de ajuda para obter o Client ID e o Secret?
+                  </div>
+                  <div className="flex gap-2">
+                    <a
+                      href="https://pluggy.ai/docs/getting-started/overview"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <Button variant="outline" className="border-cinema-gray-light text-white hover:bg-cinema-dark">
+                        Ver tutorial
+                      </Button>
+                    </a>
+                    <a
+                      href="https://dashboard.pluggy.ai/"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <Button className="bg-cinema-yellow text-cinema-dark hover:bg-cinema-yellow-dark">
+                        Criar/Entrar na Pluggy
+                      </Button>
+                    </a>
+                  </div>
+                </div>
+
                 <div className="flex items-center space-x-2">
                   <input
                     type="checkbox"
