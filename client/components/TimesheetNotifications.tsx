@@ -33,9 +33,14 @@ interface Props {
 export const TimesheetNotifications: React.FC<Props> = ({ 
   position = "top-right" 
 }) => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, isAdmin } = useAuth();
   const [notifications, setNotifications] = useState<TimesheetNotification[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Don't show timesheet notifications for admin users
+  if (isAdmin) {
+    return null;
+  }
 
   // Update current time every minute
   useEffect(() => {
