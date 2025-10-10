@@ -1025,8 +1025,34 @@ export default function PainelAdmin() {
     category: "Gravação",
   });
 
-  // Stock management state
-  const [stockData, setStockData] = useState([
+  // Stock management state (loaded from API)
+  const [stockData, setStockData] = useState<any[]>([]);
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/public/products');
+        const json = await res.json();
+        if (json?.success) {
+          const mapped = json.data.map((p: any, idx: number) => ({
+            id: idx + 1,
+            name: p.name,
+            code: p.sku ?? `REF-${String(idx + 1).padStart(3, '0')}`,
+            category: p.category ?? 'REFLETORES',
+            brand: (p.tags?.[0]) ?? '',
+            type: 'individual',
+            available: p.quantity ?? 0,
+            total: p.quantity ?? 0,
+            reserved: 0,
+            price: p.dailyPrice ?? 0,
+            isKit: false,
+            kitItems: [],
+            owner: 'empresa',
+          }));
+          setStockData(mapped);
+        }
+      } catch {}
+    })();
+  }, []);
     {
       id: 1,
       name: "Sony FX6 Full Frame",
