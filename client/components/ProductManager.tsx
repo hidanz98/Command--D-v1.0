@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -132,6 +132,39 @@ export const ProductManager: React.FC<{
   mode?: 'manage' | 'select';
 }> = ({ onProductSelect, onClose, mode = 'manage' }) => {
   const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/public/products');
+        const json = await res.json();
+        if (json?.success) {
+          const mapped: Product[] = json.data.map((p: any, idx: number) => ({
+            id: p.id ?? String(idx + 1),
+            name: p.name,
+            description: p.description ?? '',
+            price: p.dailyPrice ?? 0,
+            image: (p.images?.[0]) ?? '/placeholder.svg',
+            category: p.category ?? 'REFLETORES',
+            ecommerceEnabled: true,
+            isKit: false,
+            kitItems: [],
+            tags: p.tags ?? [],
+            availability: (p.available ?? true) ? 'available' : 'maintenance',
+            featured: (p.tags ?? []).includes('featured'),
+            dailyRate: p.dailyPrice ?? 0,
+            weeklyRate: undefined,
+            monthlyRate: undefined,
+            specifications: {},
+            images: p.images && p.images.length ? p.images : ['/placeholder.svg'],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }));
+          if (mapped.length) setProducts(mapped);
+        }
+      } catch {}
+    })();
+  }, []);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [searchTerm, setSearchTerm] = useState('');

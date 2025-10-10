@@ -42,8 +42,8 @@ interface Product {
   description: string;
 }
 
-// Extended products catalog
-const allProducts: Product[] = [
+// NOTE: Replaced static catalog by API-driven list (fallback remains if API fails)
+let allProducts: Product[] = [
   {
     id: "1",
     name: "Sony FX6 Full Frame",
@@ -293,6 +293,29 @@ const allProducts: Product[] = [
   },
 ];
 
+async function fetchProductsFromApi(): Promise<Product[]> {
+  try {
+    const res = await fetch('/api/public/products');
+    const json = await res.json();
+    if (!json?.success) return [];
+    const fromApi: Product[] = json.data.map((p: any, idx: number) => ({
+      id: p.id ?? String(idx + 1),
+      name: p.name,
+      category: p.category ?? 'REFLETORES',
+      pricePerDay: p.dailyPrice ?? 0,
+      image: (p.images?.[0]) ?? '/placeholder.svg',
+      rating: 4.8,
+      reviews: 20,
+      available: p.available ?? true,
+      featured: p.featured ?? false,
+      description: p.description ?? '',
+    }));
+    return fromApi.length ? fromApi : [];
+  } catch {
+    return [];
+  }
+}
+
 const categories = ["Todas", "Câmeras", "Lentes", "Monitores", "Eletrônicos", "Iluminação", "Áudio", "Suportes"];
 
 const categoryIcons = {
@@ -320,21 +343,33 @@ export default function Equipamentos() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<typeof allProducts>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [apiProducts, setApiProducts] = useState<typeof allProducts>([]);
 
-  // Debug logs
+  // Load from API (public endpoint) and stop showing mock data when available
   useEffect(() => {
-    console.log("Equipamentos component mounted");
-    console.log("Categoria:", categoria);
-    console.log("Subcategoria:", subcategoria);
-    console.log("Total products:", allProducts.length);
-    
-    // Simular carregamento para debug
-    const timer = setTimeout(() => {
-      console.log("Equipamentos loaded successfully");
-      setIsLoading(false);
-    }, 100);
-    
-    return () => clearTimeout(timer);
+    (async () => {
+      try {
+        const res = await fetch('/api/public/products');
+        const json = await res.json();
+        if (json?.success && Array.isArray(json.data) && json.data.length) {
+          const mapped = json.data.map((p: any, idx: number) => ({
+            id: p.id ?? String(idx + 1),
+            name: p.name,
+            category: p.category ?? 'REFLETORES',
+            pricePerDay: p.dailyPrice ?? 0,
+            image: (p.images?.[0]) ?? '/placeholder.svg',
+            rating: 4.8,
+            reviews: 20,
+            available: p.available ?? true,
+            featured: p.featured ?? false,
+            description: p.description ?? '',
+          }));
+          setApiProducts(mapped);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    })();
   }, []);
 
   // Generate search suggestions
@@ -382,7 +417,7 @@ export default function Equipamentos() {
   }, [categoria, subcategoria]);
 
   const filteredProducts = useMemo(() => {
-    let filtered = allProducts;
+    let filtered = apiProducts.length ? apiProducts : allProducts;
 
     // Filter by category
     if (selectedCategory !== "Todas") {

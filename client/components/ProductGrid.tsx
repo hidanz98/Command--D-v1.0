@@ -18,7 +18,7 @@ interface Product {
   featured?: boolean;
 }
 
-// Sample products data
+// Fallback sample products (real data will come from API)
 const sampleProducts: Product[] = [
   {
     id: "1",
@@ -104,9 +104,33 @@ export default function ProductGrid({
 }: ProductGridProps) {
   const { dispatch } = useCart();
 
-  let products = showFeaturedOnly
-    ? sampleProducts.filter((p) => p.featured)
-    : sampleProducts;
+  const [apiProducts, setApiProducts] = React.useState<Product[] | null>(null);
+
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/public/products');
+        const json = await res.json();
+        if (json?.success) {
+          const mapped: Product[] = json.data.map((p: any, idx: number) => ({
+            id: p.id ?? String(idx + 1),
+            name: p.name,
+            category: p.category ?? 'REFLETORES',
+            pricePerDay: p.dailyPrice ?? 0,
+            image: (p.images?.[0]) ?? '/placeholder.svg',
+            rating: 4.8,
+            reviews: 20,
+            available: p.available ?? true,
+            featured: p.featured ?? false,
+          }));
+          setApiProducts(mapped);
+        }
+      } catch {}
+    })();
+  }, []);
+
+  let base = apiProducts && apiProducts.length ? apiProducts : sampleProducts;
+  let products = showFeaturedOnly ? base.filter((p) => p.featured) : base;
 
   if (maxItems) {
     products = products.slice(0, maxItems);

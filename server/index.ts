@@ -48,6 +48,7 @@ import {
 } from "./routes/master";
 import partnershipsRouter from "./routes/partnerships";
 import { startHeartbeat } from "./jobs/heartbeat";
+import { getPublicProducts } from "./routes/public";
 import { startLicenseChecker } from "./jobs/licenseChecker";
 
 export function createServer() {
@@ -72,6 +73,7 @@ export function createServer() {
   // Public API Routes
   app.get("/api/ping", handlePing);
   app.get("/api/demo", handleDemo);
+  app.get("/api/public/products", getPublicProducts);
   
   // Auth Routes
   app.post("/api/auth/login", login);
