@@ -421,7 +421,7 @@ export function CabecaEfeito() {
       </div>
 
       {/* Notification - Only for authenticated admins */}
-      {showNotification && isAuthenticated && isAdmin && (
+      {false && showNotification && isAuthenticated && isAdmin && (
         <div className="fixed bottom-4 right-4 bg-white rounded-lg shadow-xl border border-pink-500 max-w-sm z-50">
           <div className="p-4">
             <div className="flex items-start justify-between mb-3">
