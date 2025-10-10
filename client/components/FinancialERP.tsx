@@ -582,53 +582,6 @@ const generateMockTransactions = (): Transaction[] => {
 
 const MOCK_TRANSACTIONS: Transaction[] = generateMockTransactions();
 
-const MOCK_BANK_ACCOUNTS: BankAccount[] = [
-  {
-    id: "1",
-    name: "Conta Corrente Principal",
-    bank: "Banco do Brasil",
-    agency: "1234-5",
-    account: "12345-6",
-    balance: 45680.5,
-    type: "checking",
-    active: true,
-    lastUpdate: "2025-01-15T10:30:00Z",
-  },
-  {
-    id: "2",
-    name: "Poupança Reserva de Emergência",
-    bank: "Caixa Econômica Federal",
-    agency: "0987",
-    account: "98765-4",
-    balance: 125000.0,
-    type: "savings",
-    active: true,
-    lastUpdate: "2025-01-15T10:30:00Z",
-  },
-  {
-    id: "3",
-    name: "Investimentos CDB",
-    bank: "Bradesco",
-    agency: "5678",
-    account: "11111-1",
-    balance: 80000.0,
-    type: "investment",
-    active: true,
-    lastUpdate: "2025-01-15T10:30:00Z",
-  },
-  {
-    id: "4",
-    name: "PIX Empresarial",
-    bank: "Nubank",
-    agency: "0001",
-    account: "99999-9",
-    balance: 15000.0,
-    type: "pix",
-    active: true,
-    lastUpdate: "2025-01-15T15:45:00Z",
-  },
-];
-
 const MOCK_COST_CENTERS: CostCenter[] = [
   {
     id: "operacoes",
