@@ -1053,7 +1053,8 @@ export default function PainelAdmin() {
       } catch {}
     })();
   }, []);
-    {
+  // Legacy mock removed
+  /*{
       id: 1,
       name: "Sony FX6 Full Frame",
       code: "SFX6-001",
@@ -1066,8 +1067,8 @@ export default function PainelAdmin() {
       price: 450.0,
       isKit: false,
       kitItems: [],
-      owner: "empresa", // Próprio da empresa
-    },
+      owner: "empresa",
+    },*/
     {
       id: 2,
       name: "Canon EOS R5C",
