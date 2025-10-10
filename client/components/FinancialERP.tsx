@@ -3228,13 +3228,14 @@ export const FinancialERP: React.FC = () => {
                     Precisa de ajuda para obter o Client ID e o Secret?
                   </div>
                   <div className="flex gap-2">
-                    <a
-                      href="https://pluggy.ai/docs/getting-started/overview"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
+                    <a href="https://pluggy.ai/docs/getting-started/overview" target="_blank" rel="noreferrer">
                       <Button variant="outline" className="border-cinema-gray-light text-white hover:bg-cinema-dark">
-                        Ver tutorial
+                        Ver tutorial (Docs)
+                      </Button>
+                    </a>
+                    <a href="https://github.com/pluggyai/meu-pluggy" target="_blank" rel="noreferrer">
+                      <Button variant="outline" className="border-cinema-gray-light text-white hover:bg-cinema-dark">
+                        Guia Meu Pluggy (GitHub)
                       </Button>
                     </a>
                     <a
