@@ -1210,7 +1210,7 @@ export default function PainelAdmin() {
       ],
     },
   */
-  ]);
+
 
   // Stock search and filtering state
   const [stockSearch, setStockSearch] = useState("");
