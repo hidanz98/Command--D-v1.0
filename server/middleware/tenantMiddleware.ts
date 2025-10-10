@@ -5,6 +5,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
+import { prisma } from '../lib/prisma';
 
 declare global {
   namespace Express {
@@ -18,33 +19,29 @@ declare global {
  * Middleware que requer tenantId
  * Extrai do header x-tenant-id ou do usuário autenticado
  */
-export const requireTenant = (
+export const requireTenant = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    // Tenta pegar do header primeiro
+    // 1) Header tem prioridade
     let tenantId = req.headers['x-tenant-id'] as string;
 
-    // Se não tem no header, tenta pegar do usuário autenticado
-    if (!tenantId && req.userId) {
-      // Por enquanto, usa um tenant padrão
-      // TODO: Buscar tenantId do usuário no banco
-      tenantId = 'default-tenant';
+    // 2) Sem header: tente obter o tenant padrão do banco
+    if (!tenantId) {
+      const tenant = await prisma.tenant.findFirst({ orderBy: { createdAt: 'asc' } });
+      if (tenant) tenantId = tenant.id;
     }
 
-    // Se ainda não tem, retorna erro
     if (!tenantId) {
       return res.status(400).json({
         error: 'Tenant ID obrigatório',
-        message: 'Envie o header x-tenant-id ou faça login'
+        message: 'Nenhum tenant encontrado. Crie um tenant ou envie o header x-tenant-id.'
       });
     }
 
-    // Injeta o tenantId no request
     req.tenantId = tenantId;
-
     next();
   } catch (error) {
     console.error('Erro no middleware de tenant:', error);
