@@ -3223,30 +3223,28 @@ export const FinancialERP: React.FC = () => {
                   </div>
                 </div>
                 {/* Tutorial / Ajuda */}
-                <div className="flex items-center justify-between bg-cinema-dark-lighter/50 border border-cinema-gray-light/40 rounded-lg p-3">
-                  <div className="text-gray-300 text-sm">
-                    Precisa de ajuda para obter o Client ID e o Secret?
-                  </div>
-                  <div className="flex gap-2">
-                    <a href="https://pluggy.ai/docs/getting-started/overview" target="_blank" rel="noreferrer">
-                      <Button variant="outline" className="border-cinema-gray-light text-white hover:bg-cinema-dark">
-                        Ver tutorial (Docs)
-                      </Button>
-                    </a>
-                    <a href="https://github.com/pluggyai/meu-pluggy" target="_blank" rel="noreferrer">
-                      <Button variant="outline" className="border-cinema-gray-light text-white hover:bg-cinema-dark">
-                        Guia Meu Pluggy (GitHub)
-                      </Button>
-                    </a>
-                    <a
-                      href="https://dashboard.pluggy.ai/"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      <Button className="bg-cinema-yellow text-cinema-dark hover:bg-cinema-yellow-dark">
-                        Criar/Entrar na Pluggy
-                      </Button>
-                    </a>
+                <div className="bg-cinema-dark-lighter/50 border border-cinema-gray-light/40 rounded-lg p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
+                    <div className="text-gray-300 text-sm leading-relaxed">
+                      Precisa de ajuda para obter o <span className="font-medium text-white">Client ID</span> e o <span className="font-medium text-white">Client Secret</span>? Siga o passo a passo ou acesse seu painel da Pluggy.
+                    </div>
+                    <div className="flex flex-wrap gap-2 justify-start md:justify-end">
+                      <a href="https://pluggy.ai/docs/getting-started/overview" target="_blank" rel="noreferrer">
+                        <Button variant="outline" className="border-cinema-gray-light text-white hover:bg-cinema-dark">
+                          <FileText className="w-4 h-4 mr-2" /> Ver tutorial
+                        </Button>
+                      </a>
+                      <a href="https://github.com/pluggyai/meu-pluggy" target="_blank" rel="noreferrer">
+                        <Button variant="outline" className="border-cinema-gray-light text-white hover:bg-cinema-dark">
+                          <ExternalLink className="w-4 h-4 mr-2" /> Meu Pluggy (GitHub)
+                        </Button>
+                      </a>
+                      <a href="https://dashboard.pluggy.ai/" target="_blank" rel="noreferrer">
+                        <Button className="bg-cinema-yellow text-cinema-dark hover:bg-cinema-yellow-dark whitespace-nowrap">
+                          <Settings className="w-4 h-4 mr-2" /> Dashboard Pluggy
+                        </Button>
+                      </a>
+                    </div>
                   </div>
                 </div>
 
