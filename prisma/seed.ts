@@ -254,7 +254,10 @@ async function main() {
 main()
   .catch((e) => {
     console.error('❌ Error seeding database:', e);
-    process.exit(1);
+    // Use globalThis.process for compatibility if 'process' is not recognized in some environments.
+    if (typeof process !== "undefined" && typeof process.exit === "function") {
+      process.exit(1);
+    }
   })
   .finally(async () => {
     await prisma.$disconnect();
