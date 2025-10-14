@@ -27,7 +27,7 @@ export default function FacialRecognitionCamera({
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const faceDetectionRef = useRef<FaceDetection | null>(null);
+  const faceDetectionRef = useRef<any>(null);
   const [isReady, setIsReady] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [faceDetected, setFaceDetected] = useState(false);
@@ -37,7 +37,7 @@ export default function FacialRecognitionCamera({
 
   const initializeFaceDetection = useCallback(async () => {
     try {
-      const faceDetection = new FaceDetection({
+      const faceDetection = FaceDetection({
         locateFile: (file) => {
           return `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`;
         }

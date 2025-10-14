@@ -19,6 +19,9 @@
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
       "@/*": [
