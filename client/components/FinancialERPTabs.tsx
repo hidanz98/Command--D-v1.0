@@ -28,6 +28,8 @@ import {
   Clock,
   AlertTriangle,
   CheckCircle,
+  Search,
+  Building2,
   Download,
   Upload,
   Eye,
@@ -1339,7 +1341,7 @@ export const ReportsTab: React.FC = () => {
 export const TaxesTab: React.FC = () => {
   // ===========================================
   // 🏆 SISTEMA DE IMPOSTOS PROFISSIONAL
-  // Desenvolvido como o melhor contador do mundo
+  // Integrado com BrasilAPI para dados do CNPJ
   // ===========================================
 
   // Tabela do Simples Nacional - Anexo III (Serviços)
@@ -1354,11 +1356,10 @@ export const TaxesTab: React.FC = () => {
 
   // Estado com histórico de faturamento (12 meses)
   const [taxConfig, setTaxConfig] = useState(() => {
-    const saved = localStorage.getItem('taxConfig_v2');
+    const saved = localStorage.getItem('taxConfig_v3');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // Garantir que historicoFaturamento existe
         if (!parsed.historicoFaturamento || !Array.isArray(parsed.historicoFaturamento)) {
           parsed.historicoFaturamento = Array(12).fill(15000);
         }
@@ -1372,22 +1373,97 @@ export const TaxesTab: React.FC = () => {
 
   function getDefaultTaxConfig() {
     return {
+      cnpj: '',
+      razaoSocial: '',
+      porte: '',
+      cnae: '',
+      cnaDescricao: '',
+      cidade: '',
+      uf: '',
+      optanteSimples: false,
       regime: 'simples',
       faturamentoMensal: 15000,
-      folhaDePagamento: 5000, // Para cálculo do Fator R
-      historicoFaturamento: Array(12).fill(15000), // RBT12
-      issRate: 5.0, // ISS municipal (BH = 5%)
+      folhaDePagamento: 5000,
+      historicoFaturamento: Array(12).fill(15000),
+      issRate: 5.0,
       calcularAutomatico: true,
+      dataConsultaCNPJ: null,
     };
   }
 
   const [taxes, setTaxes] = useState<TaxCalculation[]>([]);
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [isFetchingCNPJ, setIsFetchingCNPJ] = useState(false);
+  const [cnpjInput, setCnpjInput] = useState(taxConfig.cnpj || '');
+
+  // Buscar dados do CNPJ via BrasilAPI
+  const buscarDadosCNPJ = async () => {
+    const cnpjLimpo = cnpjInput.replace(/\D/g, '');
+    if (cnpjLimpo.length !== 14) {
+      alert('❌ CNPJ inválido! Digite 14 números.');
+      return;
+    }
+
+    setIsFetchingCNPJ(true);
+    try {
+      const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpjLimpo}`);
+      if (!response.ok) {
+        throw new Error('CNPJ não encontrado');
+      }
+      const data = await response.json();
+      
+      // Determinar regime baseado nos dados
+      let regime = 'presumido';
+      if (data.opcao_pelo_simples) {
+        regime = 'simples';
+      }
+      
+      // ISS por cidade (BH = 5%, SP = 2% a 5%, etc)
+      let issRate = 5.0;
+      if (data.municipio === 'SAO PAULO') issRate = 5.0;
+      if (data.municipio === 'RIO DE JANEIRO') issRate = 5.0;
+      if (data.municipio === 'BELO HORIZONTE') issRate = 5.0;
+
+      setTaxConfig(prev => ({
+        ...prev,
+        cnpj: cnpjLimpo,
+        razaoSocial: data.razao_social || '',
+        porte: data.porte || '',
+        cnae: data.cnae_fiscal?.toString() || '',
+        cnaeDescricao: data.cnae_fiscal_descricao || '',
+        cidade: data.municipio || '',
+        uf: data.uf || '',
+        optanteSimples: data.opcao_pelo_simples || false,
+        regime: regime,
+        issRate: issRate,
+        dataConsultaCNPJ: new Date().toISOString(),
+      }));
+
+      alert(`✅ CNPJ ENCONTRADO!\n\n📋 ${data.razao_social}\n🏢 Porte: ${data.porte}\n📍 ${data.municipio}/${data.uf}\n💼 Simples Nacional: ${data.opcao_pelo_simples ? 'SIM ✅' : 'NÃO ❌'}\n🏭 CNAE: ${data.cnae_fiscal_descricao}`);
+    } catch (error) {
+      alert('❌ Erro ao buscar CNPJ. Verifique se o número está correto.');
+    } finally {
+      setIsFetchingCNPJ(false);
+    }
+  };
+
+  // Formatar CNPJ
+  const formatarCNPJ = (valor: string) => {
+    const numeros = valor.replace(/\D/g, '');
+    if (numeros.length <= 14) {
+      return numeros
+        .replace(/^(\d{2})(\d)/, '$1.$2')
+        .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+        .replace(/\.(\d{3})(\d)/, '.$1/$2')
+        .replace(/(\d{4})(\d)/, '$1-$2');
+    }
+    return valor;
+  };
 
   // Salvar configurações no localStorage
   useEffect(() => {
-    localStorage.setItem('taxConfig_v2', JSON.stringify(taxConfig));
+    localStorage.setItem('taxConfig_v3', JSON.stringify(taxConfig));
   }, [taxConfig]);
 
   // Calcular RBT12 (Receita Bruta Total dos últimos 12 meses)
@@ -1616,8 +1692,8 @@ export const TaxesTab: React.FC = () => {
     <div className="space-y-6">
       {/* Modal de Configuração */}
       {showConfigModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <Card className="bg-cinema-dark border-cinema-gray-light w-full max-w-lg">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 pt-20" style={{ zIndex: 9999 }}>
+          <Card className="bg-cinema-dark border-cinema-gray-light w-full max-w-2xl max-h-[85vh] overflow-y-auto">
             <CardHeader>
               <CardTitle className="text-white flex items-center justify-between">
                 <span>⚙️ Configuração de Impostos</span>
@@ -1627,6 +1703,50 @@ export const TaxesTab: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* CNPJ com integração BrasilAPI */}
+              <div className="p-4 bg-cinema-gray rounded-lg border border-cinema-yellow/30">
+                <Label className="text-cinema-yellow font-semibold text-lg mb-2 block">
+                  🔍 Buscar Dados do CNPJ (BrasilAPI)
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={cnpjInput}
+                    onChange={(e) => setCnpjInput(formatarCNPJ(e.target.value))}
+                    placeholder="00.000.000/0000-00"
+                    className="bg-cinema-dark-lighter border-cinema-gray-light text-white flex-1"
+                    maxLength={18}
+                  />
+                  <Button 
+                    onClick={buscarDadosCNPJ}
+                    disabled={isFetchingCNPJ}
+                    className="bg-cinema-yellow text-cinema-dark hover:bg-yellow-400"
+                  >
+                    {isFetchingCNPJ ? (
+                      <span className="animate-spin">⏳</span>
+                    ) : (
+                      <>
+                        <Search className="w-4 h-4 mr-1" />
+                        Buscar
+                      </>
+                    )}
+                  </Button>
+                </div>
+                
+                {/* Dados do CNPJ encontrado */}
+                {taxConfig.razaoSocial && (
+                  <div className="mt-3 p-3 bg-green-900/30 rounded border border-green-500/50">
+                    <p className="text-green-400 font-semibold">{taxConfig.razaoSocial}</p>
+                    <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
+                      <p className="text-gray-300">📍 {taxConfig.cidade}/{taxConfig.uf}</p>
+                      <p className="text-gray-300">🏢 {taxConfig.porte}</p>
+                      <p className="text-gray-300">💼 Simples: {taxConfig.optanteSimples ? '✅ SIM' : '❌ NÃO'}</p>
+                      <p className="text-gray-300">🏭 CNAE: {taxConfig.cnae}</p>
+                    </div>
+                    <p className="text-gray-400 text-xs mt-2">{taxConfig.cnaeDescricao}</p>
+                  </div>
+                )}
+              </div>
+
               <div>
                 <Label className="text-white">Regime Tributário</Label>
                 <Select 
@@ -1637,11 +1757,14 @@ export const TaxesTab: React.FC = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="simples">Simples Nacional</SelectItem>
+                    <SelectItem value="simples">Simples Nacional (Anexo III)</SelectItem>
                     <SelectItem value="presumido">Lucro Presumido</SelectItem>
                     <SelectItem value="real">Lucro Real</SelectItem>
                   </SelectContent>
                 </Select>
+                {taxConfig.optanteSimples && taxConfig.regime !== 'simples' && (
+                  <p className="text-yellow-400 text-xs mt-1">⚠️ Empresa é optante do Simples Nacional!</p>
+                )}
               </div>
 
               <div>
