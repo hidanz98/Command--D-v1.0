@@ -34,10 +34,8 @@ import {
   Upload,
   Eye,
   Filter,
-  Search,
   ArrowUpRight,
   ArrowDownRight,
-  Building2,
   User,
   PlusCircle,
   MinusCircle,
@@ -1679,9 +1677,12 @@ export const TaxesTab: React.FC = () => {
 
   // Salvar configurações
   const salvarConfig = () => {
-    localStorage.setItem('taxConfig', JSON.stringify(taxConfig));
+    localStorage.setItem('taxConfig_v3', JSON.stringify(taxConfig));
     setShowConfigModal(false);
-    alert('✅ Configurações salvas!');
+    
+    const rbt12 = calcularRBT12();
+    const aliquota = calcularAliquotaEfetiva();
+    alert(`✅ Configurações salvas!\n\n📊 Resumo:\n• Faturamento Mensal: R$ ${taxConfig.faturamentoMensal.toLocaleString('pt-BR')}\n• RBT12: R$ ${rbt12.toLocaleString('pt-BR')}\n• Alíquota Efetiva: ${aliquota.toFixed(2)}%`);
   };
 
   const totalTaxes = taxes.reduce((sum, tax) => sum + tax.amount, 0);
@@ -1768,27 +1769,52 @@ export const TaxesTab: React.FC = () => {
               </div>
 
               <div>
-                <Label className="text-white">Faturamento Mensal (R$)</Label>
+                <Label className="text-white">Faturamento Mensal Médio (R$)</Label>
                 <Input
                   type="number"
                   value={taxConfig.faturamentoMensal}
-                  onChange={(e) => setTaxConfig({...taxConfig, faturamentoMensal: parseFloat(e.target.value) || 0})}
+                  onChange={(e) => {
+                    const valor = parseFloat(e.target.value) || 0;
+                    // Atualiza o histórico com o mesmo valor para todos os 12 meses
+                    setTaxConfig({
+                      ...taxConfig, 
+                      faturamentoMensal: valor,
+                      historicoFaturamento: Array(12).fill(valor)
+                    });
+                  }}
                   className="bg-cinema-dark-lighter border-cinema-gray-light text-white"
                 />
+                <p className="text-gray-400 text-xs mt-1">
+                  RBT12 (12 meses): R$ {((taxConfig.faturamentoMensal || 0) * 12).toLocaleString('pt-BR')}
+                </p>
               </div>
 
               {taxConfig.regime === 'simples' && (
-                <div>
-                  <Label className="text-white">Alíquota Simples (%)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={taxConfig.simplesRate}
-                    onChange={(e) => setTaxConfig({...taxConfig, simplesRate: parseFloat(e.target.value) || 0})}
-                    className="bg-cinema-dark-lighter border-cinema-gray-light text-white"
-                  />
-                  <p className="text-gray-400 text-xs mt-1">Anexo III: 6% a 33% (depende do faturamento)</p>
-                </div>
+                <>
+                  <div>
+                    <Label className="text-white">Folha de Pagamento Mensal (R$)</Label>
+                    <Input
+                      type="number"
+                      value={taxConfig.folhaDePagamento || 0}
+                      onChange={(e) => setTaxConfig({...taxConfig, folhaDePagamento: parseFloat(e.target.value) || 0})}
+                      className="bg-cinema-dark-lighter border-cinema-gray-light text-white"
+                    />
+                    <p className="text-gray-400 text-xs mt-1">
+                      Fator R: {(((taxConfig.folhaDePagamento || 0) * 12) / ((taxConfig.faturamentoMensal || 1) * 12) * 100).toFixed(2)}%
+                      {((taxConfig.folhaDePagamento || 0) * 12) / ((taxConfig.faturamentoMensal || 1) * 12) >= 0.28 ? ' ✅ Anexo III' : ' ⚠️ Pode ser Anexo V'}
+                    </p>
+                  </div>
+                  
+                  <div className="p-3 bg-blue-900/30 rounded border border-blue-500/50">
+                    <p className="text-blue-400 font-semibold mb-2">📊 Cálculo Automático</p>
+                    <div className="text-sm text-gray-300 space-y-1">
+                      <p>• RBT12: R$ {((taxConfig.faturamentoMensal || 0) * 12).toLocaleString('pt-BR')}</p>
+                      <p>• Faixa: {encontrarFaixaSimples((taxConfig.faturamentoMensal || 0) * 12).faixa}ª</p>
+                      <p>• Alíquota Nominal: {encontrarFaixaSimples((taxConfig.faturamentoMensal || 0) * 12).aliquota}%</p>
+                      <p>• Alíquota Efetiva: <span className="text-cinema-yellow font-bold">{calcularAliquotaEfetiva().toFixed(2)}%</span></p>
+                    </div>
+                  </div>
+                </>
               )}
 
               {taxConfig.regime !== 'simples' && (

@@ -682,7 +682,18 @@ export const FinancialERP: React.FC = () => {
   const isMasterAdmin = user?.role === 'master_admin' || user?.email === 'master@bilscinema.com';
   
   const [activeTab, setActiveTab] = useState<string>("dashboard");
-  const [companyConfig, setCompanyConfig] = useState<CompanyConfig>(MOCK_COMPANY_CONFIG);
+  const [companyConfig, setCompanyConfig] = useState<CompanyConfig>(() => {
+    // Carregar dados salvos do localStorage
+    const saved = localStorage.getItem('companyConfig');
+    if (saved) {
+      try {
+        return { ...MOCK_COMPANY_CONFIG, ...JSON.parse(saved) };
+      } catch {
+        return MOCK_COMPANY_CONFIG;
+      }
+    }
+    return MOCK_COMPANY_CONFIG;
+  });
   const [editingCompanyConfig, setEditingCompanyConfig] = useState<CompanyConfig>(MOCK_COMPANY_CONFIG);
   const [isEditingCompany, setIsEditingCompany] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>(MOCK_EMPLOYEES);
@@ -874,8 +885,10 @@ export const FinancialERP: React.FC = () => {
   const saveCompanyConfig = () => {
     setCompanyConfig(editingCompanyConfig);
     setIsEditingCompany(false);
-    // Aqui você pode adicionar uma chamada para salvar no backend
+    // Salvar no localStorage para persistência
+    localStorage.setItem('companyConfig', JSON.stringify(editingCompanyConfig));
     console.log("Dados da empresa salvos:", editingCompanyConfig);
+    alert('✅ Dados da empresa salvos com sucesso!');
   };
 
   // Estado para loading da busca CNPJ
