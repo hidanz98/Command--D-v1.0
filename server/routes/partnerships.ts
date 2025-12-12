@@ -132,12 +132,15 @@ export const requestPartnership: RequestHandler = async (req: AuthenticatedReque
     // Criar solicitação de parceria
     const partnership = await masterPrisma.partnership.create({
       data: {
+        licenseHolderId: currentLicense.id,
+        partnerName: targetLicense.companyName,
+        partnerEmail: targetLicense.email,
+        partnerPhone: targetLicense.phone,
         partnerFromId: currentLicense.id,
         partnerToId: targetLicense.id,
         status: 'PENDING',
         shareClientData: true,
-        allowCrossRental: allowCrossRental || false,
-        requestedBy: req.user?.userId
+        allowCrossRental: allowCrossRental || false
       }
     });
 
@@ -146,13 +149,16 @@ export const requestPartnership: RequestHandler = async (req: AuthenticatedReque
       data: {
         action: 'partnership_requested',
         entity: 'partnership',
-        entityId: partnership.id,
-        userEmail: req.user?.email,
-        details: {
-          from: currentLicense.companyName,
-          to: targetLicense.companyName,
-          message: requestMessage
-        }
+        metadata: {
+          entityId: partnership.id,
+          userEmail: req.user?.email,
+          details: {
+            from: currentLicense.companyName,
+            to: targetLicense.companyName,
+            message: requestMessage
+          }
+        },
+        licenseHolderId: currentLicense.id
       }
     });
 

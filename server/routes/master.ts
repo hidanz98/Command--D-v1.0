@@ -117,7 +117,7 @@ export const createLicense: RequestHandler = async (req, res) => {
     }
 
     // Verificar se email já existe
-    const existingEmail = await masterPrisma.licenseHolder.findUnique({
+    const existingEmail = await masterPrisma.licenseHolder.findFirst({
       where: { ownerEmail }
     });
 
@@ -169,26 +169,28 @@ export const createLicense: RequestHandler = async (req, res) => {
     const nextPayment = new Date();
     nextPayment.setMonth(nextPayment.getMonth() + 1);
 
+    // Definir data de expiração
+    const expiryDate = plan === 'TRIAL' ? trialEndsAt : new Date(new Date().setFullYear(new Date().getFullYear() + 1));
+
     const license = await masterPrisma.licenseHolder.create({
       data: {
         companyName,
         cnpj,
+        email: ownerEmail || companyName + '@tempmail.com',
         ownerName,
         ownerEmail,
         ownerPhone,
-        ownerAddress,
+        address: ownerAddress,
         licenseKey,
         licenseStatus: plan === 'TRIAL' ? 'TRIAL' : 'ACTIVE',
         trialEndsAt: plan === 'TRIAL' ? trialEndsAt : null,
+        expiryDate: expiryDate,
         plan,
         monthlyFee,
         maxUsers,
         maxProducts,
         subdomain,
-        serverUrl,
-        serverIp,
         apiKey,
-        apiSecret: apiSecretHash,
         isActive: true,
         enabledFeatures: enabledFeatures || {
           nfse: true,
@@ -206,12 +208,15 @@ export const createLicense: RequestHandler = async (req, res) => {
       data: {
         action: 'license_created',
         entity: 'license',
-        entityId: license.id,
-        details: {
-          companyName,
-          plan,
-          subdomain
-        }
+        metadata: {
+          entityId: license.id,
+          details: {
+            companyName,
+            plan,
+            subdomain
+          }
+        },
+        licenseHolderId: license.id
       }
     });
 
@@ -254,10 +259,13 @@ export const updateLicense: RequestHandler = async (req, res) => {
 
     await masterPrisma.masterAuditLog.create({
       data: {
+        licenseHolderId: id,
         action: 'license_updated',
         entity: 'license',
-        entityId: id,
-        details: updates
+        metadata: {
+          entityId: id,
+          details: updates
+        }
       }
     });
 
@@ -290,10 +298,13 @@ export const suspendLicense: RequestHandler = async (req, res) => {
 
     await masterPrisma.masterAuditLog.create({
       data: {
+        licenseHolderId: id,
         action: 'license_suspended',
         entity: 'license',
-        entityId: id,
-        details: { reason }
+        metadata: {
+          entityId: id,
+          details: { reason }
+        }
       }
     });
 
@@ -325,9 +336,12 @@ export const activateLicense: RequestHandler = async (req, res) => {
 
     await masterPrisma.masterAuditLog.create({
       data: {
+        licenseHolderId: id,
         action: 'license_activated',
         entity: 'license',
-        entityId: id
+        metadata: {
+          entityId: id
+        }
       }
     });
 
@@ -368,8 +382,7 @@ export const receiveHeartbeat: RequestHandler = async (req, res) => {
       where: { id: license.id },
       data: {
         lastHeartbeat: new Date(),
-        version,
-        systemHealth: metrics
+        version
       }
     });
 
@@ -404,18 +417,24 @@ export const registerPayment: RequestHandler = async (req, res) => {
       transactionId
     } = req.body;
 
-    const payment = await masterPrisma.payment.create({
-      data: {
+    // Payment precisa de tenantId, então vamos usar Invoice para LicenseHolder
+    // Atualizar a Invoice como paga
+    const invoice = await masterPrisma.invoice.findFirst({
+      where: {
         licenseHolderId,
-        amount,
-        referenceMonth: new Date(referenceMonth),
-        dueDate: new Date(referenceMonth),
-        paidAt: new Date(),
-        status: 'PAID',
-        paymentMethod,
-        transactionId
+        referenceMonth
       }
     });
+
+    if (invoice) {
+      await masterPrisma.invoice.update({
+        where: { id: invoice.id },
+        data: {
+          status: 'paid',
+          paidAt: new Date()
+        }
+      });
+    }
 
     // Atualizar status da licença
     await masterPrisma.licenseHolder.update({
@@ -434,16 +453,19 @@ export const registerPayment: RequestHandler = async (req, res) => {
 
     await masterPrisma.masterAuditLog.create({
       data: {
+        licenseHolderId: licenseHolderId,
         action: 'payment_received',
-        entity: 'payment',
-        entityId: payment.id,
-        details: { amount, licenseHolderId }
+        entity: 'invoice',
+        metadata: {
+          entityId: invoice?.id || 'unknown',
+          details: { amount, licenseHolderId, referenceMonth }
+        }
       }
     });
 
     res.status(201).json({
       success: true,
-      data: { payment }
+      data: { invoice, message: 'Pagamento registrado com sucesso' }
     });
   } catch (error) {
     console.error('Erro ao registrar pagamento:', error);

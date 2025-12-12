@@ -342,10 +342,10 @@ export default function Equipamentos() {
   const [showAvailableOnly, setShowAvailableOnly] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<typeof allProducts>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [apiProducts, setApiProducts] = useState<typeof allProducts>([]);
 
-  // Load from API (public endpoint) and stop showing mock data when available
+  // Load from API (public endpoint) and replace static data when available
   useEffect(() => {
     (async () => {
       try {
@@ -366,8 +366,8 @@ export default function Equipamentos() {
           }));
           setApiProducts(mapped);
         }
-      } finally {
-        setIsLoading(false);
+      } catch (error) {
+        console.log('Failed to load products from API, using fallback data');
       }
     })();
   }, []);
@@ -375,7 +375,8 @@ export default function Equipamentos() {
   // Generate search suggestions
   useEffect(() => {
     if (searchTerm.length >= 2) {
-      const matchingProducts = allProducts
+      const productsToSearch = apiProducts.length > 0 ? apiProducts : allProducts;
+      const matchingProducts = productsToSearch
         .filter(
           (product) =>
             product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -391,7 +392,7 @@ export default function Equipamentos() {
       setSuggestions([]);
       setShowSuggestions(false);
     }
-  }, [searchTerm]);
+  }, [searchTerm, apiProducts]);
 
   // Handle click outside to close suggestions
   useEffect(() => {
@@ -417,7 +418,8 @@ export default function Equipamentos() {
   }, [categoria, subcategoria]);
 
   const filteredProducts = useMemo(() => {
-    let filtered = apiProducts ?? [] as Product[];
+    // Use API products if available, otherwise fallback to static products
+    let filtered = (apiProducts.length > 0 ? apiProducts : allProducts) as Product[];
 
     // Filter by category
     if (selectedCategory !== "Todas") {
@@ -456,7 +458,7 @@ export default function Equipamentos() {
     });
 
     return filtered;
-  }, [selectedCategory, searchTerm, sortBy, showAvailableOnly]);
+  }, [selectedCategory, searchTerm, sortBy, showAvailableOnly, apiProducts]);
 
   const handleSuggestionClick = (suggestion: Product) => {
     setSearchTerm(suggestion.name);
@@ -488,20 +490,6 @@ export default function Equipamentos() {
 
     console.log(`${product.name} adicionado ao carrinho! - R$ ${product.pricePerDay}/dia`);
   }, [dispatch]);
-
-  // Show loading state
-  if (isLoading) {
-    return (
-      <Layout>
-        <div className="min-h-screen bg-cinema-dark pt-20 pb-12 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cinema-yellow mx-auto mb-4"></div>
-            <p className="text-white text-lg">Carregando equipamentos...</p>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
 
   return (
     <Layout>

@@ -29,6 +29,13 @@ import { ProductDetail } from "./pages/ProductDetail";
 import { Carrinho } from "./pages/Carrinho";
 import Login from "./pages/Login";
 import ClientRegistrationWithDocuments from "./components/ClientRegistrationWithDocuments";
+import Pedidos from "./pages/Pedidos";
+import Aprovacoes from "./pages/Aprovacoes";
+import Dashboard from "./pages/Dashboard";
+import Clientes from "./pages/Clientes";
+import Maintenances from "./pages/Maintenances";
+import Configuracoes from "./pages/Configuracoes";
+import Backups from "./pages/Backups";
 
 // Create QueryClient instance with proper configuration
 // const queryClient = new QueryClient({
@@ -95,6 +102,13 @@ function AppWrapper() {
                                 <Route path="/cadastro" element={<ClientRegistrationWithDocuments />} />
                                 <Route path="/area-cliente" element={<AreaCliente />} />
                                 <Route path="/painel-admin" element={<PainelAdmin />} />
+                                <Route path="/pedidos" element={<Pedidos />} />
+                                <Route path="/aprovacoes" element={<Aprovacoes />} />
+                                <Route path="/dashboard" element={<Dashboard />} />
+                                <Route path="/clientes" element={<Clientes />} />
+                                <Route path="/manutencoes" element={<Maintenances />} />
+                                <Route path="/configuracoes" element={<Configuracoes />} />
+                                <Route path="/backups" element={<Backups />} />
                                 <Route path="/master-admin" element={<MasterAdminPanel />} />
                                 <Route path="/login" element={<Login />} />
                                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

@@ -65,6 +65,15 @@ interface EditElement {
   boxShadow?: string;
   width?: string;
   height?: string;
+  // Position properties (for drag & drop)
+  position?: string;
+  top?: string;
+  left?: string;
+  right?: string;
+  bottom?: string;
+  translateX?: string;
+  translateY?: string;
+  zIndex?: string;
   // Icon properties
   iconColor?: string;
   iconSize?: string;
@@ -431,6 +440,41 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     if (edit.boxShadow) {
       element.style.boxShadow = edit.boxShadow;
       console.log('Applied boxShadow:', edit.boxShadow);
+    }
+    
+    // Apply position properties
+    if (edit.position) {
+      element.style.setProperty('position', edit.position, 'important');
+      console.log('Applied position:', edit.position);
+    }
+    if (edit.top) {
+      element.style.setProperty('top', edit.top, 'important');
+      console.log('Applied top:', edit.top);
+    }
+    if (edit.left) {
+      element.style.setProperty('left', edit.left, 'important');
+      console.log('Applied left:', edit.left);
+    }
+    if (edit.right) {
+      element.style.setProperty('right', edit.right, 'important');
+      console.log('Applied right:', edit.right);
+    }
+    if (edit.bottom) {
+      element.style.setProperty('bottom', edit.bottom, 'important');
+      console.log('Applied bottom:', edit.bottom);
+    }
+    if (edit.zIndex) {
+      element.style.setProperty('z-index', edit.zIndex, 'important');
+      console.log('Applied zIndex:', edit.zIndex);
+    }
+    // Apply translate via transform
+    if (edit.translateX || edit.translateY) {
+      const tx = edit.translateX || '0px';
+      const ty = edit.translateY || '0px';
+      const existingTransform = edit.transform || '';
+      const newTransform = `translate(${tx}, ${ty}) ${existingTransform}`.trim();
+      element.style.setProperty('transform', newTransform, 'important');
+      console.log('Applied translate transform:', newTransform);
     }
     
     // Apply icon properties
@@ -1128,13 +1172,22 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         }
       });
       
-      // Clear ALL localStorage
-      localStorage.clear();
-      console.log('All localStorage cleared');
+      // Preservar dados de autenticação antes de limpar
+      const authUser = localStorage.getItem('bil_cinema_user');
+      const authToken = localStorage.getItem('token');
+      const rememberMe = localStorage.getItem('rememberMe');
+      const pluggyCredentials = localStorage.getItem('pluggyCredentials');
       
-      // Clear sessionStorage too
-      sessionStorage.clear();
-      console.log('All sessionStorage cleared');
+      // Limpar apenas dados do editor
+      localStorage.removeItem('nasa-editor-edits');
+      console.log('Editor edits cleared');
+      
+      // Restaurar dados de autenticação
+      if (authUser) localStorage.setItem('bil_cinema_user', authUser);
+      if (authToken) localStorage.setItem('token', authToken);
+      if (rememberMe) localStorage.setItem('rememberMe', rememberMe);
+      if (pluggyCredentials) localStorage.setItem('pluggyCredentials', pluggyCredentials);
+      console.log('Auth data preserved');
       
       // Reset state
       setEdits({});
@@ -3226,6 +3279,16 @@ export function EditPanel() {
         >
           Ícone
         </button>
+        <button
+          onClick={() => setActiveTab('position')}
+          className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+            activeTab === 'position'
+              ? 'text-blue-400 border-b-2 border-blue-400'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          Posição
+        </button>
       </div>
 
       <CardContent className="space-y-3 pt-3 text-xs">
@@ -3500,6 +3563,189 @@ export function EditPanel() {
                     />
                   </div>
                 )}
+              </div>
+              </div>
+            </div>
+        )}
+
+        {/* Position Tab - Drag & Drop */}
+        {activeTab === 'position' && (
+          <div className="space-y-4">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Move className="w-4 h-4 text-blue-400" />
+                <Label className="text-white text-sm font-medium">Mover Elemento</Label>
+              </div>
+              
+              {/* Quick Position Buttons */}
+              <div className="p-3 bg-gray-800 rounded-lg border border-gray-700">
+                <Label className="text-gray-300 text-xs mb-2 block">Ajuste Rápido</Label>
+                <div className="grid grid-cols-3 gap-1 w-32 mx-auto">
+                  <div></div>
+                  <Button
+                    data-editor-button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-8 p-0 border-gray-600 text-gray-300 hover:bg-blue-600"
+                    onClick={() => {
+                      const current = parseInt(currentEdit.translateY || '0') || 0;
+                      updateElement(state.selectedId!, { translateY: `${current - 5}px` });
+                    }}
+                  >
+                    ↑
+                  </Button>
+                  <div></div>
+                  <Button
+                    data-editor-button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-8 p-0 border-gray-600 text-gray-300 hover:bg-blue-600"
+                    onClick={() => {
+                      const current = parseInt(currentEdit.translateX || '0') || 0;
+                      updateElement(state.selectedId!, { translateX: `${current - 5}px` });
+                    }}
+                  >
+                    ←
+                  </Button>
+                  <Button
+                    data-editor-button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-8 p-0 border-gray-600 text-gray-300 hover:bg-blue-600"
+                    onClick={() => {
+                      updateElement(state.selectedId!, { translateX: '0px', translateY: '0px' });
+                    }}
+                  >
+                    ⊙
+                  </Button>
+                  <Button
+                    data-editor-button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-8 p-0 border-gray-600 text-gray-300 hover:bg-blue-600"
+                    onClick={() => {
+                      const current = parseInt(currentEdit.translateX || '0') || 0;
+                      updateElement(state.selectedId!, { translateX: `${current + 5}px` });
+                    }}
+                  >
+                    →
+                  </Button>
+                  <div></div>
+                  <Button
+                    data-editor-button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-8 p-0 border-gray-600 text-gray-300 hover:bg-blue-600"
+                    onClick={() => {
+                      const current = parseInt(currentEdit.translateY || '0') || 0;
+                      updateElement(state.selectedId!, { translateY: `${current + 5}px` });
+                    }}
+                  >
+                    ↓
+                  </Button>
+                  <div></div>
+                </div>
+                <p className="text-gray-500 text-xs text-center mt-2">Clique nas setas para mover 5px</p>
+              </div>
+
+              {/* Translate X/Y */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-gray-300 text-xs">Mover X (horizontal)</Label>
+                  <Input
+                    value={currentEdit.translateX || ''}
+                    onChange={(e) => updateElement(state.selectedId!, { translateX: e.target.value })}
+                    placeholder="0px"
+                    className="bg-gray-700 border-gray-600 text-white text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-gray-300 text-xs">Mover Y (vertical)</Label>
+                  <Input
+                    value={currentEdit.translateY || ''}
+                    onChange={(e) => updateElement(state.selectedId!, { translateY: e.target.value })}
+                    placeholder="0px"
+                    className="bg-gray-700 border-gray-600 text-white text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Position Type */}
+              <div className="space-y-1">
+                <Label className="text-gray-300 text-xs">Tipo de Posição</Label>
+                <select
+                  value={currentEdit.position || 'relative'}
+                  onChange={(e) => updateElement(state.selectedId!, { position: e.target.value })}
+                  className="w-full bg-gray-700 border border-gray-600 text-white text-xs rounded-md px-2 py-1.5"
+                >
+                  <option value="relative">Relativo</option>
+                  <option value="absolute">Absoluto</option>
+                  <option value="fixed">Fixo</option>
+                  <option value="static">Estático</option>
+                </select>
+              </div>
+
+              {/* Position Values (for absolute/fixed) */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-gray-300 text-xs">Topo</Label>
+                  <Input
+                    value={currentEdit.top || ''}
+                    onChange={(e) => updateElement(state.selectedId!, { top: e.target.value })}
+                    placeholder="auto"
+                    className="bg-gray-700 border-gray-600 text-white text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-gray-300 text-xs">Esquerda</Label>
+                  <Input
+                    value={currentEdit.left || ''}
+                    onChange={(e) => updateElement(state.selectedId!, { left: e.target.value })}
+                    placeholder="auto"
+                    className="bg-gray-700 border-gray-600 text-white text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-gray-300 text-xs">Baixo</Label>
+                  <Input
+                    value={currentEdit.bottom || ''}
+                    onChange={(e) => updateElement(state.selectedId!, { bottom: e.target.value })}
+                    placeholder="auto"
+                    className="bg-gray-700 border-gray-600 text-white text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-gray-300 text-xs">Direita</Label>
+                  <Input
+                    value={currentEdit.right || ''}
+                    onChange={(e) => updateElement(state.selectedId!, { right: e.target.value })}
+                    placeholder="auto"
+                    className="bg-gray-700 border-gray-600 text-white text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Z-Index */}
+              <div className="space-y-1">
+                <Label className="text-gray-300 text-xs">Camada (z-index)</Label>
+                <Input
+                  value={currentEdit.zIndex || ''}
+                  onChange={(e) => updateElement(state.selectedId!, { zIndex: e.target.value })}
+                  placeholder="auto"
+                  className="bg-gray-700 border-gray-600 text-white text-xs"
+                />
+              </div>
+
+              {/* Margin (quick adjust) */}
+              <div className="space-y-1">
+                <Label className="text-gray-300 text-xs">Margem (espaçamento externo)</Label>
+                <Input
+                  value={currentEdit.margin || ''}
+                  onChange={(e) => updateElement(state.selectedId!, { margin: e.target.value })}
+                  placeholder="0px ou 10px 5px 10px 5px"
+                  className="bg-gray-700 border-gray-600 text-white text-xs"
+                />
+                <p className="text-gray-500 text-xs">Formato: topo direita baixo esquerda</p>
               </div>
               </div>
             </div>

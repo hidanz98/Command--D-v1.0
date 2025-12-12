@@ -59,6 +59,24 @@ async function main() {
 
   console.log('✅ Created master admin user');
 
+  // Create admin user (Bil's Cinema)
+  const bilsAdmin = await prisma.user.upsert({
+    where: { email: 'cabecadeefeitocine@gmail.com' },
+    update: {
+      password: hashedPassword, // Atualiza senha caso já exista
+    },
+    create: {
+      email: 'cabecadeefeitocine@gmail.com',
+      password: hashedPassword,
+      name: 'Admin Bil\'s Cinema',
+      role: 'ADMIN',
+      tenantId: defaultTenant.id,
+      isActive: true
+    }
+  });
+
+  console.log('✅ Created Bil\'s Cinema admin user');
+
   // Create admin user
   const adminUser = await prisma.user.upsert({
     where: { email: 'admin@empresa.com' },
@@ -205,7 +223,10 @@ async function main() {
         categoryId: reflectorsCategory.id,
         specifications: p.specifications ? p.specifications as any : undefined,
         tags: ['REFLETORES'],
-        images: makeImages(p.brand, p.model)
+        images: makeImages(p.brand, p.model),
+        isActive: true,
+        visibility: 'PUBLIC',
+        featured: index < 4 // Primeiros 4 produtos são destaque
       }
     });
   }
@@ -247,6 +268,7 @@ async function main() {
   console.log('🎉 Database seeded successfully!');
   console.log('\n📋 Login credentials:');
   console.log('Master Admin: admin@command-d.com / admin123');
+  console.log('Bil\'s Cinema Admin: cabecadeefeitocine@gmail.com / admin123');
   console.log('Admin: admin@empresa.com / admin123');
   console.log('Employee: funcionario@empresa.com');
 }
@@ -254,9 +276,9 @@ async function main() {
 main()
   .catch((e) => {
     console.error('❌ Error seeding database:', e);
-    // Use globalThis.process for compatibility if 'process' is not recognized in some environments.
-    if (typeof process !== "undefined" && typeof process.exit === "function") {
-      process.exit(1);
+    // Safely handle missing process type in some environments
+    if (typeof globalThis.process !== "undefined" && typeof globalThis.process.exit === "function") {
+      globalThis.process.exit(1);
     }
   })
   .finally(async () => {

@@ -2,8 +2,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   LineChart,
   Line,
-  AreaChart,
-  Area,
   BarChart,
   Bar,
   PieChart,
@@ -67,57 +65,54 @@ export function DashboardCharts() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" data-edit-id="charts.container">
       {/* Gráfico de Faturamento Mensal */}
-      <Card className="bg-cinema-gray border-cinema-gray-light lg:col-span-2">
+      <Card className="bg-cinema-gray border-cinema-gray-light lg:col-span-2 overflow-hidden">
         <CardHeader>
           <CardTitle className="text-white" data-edit-id="chart.revenue-title">Faturamento x Período</CardTitle>
         </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={revenueData}>
-              <defs>
-                <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#F5D533" stopOpacity={0.8} />
-                  <stop offset="95%" stopColor="#F5D533" stopOpacity={0.1} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="month" stroke="#9ca3af" />
-              <YAxis stroke="#9ca3af" />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "#1f2937",
-                  border: "1px solid #374151",
-                  borderRadius: "8px",
-                  color: "#fff",
-                }}
-                formatter={(value: number) => [
-                  `R$ ${value.toLocaleString()}`,
-                  "Faturamento",
-                ]}
-              />
-              <Area
-                type="monotone"
-                dataKey="value"
-                stroke="#F5D533"
-                fillOpacity={1}
-                fill="url(#colorRevenue)"
-                strokeWidth={2}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+        <CardContent className="overflow-hidden">
+          <div style={{ width: '100%', height: 300, overflow: 'hidden', position: 'relative' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={revenueData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis dataKey="month" stroke="#9ca3af" />
+                <YAxis stroke="#9ca3af" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#1f2937",
+                    border: "1px solid #374151",
+                    borderRadius: "8px",
+                    color: "#fff",
+                  }}
+                  formatter={(value: number) => [
+                    `R$ ${value.toLocaleString()}`,
+                    "Faturamento",
+                  ]}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#F5D533"
+                  strokeWidth={3}
+                  dot={{ fill: '#F5D533', strokeWidth: 2 }}
+                  activeDot={{ r: 6, fill: '#F5D533' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </CardContent>
       </Card>
 
       {/* Gráfico de Equipamentos Mais Alugados */}
-      <Card className="bg-cinema-gray border-cinema-gray-light" data-edit-id="chart.equipment-card">
+      <Card className="bg-cinema-gray border-cinema-gray-light overflow-hidden" data-edit-id="chart.equipment-card">
         <CardHeader>
           <CardTitle className="text-white" data-edit-id="chart.equipment-title">
             Equipamentos Mais Alugados
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
+        <CardContent className="overflow-hidden">
+          <div style={{ width: '100%', height: 250, overflow: 'hidden', position: 'relative' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
               <Pie
                 data={equipmentData}
                 cx="50%"
@@ -142,18 +137,20 @@ export function DashboardCharts() {
                 }}
               />
             </PieChart>
-          </ResponsiveContainer>
+            </ResponsiveContainer>
+          </div>
         </CardContent>
       </Card>
 
       {/* Gráfico de Pedidos por Status */}
-      <Card className="bg-cinema-gray border-cinema-gray-light" data-edit-id="chart.orders-card">
+      <Card className="bg-cinema-gray border-cinema-gray-light overflow-hidden" data-edit-id="chart.orders-card">
         <CardHeader>
           <CardTitle className="text-white" data-edit-id="chart.orders-title">Pedidos por Status</CardTitle>
         </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={ordersStatusData}>
+        <CardContent className="overflow-hidden">
+          <div style={{ width: '100%', height: 250, overflow: 'hidden', position: 'relative' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={ordersStatusData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
               <XAxis dataKey="name" stroke="#9ca3af" />
               <YAxis stroke="#9ca3af" />
@@ -166,52 +163,55 @@ export function DashboardCharts() {
                 }}
               />
               <Bar dataKey="value" fill="#F5D533" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </CardContent>
       </Card>
 
       {/* Gráfico de Performance Semanal */}
-      <Card className="bg-cinema-gray border-cinema-gray-light lg:col-span-2">
+      <Card className="bg-cinema-gray border-cinema-gray-light lg:col-span-2 overflow-hidden">
         <CardHeader>
           <CardTitle className="text-white" data-edit-id="chart.performance-title">Performance Semanal</CardTitle>
         </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={250}>
-            <ComposedChart data={weeklyPerformanceData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="day" stroke="#9ca3af" />
-              <YAxis yAxisId="left" stroke="#9ca3af" />
-              <YAxis yAxisId="right" orientation="right" stroke="#9ca3af" />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "#1f2937",
-                  border: "1px solid #374151",
-                  borderRadius: "8px",
-                  color: "#fff",
-                }}
-                formatter={(value: number, name: string) => [
-                  name === "revenue" ? `R$ ${value.toLocaleString()}` : value,
-                  name === "revenue" ? "Faturamento" : "Pedidos",
-                ]}
-              />
-              <Legend />
-              <Bar
-                yAxisId="left"
-                dataKey="orders"
-                fill="#4F8AC7"
-                name="Pedidos"
-              />
-              <Line
-                yAxisId="right"
-                type="monotone"
-                dataKey="revenue"
-                stroke="#F5D533"
-                strokeWidth={3}
-                name="Faturamento"
-              />
-            </ComposedChart>
-          </ResponsiveContainer>
+        <CardContent className="overflow-hidden">
+          <div style={{ width: '100%', height: 250, overflow: 'hidden', position: 'relative' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={weeklyPerformanceData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis dataKey="day" stroke="#9ca3af" />
+                <YAxis yAxisId="left" stroke="#9ca3af" />
+                <YAxis yAxisId="right" orientation="right" stroke="#9ca3af" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#1f2937",
+                    border: "1px solid #374151",
+                    borderRadius: "8px",
+                    color: "#fff",
+                  }}
+                  formatter={(value: number, name: string) => [
+                    name === "revenue" ? `R$ ${value.toLocaleString()}` : value,
+                    name === "revenue" ? "Faturamento" : "Pedidos",
+                  ]}
+                />
+                <Legend />
+                <Bar
+                  yAxisId="left"
+                  dataKey="orders"
+                  fill="#4F8AC7"
+                  name="Pedidos"
+                />
+                <Line
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#F5D533"
+                  strokeWidth={3}
+                  name="Faturamento"
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
         </CardContent>
       </Card>
     </div>

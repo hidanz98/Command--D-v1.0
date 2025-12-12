@@ -9,14 +9,6 @@ import { Request, Response, NextFunction } from 'express';
 // Tipos de roles disponíveis
 export type UserRole = 'ADMIN' | 'CLIENT' | 'EMPLOYEE' | 'MASTER_ADMIN';
 
-declare global {
-  namespace Express {
-    interface Request {
-      userRole?: UserRole;
-    }
-  }
-}
-
 /**
  * Middleware que requer uma ou mais roles específicas
  */
@@ -34,7 +26,7 @@ export const requireRole = (allowedRoles: UserRole[]) => {
       // Pega a role do usuário
       // TODO: Buscar role do banco de dados
       // Por enquanto, assume que veio no token JWT
-      const userRole = req.userRole || 'CLIENT';
+      const userRole = (req.userRole || 'CLIENT') as UserRole;
 
       // Verifica se a role está permitida
       if (!allowedRoles.includes(userRole)) {

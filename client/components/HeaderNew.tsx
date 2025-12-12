@@ -81,9 +81,26 @@ export default function HeaderNew() {
           <div className="flex items-center space-x-3">
             {/* Mobile Actions */}
             <div className="flex lg:hidden items-center space-x-2">
+              {/* Mobile Cart */}
+              <Link to="/carrinho">
+                <Button
+                  size="sm"
+                  className="text-white relative p-2"
+                  variant="ghost"
+                >
+                  <ShoppingCart className="w-5 h-5" />
+                  {state.itemCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center text-[10px]">
+                      {state.itemCount}
+                    </span>
+                  )}
+                </Button>
+              </Link>
+              
+              {/* Menu Button */}
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="text-white p-1 ml-2"
+                className="text-white p-2"
               >
                 {isMenuOpen ? (
                   <X className="w-6 h-6" />
@@ -196,6 +213,79 @@ export default function HeaderNew() {
             </div>
           </div>
         </div>
+
+        {/* Mobile Menu - Simples */}
+        {isMenuOpen && (
+          <div className="lg:hidden absolute top-16 left-0 right-0 bg-cinema-dark-lighter border-b border-cinema-gray shadow-xl z-[60]">
+            <nav className="flex flex-col p-4 space-y-2">
+              {!isAuthenticated ? (
+                <Link 
+                  to="/login" 
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex items-center text-cinema-yellow hover:bg-cinema-gray/30 px-4 py-3 rounded-lg transition-colors"
+                >
+                  <User className="w-5 h-5 mr-3" />
+                  Login
+                </Link>
+              ) : (
+                <>
+                  {isAdmin && (
+                    <Link 
+                      to="/painel-admin" 
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex items-center text-blue-400 hover:bg-cinema-gray/30 px-4 py-3 rounded-lg transition-colors"
+                    >
+                      <User className="w-5 h-5 mr-3" />
+                      Painel Admin
+                    </Link>
+                  )}
+                  <Link 
+                    to="/area-cliente" 
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center text-white hover:bg-cinema-gray/30 px-4 py-3 rounded-lg transition-colors"
+                  >
+                    <User className="w-5 h-5 mr-3" />
+                    Minha Conta
+                  </Link>
+                </>
+              )}
+              
+              <div className="border-t border-cinema-gray/30 my-2"></div>
+              
+              <Link 
+                to="/" 
+                onClick={() => setIsMenuOpen(false)}
+                className="flex items-center text-white hover:bg-cinema-gray/30 px-4 py-3 rounded-lg transition-colors"
+              >
+                Início
+              </Link>
+              
+              <Link 
+                to="/equipamentos" 
+                onClick={() => setIsMenuOpen(false)}
+                className="flex items-center text-cinema-yellow font-semibold hover:bg-cinema-gray/30 px-4 py-3 rounded-lg transition-colors"
+              >
+                Equipamentos
+              </Link>
+              
+              {isAuthenticated && (
+                <>
+                  <div className="border-t border-cinema-gray/30 my-2"></div>
+                  <button 
+                    onClick={() => {
+                      logout();
+                      setIsMenuOpen(false);
+                      navigate('/');
+                    }}
+                    className="flex items-center text-red-400 hover:bg-cinema-gray/30 px-4 py-3 rounded-lg transition-colors text-left"
+                  >
+                    Sair
+                  </button>
+                </>
+              )}
+            </nav>
+          </div>
+        )}
       </div>
     </header>
   );

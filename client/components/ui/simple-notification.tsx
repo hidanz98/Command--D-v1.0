@@ -112,7 +112,6 @@ export function useSimpleNotification() {
     
     return (
       <div className="fixed top-4 right-4 space-y-3" style={{ zIndex: 99999 }}>
-        {notifications.length > 0 && console.log("✨ Renderizando", notifications.length, "notificações")}
         {notifications.map(notification => (
           <SimpleNotification
             key={notification.id}

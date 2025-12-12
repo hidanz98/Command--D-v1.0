@@ -46,12 +46,15 @@ async function checkExpiredTrials() {
         data: {
           action: 'license_expired',
           entity: 'license',
-          entityId: license.id,
-          details: {
-            companyName: license.companyName,
-            trialEndsAt: license.trialEndsAt,
-            reason: 'Trial period ended'
-          }
+          metadata: {
+            entityId: license.id,
+            details: {
+              companyName: license.companyName,
+              trialEndsAt: license.trialEndsAt,
+              reason: 'Trial period ended'
+            }
+          },
+          licenseHolderId: license.id
         }
       });
 
@@ -102,12 +105,15 @@ async function checkOverduePayments() {
         data: {
           action: 'license_suspended',
           entity: 'license',
-          entityId: license.id,
-          details: {
-            reason: 'Payment overdue (>7 days)',
-            lastPayment: license.lastPayment,
-            nextPayment: license.nextPayment
-          }
+          metadata: {
+            entityId: license.id,
+            details: {
+              reason: 'Payment overdue (>7 days)',
+              lastPayment: license.lastPayment,
+              nextPayment: license.nextPayment
+            }
+          },
+          licenseHolderId: license.id
         }
       });
 
@@ -179,7 +185,7 @@ async function checkOfflineSystems() {
 async function generateMonthlyInvoices() {
   try {
     const now = new Date();
-    const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     
     // Buscar licenças ativas que precisam de fatura
     const licensesNeedingInvoice = await masterPrisma.licenseHolder.findMany({
@@ -192,7 +198,7 @@ async function generateMonthlyInvoices() {
       include: {
         invoices: {
           where: {
-            referenceMonth: currentMonth
+            referenceMonth: currentMonthStr
           }
         }
       }
@@ -202,36 +208,26 @@ async function generateMonthlyInvoices() {
 
     for (const license of licensesNeedingInvoice) {
       // Se já tem fatura este mês, pular
-      if (license.invoices.length > 0) {
+      if (license.invoices && license.invoices.length > 0) {
         continue;
       }
 
-      // Gerar número da fatura
-      const invoiceNumber = `INV-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}-${license.subdomain.toUpperCase()}`;
-
+      // Criar invoice
       await masterPrisma.invoice.create({
         data: {
           licenseHolderId: license.id,
-          invoiceNumber,
-          referenceMonth: currentMonth,
-          amount: license.monthlyFee,
-          status: 'pending'
+          referenceMonth: currentMonthStr,
+          amount: license.monthlyFee || 0,
+          status: 'pending',
+          dueDate: new Date(now.getFullYear(), now.getMonth(), 10), // Dia 10 de cada mês
+          description: `Fatura mensal - ${license.plan}`
         }
       });
 
-      // Criar payment pendente
-      await masterPrisma.payment.create({
-        data: {
-          licenseHolderId: license.id,
-          amount: license.monthlyFee,
-          referenceMonth: currentMonth,
-          dueDate: new Date(now.getFullYear(), now.getMonth(), 10), // Dia 10 de cada mês
-          status: 'PENDING'
-        }
-      });
+      // Payment para LicenseHolder está na Invoice, não criar Payment separado
 
       generated++;
-      console.log(`📄 Fatura gerada: ${invoiceNumber} - R$ ${license.monthlyFee}`);
+      console.log(`📄 Fatura gerada para ${license.companyName} - R$ ${license.monthlyFee}`);
     }
 
     console.log(`✅ Faturas geradas: ${generated}`);

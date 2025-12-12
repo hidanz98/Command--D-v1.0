@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/context/AuthContext";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -107,6 +108,7 @@ interface Employee {
   pix: string;
   emergencyContact: string;
   hasContract: boolean;
+  isOnline?: boolean;
 }
 
 interface Transaction {
@@ -146,12 +148,20 @@ interface BankAccount {
   id: string;
   name: string;
   bank: string;
-  agency: string;
-  account: string;
+  agency?: string;
+  account?: string;
+  accountNumber?: string;
+  accountType?: "checking" | "savings" | "business" | "investment" | "pix";
   balance: number;
-  type: "checking" | "savings" | "investment" | "pix";
-  active: boolean;
-  lastUpdate: string;
+  type?: "checking" | "savings" | "investment" | "pix";
+  active?: boolean;
+  isActive?: boolean;
+  lastUpdate?: string;
+  currency?: string;
+  pluggyConnectionId?: string;
+  lastSync?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface Department {
@@ -171,6 +181,10 @@ interface CostCenter {
   department: string;
   departmentId: string;
   active: boolean;
+  code?: string;
+  category?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface TaxConfig {
@@ -221,20 +235,8 @@ interface Report {
 }
 
 // Interfaces para Contas Bancárias e Pluggy
-interface BankAccount {
-  id: string;
-  name: string;
-  bank: string;
-  accountNumber: string;
-  accountType: "checking" | "savings" | "business";
-  balance: number;
-  currency: string;
-  isActive: boolean;
-  pluggyConnectionId?: string;
-  lastSync?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+// Removido: interface BankAccount duplicada
+// Usando a interface BankAccount definida anteriormente
 
 interface PluggyCredentials {
   id: string;
@@ -676,6 +678,9 @@ const MOCK_NOTIFICATIONS: Notification[] = [
 ];
 
 export const FinancialERP: React.FC = () => {
+  const { user } = useAuth();
+  const isMasterAdmin = user?.role === 'master_admin' || user?.email === 'master@bilscinema.com';
+  
   const [activeTab, setActiveTab] = useState<string>("dashboard");
   const [companyConfig, setCompanyConfig] = useState<CompanyConfig>(MOCK_COMPANY_CONFIG);
   const [editingCompanyConfig, setEditingCompanyConfig] = useState<CompanyConfig>(MOCK_COMPANY_CONFIG);
@@ -683,7 +688,18 @@ export const FinancialERP: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>(MOCK_EMPLOYEES);
   const [transactions, setTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(MOCK_BANK_ACCOUNTS);
-  const [pluggyCredentials, setPluggyCredentials] = useState<PluggyCredentials>(MOCK_PLUGGY_CREDENTIALS);
+  const [pluggyCredentials, setPluggyCredentials] = useState<PluggyCredentials>(() => {
+    // Carregar do localStorage se existir
+    const saved = localStorage.getItem('pluggyCredentials');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return MOCK_PLUGGY_CREDENTIALS;
+      }
+    }
+    return MOCK_PLUGGY_CREDENTIALS;
+  });
   const [costCenters, setCostCenters] = useState<CostCenter[]>(MOCK_COST_CENTERS);
   const [departments, setDepartments] = useState<Department[]>(MOCK_DEPARTMENTS);
   const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
@@ -710,6 +726,7 @@ export const FinancialERP: React.FC = () => {
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
   const [newDepartment, setNewDepartment] = useState<Partial<Department>>({
     name: "",
+    manager: "",
     description: "",
     active: true
   });
@@ -859,6 +876,74 @@ export const FinancialERP: React.FC = () => {
     setIsEditingCompany(false);
     // Aqui você pode adicionar uma chamada para salvar no backend
     console.log("Dados da empresa salvos:", editingCompanyConfig);
+  };
+
+  // Estado para loading da busca CNPJ
+  const [buscandoCNPJ, setBuscandoCNPJ] = useState(false);
+
+  // Função para buscar dados do CNPJ na BrasilAPI (gratuita)
+  const buscarDadosCNPJ = async (cnpj: string) => {
+    // Remove caracteres não numéricos
+    const cnpjLimpo = cnpj.replace(/\D/g, '');
+    
+    if (cnpjLimpo.length !== 14) {
+      alert('CNPJ deve ter 14 dígitos');
+      return;
+    }
+
+    setBuscandoCNPJ(true);
+    
+    try {
+      const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpjLimpo}`);
+      
+      if (!response.ok) {
+        throw new Error('CNPJ não encontrado');
+      }
+      
+      const dados = await response.json();
+      
+      // Montar endereço completo
+      const enderecoCompleto = [
+        dados.descricao_tipo_de_logradouro,
+        dados.logradouro,
+        dados.numero,
+        dados.complemento,
+        dados.bairro,
+        dados.municipio,
+        dados.uf,
+        dados.cep ? `CEP: ${dados.cep}` : ''
+      ].filter(Boolean).join(', ');
+
+      // Determinar regime tributário baseado no porte
+      let regime: "simples" | "presumido" | "real" = "simples";
+      if (dados.opcao_pelo_simples) {
+        regime = "simples";
+      } else if (dados.porte === "DEMAIS" || dados.porte === "GRANDE") {
+        regime = "real";
+      } else {
+        regime = "presumido";
+      }
+
+      // Atualizar os dados
+      setEditingCompanyConfig(prev => ({
+        ...prev,
+        companyName: dados.razao_social || prev.companyName,
+        cnpj: formatCNPJ(cnpjLimpo),
+        address: enderecoCompleto || prev.address,
+        phone: dados.ddd_telefone_1 ? `(${dados.ddd_telefone_1.substring(0,2)}) ${dados.ddd_telefone_1.substring(2)}` : prev.phone,
+        email: dados.email || prev.email,
+        activity: dados.cnae_fiscal?.toString() || prev.activity,
+        regime: regime,
+      }));
+
+      alert(`✅ Dados carregados!\n\nEmpresa: ${dados.razao_social}\nSituação: ${dados.descricao_situacao_cadastral}`);
+      
+    } catch (error) {
+      console.error('Erro ao buscar CNPJ:', error);
+      alert('❌ Erro ao buscar CNPJ. Verifique se o número está correto.');
+    } finally {
+      setBuscandoCNPJ(false);
+    }
   };
 
   // Função para iniciar edição
@@ -1111,8 +1196,13 @@ export const FinancialERP: React.FC = () => {
       netSalary: (newEmployee.baseSalary || 0) + (newEmployee.benefits || 0) - (newEmployee.discounts || 0),
       hireDate: newEmployee.hireDate || new Date().toISOString().split("T")[0],
       status: newEmployee.status || "active",
+      address: newEmployee.address || "",
+      birthDate: newEmployee.birthDate || "",
       workHours: newEmployee.workHours || 220,
       overtime: newEmployee.overtime || 0,
+      bankAccount: newEmployee.bankAccount || "",
+      pix: newEmployee.pix || "",
+      emergencyContact: newEmployee.emergencyContact || "",
       hasContract: newEmployee.hasContract || false,
       isOnline: false,
     };
@@ -1170,6 +1260,7 @@ export const FinancialERP: React.FC = () => {
         name: newCostCenter.name || "",
         description: newCostCenter.description || "",
         budget: newCostCenter.budget || 0,
+        spent: 0,
         responsible: newCostCenter.responsible || "",
         department: newCostCenter.department || "",
         departmentId: newCostCenter.departmentId || "",
@@ -1302,12 +1393,16 @@ export const FinancialERP: React.FC = () => {
               Gestão financeira completa integrada ao sistema
             </p>
             <div className="flex items-center space-x-4 mt-2">
-              <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${financialMetrics.urgentNotifications > 0 ? 'bg-red-400' : 'bg-green-400'}`}></div>
-                <span className="text-xs text-gray-400">
-                  {financialMetrics.urgentNotifications > 0 ? 'Ação Urgente Necessária' : 'Sistema OK'}
+              <button
+                onClick={() => financialMetrics.urgentNotifications > 0 && setActiveTab("notifications")}
+                className={`flex items-center space-x-2 ${financialMetrics.urgentNotifications > 0 ? 'cursor-pointer hover:bg-red-500/20 px-2 py-1 rounded-lg transition-colors' : ''}`}
+                disabled={financialMetrics.urgentNotifications === 0}
+              >
+                <div className={`w-2 h-2 rounded-full ${financialMetrics.urgentNotifications > 0 ? 'bg-red-400 animate-pulse' : 'bg-green-400'}`}></div>
+                <span className={`text-xs ${financialMetrics.urgentNotifications > 0 ? 'text-red-400 font-medium' : 'text-gray-400'}`}>
+                  {financialMetrics.urgentNotifications > 0 ? `⚠️ Ação Urgente (${financialMetrics.urgentNotifications})` : '✅ Sistema OK'}
                 </span>
-              </div>
+              </button>
               <div className="text-xs text-gray-400">
                 CNPJ: {companyConfig.cnpj}
               </div>
@@ -1317,7 +1412,8 @@ export const FinancialERP: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            {financialMetrics.unreadNotifications > 0 && (
+            {/* Notificações - Só aparece para Master Admin */}
+            {isMasterAdmin && financialMetrics.unreadNotifications > 0 && (
               <Button
                 variant="outline"
                 className="text-red-400 border-red-400 relative"
@@ -1359,7 +1455,8 @@ export const FinancialERP: React.FC = () => {
             { id: "timesheet", name: "Folha de Ponto", icon: Clock },
             { id: "payroll", name: "Folha Pagamento", icon: Receipt },
             { id: "company", name: "Dados da Empresa", icon: Building2 },
-            { id: "notifications", name: "Notificações", icon: Bell },
+            // Notificações - só para Master Admin
+            ...(isMasterAdmin ? [{ id: "notifications", name: "Notificações", icon: Bell }] : []),
             { id: "reports", name: "Relatórios", icon: FileText },
             { id: "taxes", name: "Impostos", icon: Calculator },
             { id: "cost-centers", name: "Centros de Custo", icon: Building },
@@ -1734,7 +1831,7 @@ export const FinancialERP: React.FC = () => {
                 <h2 className="text-2xl font-bold text-white">Contas Bancárias</h2>
                 <p className="text-gray-400">Gerencie suas contas bancárias e integração com Pluggy</p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <Button
                   onClick={() => setShowModal("pluggy-credentials")}
                   variant="outline"
@@ -1743,12 +1840,135 @@ export const FinancialERP: React.FC = () => {
                   <Settings className="w-4 h-4 mr-2" />
                   Configurar Pluggy
                 </Button>
+                {pluggyCredentials.isActive && (
+                  <Button
+                    onClick={async () => {
+                      try {
+                        // Mostrar loading
+                        alert('⏳ Gerando token de conexão...');
+                        
+                        // Obter o token do localStorage
+                        const authToken = localStorage.getItem('token');
+                        
+                        // Chamar API para gerar Connect Token
+                        const response = await fetch('/api/pluggy/connect-token', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${authToken}`,
+                          },
+                          body: JSON.stringify({
+                            clientId: pluggyCredentials.clientId,
+                            clientSecret: pluggyCredentials.clientSecret,
+                            sandbox: pluggyCredentials.sandbox,
+                          }),
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (!response.ok || !data.connectToken) {
+                          alert(`❌ Erro: ${data.error || 'Falha ao gerar token'}`);
+                          return;
+                        }
+                        
+                        // Abrir Pluggy Connect com o token
+                        const connectUrl = `https://connect.pluggy.ai/?connect_token=${data.connectToken}`;
+                        
+                        const width = 500;
+                        const height = 700;
+                        const left = (window.innerWidth - width) / 2;
+                        const top = (window.innerHeight - height) / 2;
+                        
+                        const popup = window.open(
+                          connectUrl,
+                          'PluggyConnect',
+                          `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`
+                        );
+                        
+                        if (!popup) {
+                          alert('❌ Popup bloqueado! Permita popups para este site.');
+                        }
+                      } catch (error) {
+                        console.error('Erro ao conectar Pluggy:', error);
+                        alert('❌ Erro ao conectar com Pluggy. Tente novamente.');
+                      }
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    🏦 Conectar Banco via Pluggy
+                  </Button>
+                )}
+                {pluggyCredentials.isActive && (
+                  <Button
+                    onClick={async () => {
+                      try {
+                        const authToken = localStorage.getItem('token');
+                        
+                        alert('🔄 Sincronizando contas do Pluggy...');
+                        
+                        const response = await fetch('/api/pluggy/items', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${authToken}`,
+                          },
+                          body: JSON.stringify({
+                            clientId: pluggyCredentials.clientId,
+                            clientSecret: pluggyCredentials.clientSecret,
+                          }),
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (!response.ok) {
+                          alert(`❌ Erro: ${data.error}`);
+                          return;
+                        }
+                        
+                        if (data.accounts && data.accounts.length > 0) {
+                          // Adicionar contas encontradas
+                          const novasContas = data.accounts.map((acc: any, index: number) => ({
+                            id: `pluggy-${acc.id}`,
+                            name: acc.name || `Conta ${acc.bankName}`,
+                            bank: acc.bankName,
+                            accountNumber: acc.number || acc.id.substring(0, 10),
+                            accountType: acc.type === 'CHECKING' ? 'checking' : acc.type === 'SAVINGS' ? 'savings' : 'checking',
+                            balance: acc.balance || 0,
+                            active: true,
+                            pluggyConnectionId: acc.itemId,
+                            pluggyAccountId: acc.id,
+                          }));
+                          
+                          setBankAccounts(prev => {
+                            // Remover duplicatas
+                            const existingIds = prev.map(p => p.pluggyConnectionId).filter(Boolean);
+                            const novasUnicas = novasContas.filter((n: any) => !existingIds.includes(n.pluggyConnectionId));
+                            return [...prev, ...novasUnicas];
+                          });
+                          
+                          alert(`✅ ${data.accounts.length} conta(s) sincronizada(s)!\n\n${data.accounts.map((a: any) => `• ${a.bankName}: R$ ${(a.balance || 0).toFixed(2)}`).join('\n')}`);
+                        } else {
+                          alert(`ℹ️ Nenhuma conta encontrada.\n\nItems conectados: ${data.items?.length || 0}\n\nSe você acabou de conectar, aguarde alguns minutos e tente novamente.`);
+                        }
+                      } catch (error) {
+                        console.error('Erro ao sincronizar:', error);
+                        alert('❌ Erro ao sincronizar contas');
+                      }
+                    }}
+                    variant="outline"
+                    className="bg-green-600 hover:bg-green-700 text-white border-green-600"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    🔄 Sincronizar Contas Pluggy
+                  </Button>
+                )}
                 <Button
                   onClick={() => setShowModal("add-bank-account")}
                   className="bg-cinema-yellow text-cinema-dark hover:bg-cinema-yellow-dark"
                 >
                   <Plus className="w-4 h-4 mr-2" />
-                  Nova Conta
+                  Nova Conta Manual
                 </Button>
               </div>
             </div>
@@ -1966,16 +2186,37 @@ export const FinancialERP: React.FC = () => {
                   
                   <div>
                     <Label className="text-white">CNPJ</Label>
-                    <Input
-                      value={isEditingCompany ? editingCompanyConfig.cnpj : companyConfig.cnpj}
-                      onChange={(e) => isEditingCompany && setEditingCompanyConfig({
-                        ...editingCompanyConfig,
-                        cnpj: formatCNPJ(e.target.value)
-                      })}
-                      disabled={!isEditingCompany}
-                      className="bg-cinema-dark-lighter border-cinema-gray-light text-white disabled:opacity-50"
-                      placeholder="00.000.000/0000-00"
-                    />
+                    <div className="flex gap-2">
+                      <Input
+                        value={isEditingCompany ? editingCompanyConfig.cnpj : companyConfig.cnpj}
+                        onChange={(e) => isEditingCompany && setEditingCompanyConfig({
+                          ...editingCompanyConfig,
+                          cnpj: formatCNPJ(e.target.value)
+                        })}
+                        disabled={!isEditingCompany}
+                        className="bg-cinema-dark-lighter border-cinema-gray-light text-white disabled:opacity-50 flex-1"
+                        placeholder="00.000.000/0000-00"
+                      />
+                      {isEditingCompany && (
+                        <Button
+                          type="button"
+                          onClick={() => buscarDadosCNPJ(editingCompanyConfig.cnpj)}
+                          disabled={buscandoCNPJ}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-4"
+                        >
+                          {buscandoCNPJ ? (
+                            <Clock className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Search className="w-4 h-4" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                    {isEditingCompany && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        Digite o CNPJ e clique na lupa para buscar dados automaticamente
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -2856,7 +3097,6 @@ export const FinancialERP: React.FC = () => {
             className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
             style={{ zIndex: 9999 }}
           >
-            {console.log("Modal de departamentos sendo renderizado")}
             <Card className="w-full max-w-4xl bg-cinema-dark border-cinema-gray-light max-h-[90vh] overflow-y-auto">
               <CardHeader>
                 <div className="flex justify-between items-center">
@@ -2877,15 +3117,156 @@ export const FinancialERP: React.FC = () => {
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="text-white">
-                  <h3 className="text-lg font-semibold mb-4">Teste do Modal</h3>
-                  <p>Se você está vendo isso, o modal está funcionando!</p>
-                  <Button
-                    onClick={() => setShowModal(null)}
-                    className="bg-cinema-yellow text-cinema-dark mt-4"
-                  >
-                    Fechar Modal
-                  </Button>
+                {/* Formulário para Novo/Editar Departamento */}
+                {editingDepartment ? (
+                  <div className="space-y-4 border-b border-cinema-gray-light pb-6">
+                    <h3 className="text-lg font-semibold text-cinema-yellow">
+                      Editar Departamento
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-white">Nome</Label>
+                        <Input
+                          value={editingDepartment.name}
+                          onChange={(e) => setEditingDepartment({...editingDepartment, name: e.target.value})}
+                          className="bg-cinema-gray border-cinema-gray-light text-white"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-white">Responsável</Label>
+                        <Input
+                          value={editingDepartment.manager}
+                          onChange={(e) => setEditingDepartment({...editingDepartment, manager: e.target.value})}
+                          className="bg-cinema-gray border-cinema-gray-light text-white"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-white">Descrição</Label>
+                      <Input
+                        value={editingDepartment.description || ''}
+                        onChange={(e) => setEditingDepartment({...editingDepartment, description: e.target.value})}
+                        className="bg-cinema-gray border-cinema-gray-light text-white"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => {
+                          setDepartments(departments.map(d => d.id === editingDepartment.id ? editingDepartment : d));
+                          setEditingDepartment(null);
+                        }}
+                        className="bg-cinema-yellow text-cinema-dark"
+                      >
+                        Salvar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setEditingDepartment(null)}
+                        className="border-gray-500 text-gray-400"
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4 border-b border-cinema-gray-light pb-6">
+                    <h3 className="text-lg font-semibold text-cinema-yellow">
+                      Novo Departamento
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-white">Nome *</Label>
+                        <Input
+                          placeholder="Ex: Marketing"
+                          className="bg-cinema-gray border-cinema-gray-light text-white"
+                          value={newDepartment.name || ''}
+                          onChange={(e) => setNewDepartment({...newDepartment, name: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-white">Responsável</Label>
+                        <Input
+                          placeholder="Nome do responsável"
+                          className="bg-cinema-gray border-cinema-gray-light text-white"
+                          value={newDepartment.manager || ''}
+                          onChange={(e) => setNewDepartment({...newDepartment, manager: e.target.value})}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-white">Descrição</Label>
+                      <Input
+                        placeholder="Descrição do departamento"
+                        className="bg-cinema-gray border-cinema-gray-light text-white"
+                        value={newDepartment.description || ''}
+                        onChange={(e) => setNewDepartment({...newDepartment, description: e.target.value})}
+                      />
+                    </div>
+                    <Button
+                      onClick={() => {
+                        if (newDepartment.name && newDepartment.name.trim()) {
+                          const dept: Department = {
+                            id: `dept_${Date.now()}`,
+                            name: newDepartment.name.trim(),
+                            manager: newDepartment.manager || '',
+                            employeeCount: 0,
+                            budget: 0,
+                            description: newDepartment.description || '',
+                            active: true
+                          };
+                          setDepartments(prev => [...prev, dept]);
+                          setNewDepartment({ name: '', manager: '', description: '' });
+                          alert(`Departamento "${dept.name}" criado com sucesso!`);
+                        } else {
+                          alert('Por favor, preencha o nome do departamento.');
+                        }
+                      }}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Adicionar Departamento
+                    </Button>
+                  </div>
+                )}
+
+                {/* Lista de Departamentos */}
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold text-white">Departamentos Cadastrados</h3>
+                  {departments.length === 0 ? (
+                    <p className="text-gray-400">Nenhum departamento cadastrado.</p>
+                  ) : (
+                    departments.map((dept) => (
+                      <Card key={dept.id} className="bg-cinema-gray border-cinema-gray-light">
+                        <CardContent className="p-4">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <h4 className="text-white font-semibold">{dept.name}</h4>
+                              <p className="text-gray-400 text-sm">Responsável: {dept.manager || 'Não definido'}</p>
+                              <p className="text-gray-400 text-sm">{dept.employeeCount} funcionários</p>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setEditingDepartment(dept)}
+                                className="border-cinema-yellow text-cinema-yellow"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setDepartments(departments.filter(d => d.id !== dept.id))}
+                                className="border-red-500 text-red-500"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -3282,6 +3663,15 @@ export const FinancialERP: React.FC = () => {
                         alert("Por favor, preencha Client ID e Client Secret");
                         return;
                       }
+                      const newCreds = {
+                        id: "1",
+                        clientId: newPluggyCredentials.clientId,
+                        clientSecret: newPluggyCredentials.clientSecret,
+                        sandbox: newPluggyCredentials.sandbox !== false,
+                        isActive: newPluggyCredentials.isActive !== false,
+                      };
+                      // Salvar no localStorage
+                      localStorage.setItem('pluggyCredentials', JSON.stringify(newCreds));
                       setPluggyCredentials({
                         id: "1",
                         clientId: newPluggyCredentials.clientId,

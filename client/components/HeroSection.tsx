@@ -1,13 +1,11 @@
 import { Button } from "@/components/ui/button";
 import {
   ArrowRight,
-  Play,
   Camera,
-  Film,
-  Zap,
   Monitor,
   Smartphone,
   Tablet,
+  Zap,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -16,20 +14,14 @@ import {
   getResponsiveTextSize,
   getResponsiveSpacing,
 } from "@/hooks/use-device-detection";
-import { useCompanySettings } from "@/context/CompanyContext";
-import { useTenant } from "@/context/TenantContext";
 
 export default function HeroSection() {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const device = useDeviceDetection();
   const textSizes = getResponsiveTextSize(device.deviceType);
   const spacing = getResponsiveSpacing(device.deviceType);
-  const { companySettings } = useCompanySettings();
-  const { currentTenant } = useTenant();
 
-  // Get company name from current tenant or fallback to company settings
-  const companyName =
-    currentTenant?.name || companySettings.name || "Locadora de Equipamentos";
+  const companyName = "Locadora de Equipamentos Profissionais";
 
   useEffect(() => {
     // Only track mouse movement on desktop for performance
@@ -63,54 +55,53 @@ export default function HeroSection() {
             `
             : `
               radial-gradient(circle at ${mousePosition.x}% ${mousePosition.y}%,
-                rgba(255, 215, 0, 0.15) 0%,
-                rgba(255, 215, 0, 0.05) 25%,
+                rgba(56, 189, 248, 0.20) 0%,
+                rgba(99, 102, 241, 0.10) 25%,
                 transparent 50%),
               linear-gradient(135deg,
-                rgba(10, 10, 10, 0.95) 0%,
-                rgba(26, 26, 26, 0.9) 25%,
-                rgba(10, 10, 10, 0.95) 50%,
-                rgba(26, 26, 26, 0.9) 75%,
-                rgba(10, 10, 10, 0.95) 100%),
+                rgba(6, 11, 20, 0.95) 0%,
+                rgba(10, 12, 22, 0.92) 25%,
+                rgba(6, 11, 20, 0.95) 50%,
+                rgba(10, 12, 22, 0.92) 75%,
+                rgba(6, 11, 20, 0.95) 100%),
               conic-gradient(from 0deg at 50% 50%,
-                rgba(255, 215, 0, 0.1) 0deg,
+                rgba(56, 189, 248, 0.15) 0deg,
                 transparent 60deg,
-                rgba(255, 215, 0, 0.05) 180deg,
+                rgba(99, 102, 241, 0.08) 180deg,
                 transparent 240deg,
-                rgba(255, 215, 0, 0.1) 360deg)
+                rgba(56, 189, 248, 0.15) 360deg)
             `,
         }}
       />
 
-      {/* Device indicator and status (Hidden on mobile) */}
-      {!device.isMobile && (
-        <div className="absolute top-4 right-4 z-50 bg-cinema-gray/80 backdrop-blur-sm rounded-lg px-3 py-2 text-xs text-cinema-yellow flex items-center gap-2">
-          {device.isTablet && <Tablet className="w-4 h-4" />}
-          {device.isDesktop && <Monitor className="w-4 h-4" />}
-          <span>{device.deviceType}</span>
-          <span className="text-gray-400">|</span>
-          <span>
-            {device.screenWidth}x{device.screenHeight}
-          </span>
-        </div>
-      )}
-
       {/* Responsive floating geometric shapes */}
       {!device.isMobile && (
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-20 left-10 w-32 h-32 border border-cinema-yellow/20 rounded-full animate-pulse"></div>
-          <div className="absolute top-40 right-20 w-24 h-24 border border-cinema-yellow/10 rotate-45 animate-spin-slow"></div>
-          <div className="absolute bottom-32 left-20 w-16 h-16 bg-cinema-yellow/5 rounded-lg animate-bounce"></div>
-          <div className="absolute bottom-20 right-10 w-40 h-40 border border-cinema-yellow/15 rounded-full animate-pulse delay-500"></div>
+          <div
+            className="absolute top-20 left-10 w-32 h-32 rounded-full animate-pulse"
+            style={{ border: "1px solid rgba(56, 189, 248, 0.35)" }}
+          ></div>
+          <div
+            className="absolute top-40 right-20 w-24 h-24 rotate-45 animate-spin-slow"
+            style={{ border: "1px solid rgba(99, 102, 241, 0.25)" }}
+          ></div>
+          <div
+            className="absolute bottom-32 left-20 w-16 h-16 rounded-lg animate-bounce"
+            style={{ background: "rgba(99, 102, 241, 0.15)" }}
+          ></div>
+          <div
+            className="absolute bottom-20 right-10 w-40 h-40 rounded-full animate-pulse delay-500"
+            style={{ border: "1px solid rgba(56, 189, 248, 0.25)" }}
+          ></div>
         </div>
       )}
 
       {/* Animated film strip overlays */}
       <div className="absolute inset-0 opacity-20">
-        <div className="h-full w-12 bg-gradient-to-b from-cinema-yellow/30 via-transparent to-cinema-yellow/30 absolute left-8 animate-pulse"></div>
-        <div className="h-full w-8 bg-gradient-to-b from-cinema-yellow/20 via-transparent to-cinema-yellow/20 absolute left-24 animate-pulse delay-700"></div>
-        <div className="h-full w-12 bg-gradient-to-b from-cinema-yellow/30 via-transparent to-cinema-yellow/30 absolute right-8 animate-pulse delay-1000"></div>
-        <div className="h-full w-8 bg-gradient-to-b from-cinema-yellow/20 via-transparent to-cinema-yellow/20 absolute right-24 animate-pulse delay-300"></div>
+        <div className="h-full w-12 bg-gradient-to-b from-cyan-400/30 via-transparent to-cyan-400/30 absolute left-8 animate-pulse"></div>
+        <div className="h-full w-8 bg-gradient-to-b from-indigo-400/20 via-transparent to-indigo-400/20 absolute left-24 animate-pulse delay-700"></div>
+        <div className="h-full w-12 bg-gradient-to-b from-cyan-400/30 via-transparent to-cyan-400/30 absolute right-8 animate-pulse delay-1000"></div>
+        <div className="h-full w-8 bg-gradient-to-b from-indigo-400/20 via-transparent to-indigo-400/20 absolute right-24 animate-pulse delay-300"></div>
       </div>
 
       {/* Floating particles */}
@@ -118,7 +109,7 @@ export default function HeroSection() {
         {[...Array(20)].map((_, i) => (
           <div
             key={i}
-            className="absolute w-1 h-1 bg-cinema-yellow/40 rounded-full animate-float"
+            className="absolute w-1 h-1 bg-cyan-400/40 rounded-full animate-float"
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
@@ -183,7 +174,7 @@ export default function HeroSection() {
             </Link>
 
             {!device.isMobile && (
-              <Link to="/carrinho">
+              <Link to="/login">
                 <Button
                   variant="outline"
                   size="lg"

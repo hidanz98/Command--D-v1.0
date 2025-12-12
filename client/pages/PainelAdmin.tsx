@@ -5,6 +5,7 @@ import { useLogo } from "@/context/LogoContext";
 import { useTenant } from "@/context/TenantContext";
 import { DocumentService } from "@/lib/documentService";
 import { ResponsiveSidebarTabs } from "@/components/ResponsiveTabs";
+import { NewOrderModal } from "@/components/NewOrderModal";
 import { toast } from "sonner";
 import {
   BarChart,
@@ -53,6 +54,8 @@ import {
   ShoppingCart,
   User,
   Building,
+  RefreshCw,
+  Menu,
 } from "lucide-react";
 
 // UI Components
@@ -80,6 +83,7 @@ import ColorSettings from "@/components/ColorSettings";
 import { ClientAreaManager } from "@/components/ClientAreaManager";
 import { ProductSelectionModal } from "@/components/ProductSelectionModal";
 import { ProductManager } from "@/components/ProductManager";
+import { ProductEditModal } from "@/components/ProductEditModal";
 import { CategoryManager } from "@/components/CategoryManager";
 import { DashboardCharts } from "@/components/DashboardCharts";
 import { useInlineEditor } from "@/components/InlineEditor";
@@ -88,6 +92,7 @@ import { ManagerActivityDashboard } from "@/components/ManagerActivityDashboard"
 import { EmployeeManager } from "@/components/EmployeeManager";
 import { TabErrorBoundary } from "@/components/TabErrorBoundary";
 import ClientApprovalDashboard from "@/components/ClientApprovalDashboard";
+import { FaturaLocacao } from "@/components/FaturaLocacao";
 
 // Equipment list for autocomplete
 const availableEquipment = [
@@ -397,9 +402,6 @@ export default function PainelAdmin() {
     { id: "Categorias", name: "Categorias", icon: Tag, priority: 4, mobile: true, desktop: true },
     { id: "Clientes", name: "Clientes", icon: Users, priority: 5, mobile: true, desktop: true },
     { id: "Aprovacoes", name: "Aprovações", icon: CheckCircle, priority: 6, mobile: true, desktop: true },
-    
-    // Abas de serviços
-    { id: "servicos", name: "Serviços", icon: Wrench, priority: 6, mobile: true, desktop: true },
     { id: "Documentos", name: "Documentos", icon: FileText, priority: 7, mobile: true, desktop: true },
     
     // Abas financeiras
@@ -420,6 +422,8 @@ export default function PainelAdmin() {
     { id: "configuracoes", name: "Configurações", icon: Settings, priority: 16, mobile: true, desktop: true },
   ];
   const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [productsRefreshKey, setProductsRefreshKey] = useState(0);
   
   // Função para mudar de tab com limpeza de estado
   const handleTabChange = (newTab: string) => {
@@ -472,6 +476,10 @@ export default function PainelAdmin() {
   const [showEmitirNFSeModal, setShowEmitirNFSeModal] = useState(false);
   const [pedidoParaFaturar, setPedidoParaFaturar] = useState<any>(null);
   const [emissaoNFSeLoading, setEmissaoNFSeLoading] = useState(false);
+  
+  // Estado para Fatura de Locação
+  const [showFaturaModal, setShowFaturaModal] = useState(false);
+  const [pedidoParaFatura, setPedidoParaFatura] = useState<any>(null);
   
   // Estados para edição de Clientes
   const [showEditClientModal, setShowEditClientModal] = useState(false);
@@ -1034,7 +1042,7 @@ export default function PainelAdmin() {
         const json = await res.json();
         if (json?.success) {
           const mapped = json.data.map((p: any, idx: number) => ({
-            id: idx + 1,
+            id: p.id,
             name: p.name,
             code: p.sku ?? `REF-${String(idx + 1).padStart(3, '0')}`,
             category: p.category ?? 'REFLETORES',
@@ -1044,15 +1052,20 @@ export default function PainelAdmin() {
             total: p.quantity ?? 0,
             reserved: 0,
             price: p.dailyPrice ?? 0,
+            dailyPrice: p.dailyPrice ?? 0,
+            description: p.description ?? '',
+            images: p.images ?? [],
+            internalImage: p.internalImage ?? '',
             isKit: false,
             kitItems: [],
             owner: 'empresa',
+            featured: p.featured ?? false,
           }));
           setStockData(mapped);
         }
       } catch {}
     })();
-  }, []);
+  }, [productsRefreshKey]);
   // Legacy mock removed
   /*
     {
@@ -1218,6 +1231,7 @@ export default function PainelAdmin() {
   const [stockTypeFilter, setStockTypeFilter] = useState("todos");
   const [stockStatusFilter, setStockStatusFilter] = useState("todos");
   const [stockOwnerFilter, setStockOwnerFilter] = useState("todos");
+  const [stockFeaturedFilter, setStockFeaturedFilter] = useState("todos");
   const [stockSort, setStockSort] = useState("name");
   const [stockView, setStockView] = useState<"grid" | "list">("grid");
   const [currentPage, setCurrentPage] = useState(1);
@@ -1622,7 +1636,13 @@ export default function PainelAdmin() {
         (stockOwnerFilter === "empresa" && (!item.owner || item.owner === "empresa")) ||
         item.owner === stockOwnerFilter;
 
-      return searchMatch && categoryMatch && typeMatch && statusMatch && ownerMatch;
+      // Featured filter
+      const featuredMatch =
+        stockFeaturedFilter === "todos" ||
+        (stockFeaturedFilter === "sim" && item.featured) ||
+        (stockFeaturedFilter === "nao" && !item.featured);
+
+      return searchMatch && categoryMatch && typeMatch && statusMatch && ownerMatch && featuredMatch;
     });
 
     // Sorting
@@ -1787,13 +1807,54 @@ export default function PainelAdmin() {
     }));
   };
 
+  // Estado para menu mobile
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Função para mudar aba e fechar menu mobile
+  const handleMobileTabChange = (tabId: string) => {
+    handleTabChange(tabId);
+    setMobileMenuOpen(false);
+  };
+
   return (
     <Layout>
       <div className="min-h-screen bg-cinema-dark" data-edit-id="page.background">
+        {/* Mobile Menu Overlay */}
+        {mobileMenuOpen && (
+          <div 
+            className="md:hidden fixed inset-0 bg-black/60 z-40"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+        )}
+
+        {/* Mobile Menu Drawer */}
+        <div className={`md:hidden fixed top-0 left-0 h-full w-72 bg-cinema-gray border-r border-cinema-gray-light z-50 transform transition-transform duration-300 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          <div className="p-4 border-b border-cinema-gray-light flex justify-between items-center">
+            <h1 className="text-lg font-bold text-cinema-yellow">
+              Painel da Locadora
+            </h1>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-gray-400 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
+          <div className="p-4 overflow-y-auto h-[calc(100vh-80px)]">
+            <ResponsiveSidebarTabs
+              tabs={adminTabs}
+              activeTab={activeTab}
+              onTabChange={handleMobileTabChange}
+            />
+          </div>
+        </div>
+
         <div className="flex h-screen">
-          {/* Sidebar */}
-          <div className="w-64 bg-cinema-gray border-r border-cinema-gray-light h-full flex flex-col" data-edit-id="sidebar.container">
-            <div className="p-6 flex-1">
+          {/* Sidebar - Hidden on mobile, visible on md+ */}
+          <aside className="hidden md:flex w-64 bg-cinema-gray border-r border-cinema-gray-light h-screen sticky top-0 flex-col flex-shrink-0" data-edit-id="sidebar.container">
+            <div className="p-6 flex-1 overflow-y-auto">
               <h1 className="text-xl font-bold text-cinema-yellow mb-8" data-edit-id="sidebar.title">
                 Painel da Locadora
               </h1>
@@ -1805,19 +1866,32 @@ export default function PainelAdmin() {
               />
             </div>
             
-            {/* Footer da Sidebar - Ocupa todo o espaço restante */}
-            <div className="flex-1 bg-cinema-gray flex items-end">
-              <div className="w-full p-4 border-t border-cinema-gray-light">
+            {/* Footer da Sidebar */}
+            <div className="bg-cinema-gray border-t border-cinema-gray-light p-4 flex-shrink-0">
                 <div className="text-xs text-gray-400 text-center" data-edit-id="sidebar.footer">
                   Sistema Command-D
                 </div>
               </div>
-            </div>
-          </div>
+          </aside>
 
           {/* Main Content */}
-          <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-cinema-yellow scrollbar-track-cinema-dark">
-            <div className="p-8 min-h-full">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-cinema-yellow scrollbar-track-cinema-dark relative z-10">
+            {/* Mobile Header with Menu Button */}
+            <div className="md:hidden sticky top-0 z-30 bg-cinema-dark border-b border-cinema-gray-light p-4 flex items-center justify-between">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setMobileMenuOpen(true)}
+                className="text-cinema-yellow flex items-center gap-2"
+              >
+                <Menu className="w-5 h-5" />
+                <span>Menu</span>
+              </Button>
+              <span className="text-cinema-yellow font-semibold text-sm">{adminTabs.find(t => t.id === activeTab)?.name || 'Dashboard'}</span>
+              <div className="w-16"></div>
+            </div>
+            
+            <div className="p-4 md:p-8 min-h-full">
             {/* Dashboard Tab */}
             {activeTab === "Dashboard" && (
               <div className="space-y-8">
@@ -2015,7 +2089,7 @@ export default function PainelAdmin() {
                 </div>
 
                 {/* Dashboard Charts */}
-                <div data-edit-id="dashboard.charts-container">
+                <div data-edit-id="dashboard.charts-container" className="overflow-hidden relative">
                   <DashboardCharts />
                 </div>
               </div>
@@ -2074,8 +2148,84 @@ export default function PainelAdmin() {
                   </select>
                 </div>
 
-                {/* Orders List */}
-                <Card className="bg-cinema-gray border-cinema-gray-light">
+                {/* Orders List - Mobile Cards */}
+                <div className="md:hidden space-y-4">
+                  {allOrders.map((order) => (
+                    <Card key={order.id} className="bg-cinema-gray border-cinema-gray-light">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <span className="text-cinema-yellow font-bold text-lg">#{order.id}</span>
+                            <p className="text-white font-medium">{order.client}</p>
+                          </div>
+                          <Badge
+                            className={
+                              order.status === "Em Locação"
+                                ? "bg-blue-500/20 text-blue-400"
+                                : order.status === "Concluído"
+                                ? "bg-green-500/20 text-green-400"
+                                : order.status === "Atrasado"
+                                ? "bg-red-500/20 text-red-400"
+                                : "bg-yellow-500/20 text-yellow-400"
+                            }
+                          >
+                            {order.status}
+                          </Badge>
+                        </div>
+                        
+                        <div className="text-gray-400 text-sm mb-3">
+                          <span className="text-cinema-yellow">Equipamentos:</span> {order.items.join(", ")}
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-3 text-sm mb-3">
+                          <div className="bg-cinema-dark p-2 rounded">
+                            <div className="text-gray-400 text-xs">Retirada</div>
+                            <div className="text-white font-medium">{order.dataRetirada || order.date}</div>
+                            <div className="text-gray-400 text-xs">{order.horarioRetirada || "-"}</div>
+                          </div>
+                          <div className="bg-cinema-dark p-2 rounded">
+                            <div className="text-gray-400 text-xs">Devolução</div>
+                            <div className="text-white font-medium">{order.dataDevolucao || "-"}</div>
+                            <div className="text-gray-400 text-xs">{order.horarioDevolucao || "-"}</div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex justify-between items-center">
+                          <span className="text-green-400 font-bold text-lg">
+                            R$ {order.total?.toFixed(2) || "0.00"}
+                          </span>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-cinema-yellow border-cinema-yellow"
+                              onClick={() => {
+                                setSelectedOrder(order);
+                                setShowViewOrderModal(true);
+                              }}
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-blue-400 border-blue-400"
+                              onClick={() => {
+                                setPedidoParaFaturar(order);
+                                setShowFaturaModal(true);
+                              }}
+                            >
+                              <FileText className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Orders List - Desktop Table */}
+                <Card className="bg-cinema-gray border-cinema-gray-light hidden md:block">
                   <CardContent className="p-0">
                     <div className="overflow-x-auto">
                       <table className="w-full">
@@ -2245,7 +2395,6 @@ export default function PainelAdmin() {
                                   >
                                     <Download className="w-4 h-4" />
                                   </Button>
-                                  {order.status !== "Concluído" && (
                                     <Button
                                       size="sm"
                                       variant="outline"
@@ -2253,14 +2402,13 @@ export default function PainelAdmin() {
                                       onClick={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
-                                        setPedidoParaFaturar(order);
-                                        setShowEmitirNFSeModal(true);
+                                      setPedidoParaFatura(order);
+                                      setShowFaturaModal(true);
                                       }}
-                                      title="Emitir NFSe"
+                                    title="Gerar Fatura de Locação"
                                     >
                                       <FileText className="w-4 h-4" />
                                     </Button>
-                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -2271,987 +2419,43 @@ export default function PainelAdmin() {
                   </CardContent>
                 </Card>
 
-                {/* Enhanced Order Modal - Professional Style */}
-                {showNewOrderModal && (
-                  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-cinema-gray border border-cinema-gray-light rounded-lg w-full max-w-6xl mx-4 max-h-[95vh] overflow-hidden">
-                      {/* Modal Header */}
-                      <div className="flex justify-between items-center p-6 border-b border-cinema-gray-light">
-                        <div>
-                          <h3 className="text-xl font-bold text-white">
-                            Ficha de Locação
-                          </h3>
-                          <p className="text-gray-400 text-sm">
-                            Novo pedido - Sistema de Locação profissional
-                          </p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
+                {/* New Order Modal - Simplified */}
+                <NewOrderModal
+                  open={showNewOrderModal}
+                  onClose={() => {
                             setShowNewOrderModal(false);
                             setClientSearchTerm("");
                             setShowClientSuggestions(false);
                           }}
-                          className="text-gray-400 hover:text-white"
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-
-                      <div className="flex h-[calc(95vh-120px)]">
-                        {/* Left Panel */}
-                        <div className="w-1/3 p-6 border-r border-cinema-gray-light overflow-y-auto">
-                          <form
-                            onSubmit={handleNewOrderSubmit}
-                            className="space-y-4"
-                          >
-                            {/* Basic Information */}
-                            <div className="space-y-4">
-                              <h4 className="text-cinema-yellow font-semibold text-sm">
-                                INFORMAÇÕES BÁSICAS
-                              </h4>
-
-                              <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                  <Label className="text-white text-xs">
-                                    Número
-                                  </Label>
-                                  <Input
-                                    value={newOrderForm.orderNumber}
-                                    onChange={(e) =>
-                                      handleFormChange(
-                                        "orderNumber",
-                                        e.target.value,
-                                      )
-                                    }
-                                    className="bg-cinema-dark-lighter border-cinema-gray-light text-white text-sm"
-                                  />
-                                </div>
-                                <div>
-                                  <Label className="text-white text-xs">
-                                    Orçamento
-                                  </Label>
-                                  <Input
-                                    value={newOrderForm.quoteNumber}
-                                    onChange={(e) =>
-                                      handleFormChange(
-                                        "quoteNumber",
-                                        e.target.value,
-                                      )
-                                    }
-                                    className="bg-cinema-dark-lighter border-cinema-gray-light text-white text-sm"
-                                    placeholder="Número do orçamento"
-                                  />
-                                </div>
-                              </div>
-
-                              <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                  <Label className="text-white text-xs">
-                                    Status
-                                  </Label>
-                                  <select
-                                    value={newOrderForm.status}
-                                    onChange={(e) =>
-                                      handleFormChange("status", e.target.value)
-                                    }
-                                    className="w-full bg-cinema-dark-lighter border border-cinema-gray-light text-white rounded-md px-3 py-2 text-sm"
-                                  >
-                                    <option value="Orcamento">Orçamento</option>
-                                    <option value="Aprovado">Aprovado</option>
-                                    <option value="Em Producao">
-                                      Em Produção
-                                    </option>
-                                    <option value="Em Locacao">
-                                      Em Locação
-                                    </option>
-                                    <option value="Entregue">Entregue</option>
-                                    <option value="Devolvido">Devolvido</option>
-                                    <option value="Cancelado">Cancelado</option>
-                                  </select>
-                                </div>
-                                <div>
-                                  <Label className="text-white text-xs">
-                                    Prioridade
-                                  </Label>
-                                  <select
-                                    value={newOrderForm.priority}
-                                    onChange={(e) =>
-                                      handleFormChange(
-                                        "priority",
-                                        e.target.value,
-                                      )
-                                    }
-                                    className="w-full bg-cinema-dark-lighter border border-cinema-gray-light text-white rounded-md px-3 py-2 text-sm"
-                                  >
-                                    <option value="Baixa">Baixa</option>
-                                    <option value="Normal">Normal</option>
-                                    <option value="Alta">Alta</option>
-                                    <option value="Urgente">Urgente</option>
-                                  </select>
-                                </div>
-                              </div>
-
-                              <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                  <Label className="text-white text-xs">
-                                    Data Emissão
-                                  </Label>
-                                  <Input
-                                    type="date"
-                                    value={newOrderForm.issueDate}
-                                    onChange={(e) =>
-                                      handleFormChange(
-                                        "issueDate",
-                                        e.target.value,
-                                      )
-                                    }
-                                    className="bg-cinema-dark-lighter border-cinema-gray-light text-white text-sm"
-                                    style={{ colorScheme: "dark" }}
-                                  />
-                                </div>
-                                <div>
-                                  <Label className="text-white text-xs">
-                                    Hora Emissão
-                                  </Label>
-                                  <Input
-                                    type="time"
-                                    value={newOrderForm.issueTime}
-                                    onChange={(e) =>
-                                      handleFormChange(
-                                        "issueTime",
-                                        e.target.value,
-                                      )
-                                    }
-                                    className="bg-cinema-dark-lighter border-cinema-gray-light text-white text-sm"
-                                    style={{ colorScheme: "dark" }}
-                                  />
-                                </div>
-                              </div>
-
-                              <div>
-                                <Label className="text-white text-xs">
-                                  Vendedor/Representante
-                                </Label>
-                                <Input
-                                  value={newOrderForm.salesperson}
-                                  onChange={(e) =>
-                                    handleFormChange(
-                                      "salesperson",
-                                      e.target.value,
-                                    )
-                                  }
-                                  className="bg-cinema-dark-lighter border-cinema-gray-light text-white text-sm"
-                                  placeholder="Nome do vendedor"
-                                />
-                              </div>
-
-                              <div>
-                                <Label className="text-white text-xs">
-                                  Origem
-                                </Label>
-                                <select
-                                  value={newOrderForm.origin}
-                                  onChange={(e) =>
-                                    handleFormChange("origin", e.target.value)
-                                  }
-                                  className="w-full bg-cinema-dark-lighter border border-cinema-gray-light text-white rounded-md px-3 py-2 text-sm"
-                                >
-                                  <option value="Balcao">Balcão</option>
-                                  <option value="Telefone">Telefone</option>
-                                  <option value="Email">E-mail</option>
-                                  <option value="Site">Site</option>
-                                  <option value="Whatsapp">WhatsApp</option>
-                                  <option value="Representante">
-                                    Representante
-                                  </option>
-                                </select>
-                              </div>
-                            </div>
-
-                            {/* Client Information */}
-                            <div className="space-y-4">
-                              <h4 className="text-cinema-yellow font-semibold text-sm">
-                                CLIENTE
-                              </h4>
-
-                              <div className="relative">
-                                <Label className="text-white text-xs">
-                                  Nome do Cliente
-                                </Label>
-                                <Input
-                                  value={clientSearchTerm}
-                                  onChange={(e) =>
-                                    handleClientSearch(e.target.value)
-                                  }
-                                  onFocus={() =>
-                                    setShowClientSuggestions(
-                                      clientSearchTerm.length > 0,
-                                    )
-                                  }
-                                  className="bg-cinema-dark-lighter border-cinema-gray-light text-white text-sm"
-                                  placeholder="Digite o nome do cliente..."
-                                  required
-                                />
-                                {showClientSuggestions &&
-                                  filteredClients.length > 0 && (
-                                    <div className="absolute top-full mt-1 w-full bg-cinema-dark-lighter border border-cinema-gray-light rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
-                                      {filteredClients.map((client, index) => (
-                                        <button
-                                          key={index}
-                                          type="button"
-                                          onClick={() => selectClient(client)}
-                                          className="w-full text-left px-3 py-2 hover:bg-cinema-yellow hover:text-cinema-dark transition-colors text-white text-sm border-b border-cinema-gray-light last:border-b-0"
-                                        >
-                                          <div>
-                                            <p className="font-medium">
-                                              {client.name}
-                                            </p>
-                                            <p className="text-xs opacity-75">
-                                              {client.email} • {client.phone}
-                                            </p>
-                                          </div>
-                                        </button>
-                                      ))}
-                                    </div>
-                                  )}
-                              </div>
-
-                              <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                  <Label className="text-white text-xs">
-                                    CNPJ/CPF
-                                  </Label>
-                                  <Input
-                                    value={newOrderForm.clientCNPJ}
-                                    onChange={(e) =>
-                                      handleFormChange(
-                                        "clientCNPJ",
-                                        e.target.value,
-                                      )
-                                    }
-                                    className="bg-cinema-dark-lighter border-cinema-gray-light text-white text-sm"
-                                    placeholder="00.000.000/0000-00"
-                                  />
-                                </div>
-                                <div>
-                                  <Label className="text-white text-xs">
-                                    Telefone
-                                  </Label>
-                                  <Input
-                                    value={newOrderForm.clientPhone}
-                                    onChange={(e) =>
-                                      handleFormChange(
-                                        "clientPhone",
-                                        e.target.value,
-                                      )
-                                    }
-                                    className="bg-cinema-dark-lighter border-cinema-gray-light text-white text-sm"
-                                    required
-                                  />
-                                </div>
-                              </div>
-
-                              <div>
-                                <Label className="text-white text-xs">
-                                  E-mail
-                                </Label>
-                                <Input
-                                  type="email"
-                                  value={newOrderForm.clientEmail}
-                                  onChange={(e) =>
-                                    handleFormChange(
-                                      "clientEmail",
-                                      e.target.value,
-                                    )
-                                  }
-                                  className="bg-cinema-dark-lighter border-cinema-gray-light text-white text-sm"
-                                  required
-                                />
-                              </div>
-
-                              <div>
-                                <Label className="text-white text-xs">
-                                  Endereço
-                                </Label>
-                                <Input
-                                  value={newOrderForm.clientAddress}
-                                  onChange={(e) =>
-                                    handleFormChange(
-                                      "clientAddress",
-                                      e.target.value,
-                                    )
-                                  }
-                                  className="bg-cinema-dark-lighter border-cinema-gray-light text-white text-sm"
-                                  placeholder="Endereço completo"
-                                />
-                              </div>
-
-                              <div>
-                                <Label className="text-white text-xs">
-                                  Cidade
-                                </Label>
-                                <Input
-                                  value={newOrderForm.clientCity}
-                                  onChange={(e) =>
-                                    handleFormChange(
-                                      "clientCity",
-                                      e.target.value,
-                                    )
-                                  }
-                                  className="bg-cinema-dark-lighter border-cinema-gray-light text-white text-sm"
-                                />
-                              </div>
-                            </div>
-
-                            {/* Delivery Information */}
-                            <div className="space-y-4">
-                              <h4 className="text-cinema-yellow font-semibold text-sm">
-                                ENTREGA/RETIRADA
-                              </h4>
-
-                              <div>
-                                <Label className="text-white text-xs">
-                                  Tipo de Entrega
-                                </Label>
-                                <select
-                                  value={newOrderForm.deliveryType}
-                                  onChange={(e) =>
-                                    handleFormChange(
-                                      "deliveryType",
-                                      e.target.value,
-                                    )
-                                  }
-                                  className="w-full bg-cinema-dark-lighter border border-cinema-gray-light text-white rounded-md px-3 py-2 text-sm"
-                                >
-                                  <option value="Retirada">
-                                    Retirada na Loja
-                                  </option>
-                                  <option value="Entrega">
-                                    Entrega no Local
-                                  </option>
-                                  <option value="Correios">Correios</option>
-                                  <option value="Transportadora">
-                                    Transportadora
-                                  </option>
-                                </select>
-                              </div>
-
-                              {newOrderForm.deliveryType !== "Retirada" && (
-                                <div>
-                                  <Label className="text-white text-xs">
-                                    Endereço de Entrega
-                                  </Label>
-                                  <textarea
-                                    value={newOrderForm.deliveryAddress}
-                                    onChange={(e) =>
-                                      handleFormChange(
-                                        "deliveryAddress",
-                                        e.target.value,
-                                      )
-                                    }
-                                    className="w-full bg-cinema-dark-lighter border border-cinema-gray-light text-white rounded-md px-3 py-2 text-sm resize-none"
-                                    rows={2}
-                                    placeholder="Endereço completo para entrega"
-                                  />
-                                </div>
-                              )}
-
-                              <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                  <Label className="text-white text-xs">
-                                    Data Retirada/Entrega
-                                  </Label>
-                                  <Input
-                                    type="date"
-                                    value={newOrderForm.pickupDate}
-                                    onChange={(e) =>
-                                      handleFormChange(
-                                        "pickupDate",
-                                        e.target.value,
-                                      )
-                                    }
-                                    className="bg-cinema-dark-lighter border-cinema-gray-light text-white text-sm"
-                                    style={{ colorScheme: "dark" }}
-                                    required
-                                  />
-                                </div>
-                                <div>
-                                  <Label className="text-white text-xs">
-                                    Horário
-                                  </Label>
-                                  <Input
-                                    type="time"
-                                    value={newOrderForm.pickupTime}
-                                    onChange={(e) =>
-                                      handleFormChange(
-                                        "pickupTime",
-                                        e.target.value,
-                                      )
-                                    }
-                                    className="bg-cinema-dark-lighter border-cinema-gray-light text-white text-sm"
-                                    style={{ colorScheme: "dark" }}
-                                    required
-                                  />
-                                </div>
-                              </div>
-
-                              <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                  <Label className="text-white text-xs">
-                                    Data Devolução
-                                  </Label>
-                                  <Input
-                                    type="date"
-                                    value={newOrderForm.returnDate}
-                                    onChange={(e) =>
-                                      handleFormChange(
-                                        "returnDate",
-                                        e.target.value,
-                                      )
-                                    }
-                                    className="bg-cinema-dark-lighter border-cinema-gray-light text-white text-sm"
-                                    style={{ colorScheme: "dark" }}
-                                    required
-                                  />
-                                </div>
-                                <div>
-                                  <Label className="text-white text-xs">
-                                    Horário
-                                  </Label>
-                                  <Input
-                                    type="time"
-                                    value={newOrderForm.returnTime}
-                                    onChange={(e) =>
-                                      handleFormChange(
-                                        "returnTime",
-                                        e.target.value,
-                                      )
-                                    }
-                                    className="bg-cinema-dark-lighter border-cinema-gray-light text-white text-sm"
-                                    style={{ colorScheme: "dark" }}
-                                    required
-                                  />
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Form Actions */}
-                            <div className="flex space-x-3 pt-6">
-                              <Button
-                                type="submit"
-                                className="flex-1 bg-cinema-yellow text-cinema-dark hover:bg-cinema-yellow-dark text-sm"
-                              >
-                                Salvar Pedido
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => {
+                  onSubmit={(data) => {
+                    // Create order with proper TenantOrder format
+                    const newOrder = {
+                      customerId: "", // Will be filled if client exists
+                      customerName: data.clientName,
+                      customerEmail: data.clientEmail,
+                      items: data.equipment.map(eq => ({
+                        productId: eq.code,
+                        productName: eq.description,
+                        quantity: eq.quantity,
+                        dailyRate: eq.unitPrice,
+                        totalDays: eq.days,
+                        totalPrice: eq.total,
+                      })),
+                      startDate: new Date(data.pickupDate),
+                      endDate: new Date(data.returnDate),
+                      totalAmount: data.total,
+                      status: "pending" as const,
+                      notes: data.notes || "",
+                    };
+                    addOrder(newOrder);
                                   setShowNewOrderModal(false);
                                   setClientSearchTerm("");
-                                  setShowClientSuggestions(false);
-                                }}
-                                className="flex-1 text-gray-400 border-gray-400 hover:text-white hover:border-white text-sm"
-                              >
-                                Cancelar
-                              </Button>
-                            </div>
-                          </form>
-                        </div>
-
-                        {/* Right Panel - Equipment Grid */}
-                        <div className="flex-1 p-6 overflow-y-auto">
-                          <div className="space-y-4">
-                            <div className="flex justify-between items-center">
-                              <h4 className="text-cinema-yellow font-semibold">
-                                EQUIPAMENTOS E PRODUTOS
-                              </h4>
-                              <Button
-                                size="sm"
-                                className="bg-cinema-yellow text-cinema-dark hover:bg-cinema-yellow-dark"
-                                onClick={() =>
-                                  setShowProductSelectionModal(true)
-                                }
-                              >
-                                <Plus className="w-4 h-4 mr-1" />
-                                Adicionar Produtos
-                              </Button>
-                            </div>
-
-                            {/* Equipment Table */}
-                            <div className="bg-cinema-dark-lighter rounded-lg border border-cinema-gray-light">
-                              <div className="p-4">
-                                <table className="w-full text-sm">
-                                  <thead>
-                                    <tr className="border-b border-cinema-gray-light">
-                                      <th className="text-left text-cinema-yellow p-2">
-                                        Código
-                                      </th>
-                                      <th className="text-left text-cinema-yellow p-2">
-                                        Descrição
-                                      </th>
-                                      <th className="text-left text-cinema-yellow p-2">
-                                        Qtd
-                                      </th>
-                                      <th className="text-left text-cinema-yellow p-2">
-                                        Valor Unit.
-                                      </th>
-                                      <th className="text-left text-cinema-yellow p-2">
-                                        Dias
-                                      </th>
-                                      <th className="text-left text-cinema-yellow p-2">
-                                        Desc %
-                                      </th>
-                                      <th className="text-left text-cinema-yellow p-2">
-                                        Total
-                                      </th>
-                                      <th className="text-left text-cinema-yellow p-2">
-                                        Ações
-                                      </th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {!newOrderForm.equipment ||
-                                    newOrderForm.equipment.length === 0 ? (
-                                      <tr>
-                                        <td
-                                          colSpan={8}
-                                          className="text-center text-gray-400 p-8"
-                                        >
-                                          Nenhum equipamento adicionado
-                                          <br />
-                                          <span className="text-xs">
-                                            Clique em "Adicionar Produtos" para
-                                            começar
-                                          </span>
-                                        </td>
-                                      </tr>
-                                    ) : (
-                                      newOrderForm.equipment.map(
-                                        (item: any, index: number) => (
-                                          <tr
-                                            key={item.id}
-                                            className="border-b border-cinema-gray-light"
-                                          >
-                                            <td className="p-2">
-                                              <Input
-                                                value={item.code || ""}
-                                                onChange={(e) => {
-                                                  const updatedEquipment = [
-                                                    ...newOrderForm.equipment,
-                                                  ];
-                                                  updatedEquipment[index] = {
-                                                    ...item,
-                                                    code: e.target.value,
-                                                  };
-                                                  handleFormChange(
-                                                    "equipment",
-                                                    updatedEquipment.join(", "),
-                                                  );
-                                                }}
-                                                placeholder="Código"
-                                                className="bg-cinema-gray border-cinema-gray-light text-white text-xs h-8"
-                                              />
-                                            </td>
-                                            <td className="p-2">
-                                              <Input
-                                                value={item.name}
-                                                onChange={(e) => {
-                                                  const updatedEquipment = [
-                                                    ...newOrderForm.equipment,
-                                                  ];
-                                                  updatedEquipment[index] = {
-                                                    ...item,
-                                                    name: e.target.value,
-                                                  };
-                                                  handleFormChange(
-                                                    "equipment",
-                                                    updatedEquipment.join(", "),
-                                                  );
-                                                }}
-                                                placeholder="Descrição do equipamento"
-                                                className="bg-cinema-gray border-cinema-gray-light text-white text-xs h-8"
-                                              />
-                                            </td>
-                                            <td className="p-2">
-                                              <Input
-                                                type="number"
-                                                value={item.quantity}
-                                                onChange={(e) => {
-                                                  const updatedEquipment = [
-                                                    ...newOrderForm.equipment,
-                                                  ];
-                                                  updatedEquipment[index] = {
-                                                    ...item,
-                                                    quantity:
-                                                      parseInt(
-                                                        e.target.value,
-                                                      ) || 1,
-                                                  };
-                                                  handleFormChange(
-                                                    "equipment",
-                                                    updatedEquipment.join(", "),
-                                                  );
-                                                  updateOrderTotals(
-                                                    updatedEquipment,
-                                                  );
-                                                }}
-                                                min="1"
-                                                className="bg-cinema-gray border-cinema-gray-light text-white text-xs h-8 w-16"
-                                              />
-                                            </td>
-                                            <td className="p-2">
-                                              <Input
-                                                type="number"
-                                                value={item.unitPrice}
-                                                onChange={(e) => {
-                                                  const updatedEquipment = [
-                                                    ...newOrderForm.equipment,
-                                                  ];
-                                                  updatedEquipment[index] = {
-                                                    ...item,
-                                                    unitPrice:
-                                                      parseFloat(
-                                                        e.target.value,
-                                                      ) || 0,
-                                                  };
-                                                  handleFormChange(
-                                                    "equipment",
-                                                    updatedEquipment.join(", "),
-                                                  );
-                                                  updateOrderTotals(
-                                                    updatedEquipment,
-                                                  );
-                                                }}
-                                                step="0.01"
-                                                placeholder="0.00"
-                                                className="bg-cinema-gray border-cinema-gray-light text-white text-xs h-8 w-20"
-                                              />
-                                            </td>
-                                            <td className="p-2">
-                                              <Input
-                                                type="number"
-                                                value={item.days}
-                                                onChange={(e) => {
-                                                  const updatedEquipment = [
-                                                    ...newOrderForm.equipment,
-                                                  ];
-                                                  updatedEquipment[index] = {
-                                                    ...item,
-                                                    days:
-                                                      parseInt(
-                                                        e.target.value,
-                                                      ) || 1,
-                                                  };
-                                                  handleFormChange(
-                                                    "equipment",
-                                                    updatedEquipment.join(", "),
-                                                  );
-                                                  updateOrderTotals(
-                                                    updatedEquipment,
-                                                  );
-                                                }}
-                                                min="1"
-                                                className="bg-cinema-gray border-cinema-gray-light text-white text-xs h-8 w-16"
-                                              />
-                                            </td>
-                                            <td className="p-2">
-                                              <Input
-                                                type="number"
-                                                value={item.discount}
-                                                onChange={(e) => {
-                                                  const updatedEquipment = [
-                                                    ...newOrderForm.equipment,
-                                                  ];
-                                                  updatedEquipment[index] = {
-                                                    ...item,
-                                                    discount:
-                                                      parseFloat(
-                                                        e.target.value,
-                                                      ) || 0,
-                                                  };
-                                                  handleFormChange(
-                                                    "equipment",
-                                                    updatedEquipment.join(", "),
-                                                  );
-                                                  updateOrderTotals(
-                                                    updatedEquipment,
-                                                  );
-                                                }}
-                                                min="0"
-                                                max="100"
-                                                className="bg-cinema-gray border-cinema-gray-light text-white text-xs h-8 w-16"
-                                              />
-                                            </td>
-                                            <td className="p-2 text-cinema-yellow font-medium">
-                                              R${" "}
-                                              {(
-                                                item.unitPrice *
-                                                item.quantity *
-                                                item.days *
-                                                (1 - item.discount / 100)
-                                              ).toFixed(2)}
-                                            </td>
-                                            <td className="p-2">
-                                              <Button
-                                                size="sm"
-                                                variant="outline"
-                                                className="text-red-400 border-red-400 h-8 w-8 p-0"
-                                                onClick={() => {
-                                                  const updatedEquipment =
-                                                    newOrderForm.equipment.filter(
-                                                      (_: any, i: number) =>
-                                                        i !== index,
-                                                    );
-                                                  handleFormChange(
-                                                    "equipment",
-                                                    updatedEquipment.join(", "),
-                                                  );
-                                                  updateOrderTotals(
-                                                    updatedEquipment,
-                                                  );
-                                                }}
-                                              >
-                                                <Trash2 className="w-3 h-3" />
-                                              </Button>
-                                            </td>
-                                          </tr>
-                                        ),
-                                      )
-                                    )}
-                                  </tbody>
-                                </table>
-                              </div>
-                            </div>
-
-                            {/* Project Information */}
-                            <div className="grid grid-cols-2 gap-4 mt-6">
-                              <Card className="bg-cinema-dark border-cinema-gray-light">
-                                <CardContent className="p-4">
-                                  <h5 className="text-cinema-yellow font-semibold text-sm mb-3">
-                                    PROJETO
-                                  </h5>
-                                  <div className="space-y-3">
-                                    <div>
-                                      <Label className="text-white text-xs">
-                                        Nome do Projeto
-                                      </Label>
-                                      <Input
-                                        value={newOrderForm.projectName}
-                                        onChange={(e) =>
-                                          handleFormChange(
-                                            "projectName",
-                                            e.target.value,
-                                          )
-                                        }
-                                        className="bg-cinema-gray border-cinema-gray-light text-white text-sm"
-                                        placeholder="Nome do filme/projeto"
-                                      />
-                                    </div>
-                                    <div>
-                                      <Label className="text-white text-xs">
-                                        Direção
-                                      </Label>
-                                      <Input
-                                        value={newOrderForm.director}
-                                        onChange={(e) =>
-                                          handleFormChange(
-                                            "director",
-                                            e.target.value,
-                                          )
-                                        }
-                                        className="bg-cinema-gray border-cinema-gray-light text-white text-sm"
-                                        placeholder="Nome do diretor"
-                                      />
-                                    </div>
-                                    <div>
-                                      <Label className="text-white text-xs">
-                                        Produção
-                                      </Label>
-                                      <Input
-                                        value={newOrderForm.producer}
-                                        onChange={(e) =>
-                                          handleFormChange(
-                                            "producer",
-                                            e.target.value,
-                                          )
-                                        }
-                                        className="bg-cinema-gray border-cinema-gray-light text-white text-sm"
-                                        placeholder="Nome do produtor"
-                                      />
-                                    </div>
-                                  </div>
-                                </CardContent>
-                              </Card>
-
-                              <Card className="bg-cinema-dark border-cinema-gray-light">
-                                <CardContent className="p-4">
-                                  <h5 className="text-cinema-yellow font-semibold text-sm mb-3">
-                                    VALORES
-                                  </h5>
-                                  <div className="space-y-3">
-                                    <div className="flex justify-between">
-                                      <span className="text-gray-400 text-sm">
-                                        Subtotal:
-                                      </span>
-                                      <span className="text-white">
-                                        R$ {newOrderForm.subtotal.toFixed(2)}
-                                      </span>
-                                    </div>
-
-                                    {/* General Discount Section */}
-                                    <div className="space-y-2">
-                                      <Label className="text-white text-xs">
-                                        Desconto Geral
-                                      </Label>
-                                      <div className="flex space-x-2">
-                                        <select
-                                          value={
-                                            newOrderForm.discountGeneralType
-                                          }
-                                          onChange={(e) => {
-                                            handleFormChange(
-                                              "discountGeneralType",
-                                              e.target.value,
-                                            );
-                                            setTimeout(
-                                              () => updateOrderTotals(),
-                                              100,
-                                            );
-                                          }}
-                                          className="bg-cinema-gray border border-cinema-gray-light text-white rounded-md px-2 py-1 text-xs w-20"
-                                        >
-                                          <option value="percentage">%</option>
-                                          <option value="fixed">R$</option>
-                                        </select>
-                                        <Input
-                                          type="number"
-                                          value={newOrderForm.discountValue}
-                                          onChange={(e) => {
-                                            handleFormChange(
-                                              "discountValue",
-                                              (parseFloat(e.target.value) || 0).toString(),
-                                            );
-                                            setTimeout(
-                                              () => updateOrderTotals(),
-                                              100,
-                                            );
-                                          }}
-                                          min="0"
-                                          step="0.01"
-                                          placeholder="0.00"
-                                          className="bg-cinema-gray border-cinema-gray-light text-white text-xs h-8"
-                                        />
-                                      </div>
-                                      <div className="text-xs text-gray-400">
-                                        {newOrderForm.discountGeneralType ===
-                                        "percentage"
-                                          ? `${newOrderForm.discountValue}% = R$ ${((newOrderForm.subtotal * newOrderForm.discountValue) / 100).toFixed(2)}`
-                                          : `R$ ${newOrderForm.discountValue.toFixed(2)}`}
-                                      </div>
-                                    </div>
-
-                                    <div className="flex justify-between">
-                                      <span className="text-gray-400 text-sm">
-                                        Desconto Total:
-                                      </span>
-                                      <span className="text-red-400">
-                                        - R$ {newOrderForm.discount.toFixed(2)}
-                                      </span>
-                                    </div>
-
-                                    <Separator className="bg-cinema-gray-light" />
-
-                                    <div className="flex justify-between">
-                                      <span className="text-cinema-yellow font-semibold">
-                                        Total:
-                                      </span>
-                                      <span className="text-cinema-yellow font-bold text-lg">
-                                        R$ {newOrderForm.total.toFixed(2)}
-                                      </span>
-                                    </div>
-
-                                    <div className="mt-4">
-                                      <Label className="text-white text-xs">
-                                        Condição Pagamento
-                                      </Label>
-                                      <select
-                                        value={newOrderForm.paymentCondition}
-                                        onChange={(e) =>
-                                          handleFormChange(
-                                            "paymentCondition",
-                                            e.target.value,
-                                          )
-                                        }
-                                        className="w-full bg-cinema-gray border border-cinema-gray-light text-white rounded-md px-3 py-2 text-sm"
-                                      >
-                                        <option value="A vista">À vista</option>
-                                        <option value="30 dias">30 dias</option>
-                                        <option value="Parcelado">
-                                          Parcelado
-                                        </option>
-                                        <option value="Deposito">
-                                          Depósito
-                                        </option>
-                                      </select>
-                                    </div>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            </div>
-
-                            {/* Notes */}
-                            <Card className="bg-cinema-dark border-cinema-gray-light">
-                              <CardContent className="p-4">
-                                <h5 className="text-cinema-yellow font-semibold text-sm mb-3">
-                                  OBSERVAÇÕES
-                                </h5>
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div>
-                                    <Label className="text-white text-xs">
-                                      ObservAções do Cliente
-                                    </Label>
-                                    <textarea
-                                      value={newOrderForm.notes}
-                                      onChange={(e) =>
-                                        handleFormChange(
-                                          "notes",
-                                          e.target.value,
-                                        )
-                                      }
-                                      className="w-full bg-cinema-gray border border-cinema-gray-light text-white rounded-md px-3 py-2 text-sm resize-none"
-                                      rows={3}
-                                      placeholder="ObservAções visíveis ao cliente..."
-                                    />
-                                  </div>
-                                  <div>
-                                    <Label className="text-white text-xs">
-                                      ObservAções Internas
-                                    </Label>
-                                    <textarea
-                                      value={newOrderForm.internalNotes}
-                                      onChange={(e) =>
-                                        handleFormChange(
-                                          "internalNotes",
-                                          e.target.value,
-                                        )
-                                      }
-                                      className="w-full bg-cinema-gray border border-cinema-gray-light text-white rounded-md px-3 py-2 text-sm resize-none"
-                                      rows={3}
-                                      placeholder="ObservAções internas da equipe..."
-                                    />
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                    toast.success(`Pedido ${data.orderNumber} criado com sucesso!`);
+                  }}
+                  generateOrderNumber={generateOrderNumber}
+                  products={[]} // Produtos serão buscados dentro do modal via API
+                  clients={clientsData}
+                />
 
                 {/* View Order Modal */}
                 {showViewOrderModal && selectedOrder && (
@@ -4220,6 +3424,14 @@ export default function PainelAdmin() {
                   <div className="flex space-x-2">
                     <Button
                       variant="outline"
+                      className="text-gray-400 border-gray-400 hover:text-white hover:border-white"
+                      onClick={() => setProductsRefreshKey(prev => prev + 1)}
+                      title="Atualizar lista de produtos"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
                       className="text-cinema-yellow border-cinema-yellow"
                       onClick={() =>
                         setStockView(stockView === "grid" ? "list" : "grid")
@@ -4245,7 +3457,7 @@ export default function PainelAdmin() {
                 {/* Advanced Search and Filters */}
                 <Card className="bg-cinema-gray border-cinema-gray-light">
                   <CardContent className="p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-8 gap-4">
                       {/* Search */}
                       <div className="md:col-span-2">
                         <Label className="text-white text-sm">Pesquisar</Label>
@@ -4346,6 +3558,25 @@ export default function PainelAdmin() {
                         </select>
                       </div>
 
+                      {/* Featured Filter */}
+                      <div>
+                        <Label className="text-white text-sm">
+                          ⭐ Em Destaque
+                        </Label>
+                        <select
+                          value={stockFeaturedFilter}
+                          onChange={(e) => {
+                            setStockFeaturedFilter(e.target.value);
+                            setCurrentPage(1);
+                          }}
+                          className="w-full bg-cinema-dark-lighter border border-cinema-gray-light text-white rounded-md px-3 py-2 text-sm"
+                        >
+                          <option value="todos">Todos</option>
+                          <option value="sim">✅ Sim (Destaque)</option>
+                          <option value="nao">❌ Não</option>
+                        </select>
+                      </div>
+
                       {/* Sort */}
                       <div>
                         <Label className="text-white text-sm">
@@ -4379,6 +3610,8 @@ export default function PainelAdmin() {
                             setStockCategoryFilter("todos");
                             setStockTypeFilter("todos");
                             setStockStatusFilter("todos");
+                            setStockOwnerFilter("todos");
+                            setStockFeaturedFilter("todos");
                             setCurrentPage(1);
                           }}
                           className="text-gray-400 border-gray-400"
@@ -4400,6 +3633,24 @@ export default function PainelAdmin() {
                         className={`bg-cinema-gray border-cinema-gray-light ${item.isKit ? "border-l-4 border-l-purple-400" : ""}`}
                       >
                         <CardContent className="p-4">
+                          {/* Imagem do Produto */}
+                          {(item.internalImage || item.images?.[0]) && (
+                            <div className="mb-3 relative">
+                              <img
+                                src={item.internalImage || item.images?.[0]}
+                                alt={item.name}
+                                className="w-full h-32 object-cover rounded-lg"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
+                              {item.featured && (
+                                <span className="absolute top-2 left-2 bg-cinema-yellow text-cinema-dark text-xs px-2 py-1 rounded font-semibold">
+                                  ⭐ Destaque
+                                </span>
+                              )}
+                            </div>
+                          )}
                           <div className="flex justify-between items-start mb-3">
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
@@ -4489,14 +3740,12 @@ export default function PainelAdmin() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="text-cinema-yellow border-cinema-yellow h-7 w-7 p-0"
-                              >
-                                <Eye className="w-3 h-3" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-cinema-yellow border-cinema-yellow h-7 w-7 p-0"
+                                className="text-cinema-yellow border-cinema-yellow hover:bg-cinema-yellow hover:text-cinema-dark h-7 w-7 p-0"
+                                onClick={() => {
+                                  setEditingProduct(item);
+                                  setShowAddProductModal(true);
+                                }}
+                                title="Ver / editar produto"
                               >
                                 <Edit className="w-3 h-3" />
                               </Button>
@@ -4616,14 +3865,12 @@ export default function PainelAdmin() {
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      className="text-cinema-yellow border-cinema-yellow"
-                                    >
-                                      <Eye className="w-4 h-4" />
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="text-cinema-yellow border-cinema-yellow"
+                                      className="text-cinema-yellow border-cinema-yellow hover:bg-cinema-yellow hover:text-cinema-dark"
+                                      onClick={() => {
+                                        setEditingProduct(item);
+                                        setShowAddProductModal(true);
+                                      }}
+                                      title="Ver / editar produto"
                                     >
                                       <Edit className="w-4 h-4" />
                                     </Button>
@@ -4892,246 +4139,6 @@ export default function PainelAdmin() {
               <TabErrorBoundary>
                 <ClientApprovalDashboard />
               </TabErrorBoundary>
-            )}
-
-            {/* Serviços Tab */}
-            {activeTab === "servicos" && (
-              <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-3xl font-bold text-white" data-edit-id="Pedidos.title">
-                    Gestão de Serviços
-                  </h2>
-                  <Button
-                    className="bg-cinema-yellow text-cinema-dark hover:bg-cinema-yellow-dark"
-                    onClick={() => setShowServiceModal(true)}
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Novo Serviço
-                  </Button>
-                </div>
-
-                {/* Services Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {servicesData.map((service) => (
-                    <Card
-                      key={service.id}
-                      className="bg-cinema-gray border-cinema-gray-light"
-                    >
-                      <CardContent className="p-6">
-                        <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <h3 className="text-white font-semibold text-lg">
-                              {service.name}
-                            </h3>
-                            <p className="text-gray-400 text-sm">
-                              {service.category}
-                            </p>
-                          </div>
-                          <span
-                            className={`px-2 py-1 rounded text-xs ${
-                              service.active
-                                ? "bg-green-400/20 text-green-400"
-                                : "bg-red-400/20 text-red-400"
-                            }`}
-                          >
-                            {service.active ? "Ativo" : "Inativo"}
-                          </span>
-                        </div>
-
-                        <p className="text-gray-400 text-sm mb-4">
-                          {service.description}
-                        </p>
-
-                        <div className="space-y-2 mb-4">
-                          <div className="flex justify-between">
-                            <span className="text-gray-400 text-sm">
-                              Preço:
-                            </span>
-                            <span className="text-cinema-yellow font-medium">
-                              R$ {service.price.toFixed(2)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-400 text-sm">
-                              Duração:
-                            </span>
-                            <span className="text-white text-sm">
-                              {service.duration}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex space-x-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="flex-1 text-cinema-yellow border-cinema-yellow"
-                          >
-                            <Edit className="w-4 h-4 mr-1" />
-                            Editar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-red-400 border-red-400"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-
-                {/* Service Modal */}
-                {showServiceModal && (
-                  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-cinema-gray border border-cinema-gray-light rounded-lg p-6 w-full max-w-lg mx-4">
-                      <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-xl font-bold text-white">
-                          Novo Serviço
-                        </h3>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setShowServiceModal(false)}
-                          className="text-gray-400 hover:text-white"
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-
-                      <form
-                        onSubmit={handleServiceSubmit}
-                        className="space-y-4"
-                      >
-                        <div>
-                          <Label htmlFor="serviceName" className="text-white">
-                            Nome do Serviço
-                          </Label>
-                          <Input
-                            id="serviceName"
-                            value={serviceForm.name}
-                            onChange={(e) =>
-                              handleServiceFormChange("name", e.target.value)
-                            }
-                            className="bg-cinema-dark-lighter border-cinema-gray-light text-white"
-                            required
-                          />
-                        </div>
-
-                        <div>
-                          <Label
-                            htmlFor="serviceCategory"
-                            className="text-white"
-                          >
-                            Categoria
-                          </Label>
-                          <select
-                            id="serviceCategory"
-                            value={serviceForm.category}
-                            onChange={(e) =>
-                              handleServiceFormChange(
-                                "category",
-                                e.target.value,
-                              )
-                            }
-                            className="w-full bg-cinema-dark-lighter border border-cinema-gray-light text-white rounded-md px-3 py-2"
-                          >
-                            <option value="Gravação">Gravação</option>
-                            <option value="Produção">Produção</option>
-                            <option value="Pós-Produção">Pós-Produção</option>
-                            <option value="Streaming">Streaming</option>
-                            <option value="Fotografia">Fotografia</option>
-                            <option value="Consultoria">Consultoria</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <Label
-                            htmlFor="serviceDescription"
-                            className="text-white"
-                          >
-                            Descrição
-                          </Label>
-                          <textarea
-                            id="serviceDescription"
-                            value={serviceForm.description}
-                            onChange={(e) =>
-                              handleServiceFormChange(
-                                "description",
-                                e.target.value,
-                              )
-                            }
-                            className="w-full bg-cinema-dark-lighter border border-cinema-gray-light text-white rounded-md px-3 py-2 h-20 resize-none"
-                            required
-                          />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label
-                              htmlFor="servicePrice"
-                              className="text-white"
-                            >
-                              Preço (R$)
-                            </Label>
-                            <Input
-                              id="servicePrice"
-                              type="number"
-                              step="0.01"
-                              value={serviceForm.price}
-                              onChange={(e) =>
-                                handleServiceFormChange("price", e.target.value)
-                              }
-                              className="bg-cinema-dark-lighter border-cinema-gray-light text-white"
-                              required
-                            />
-                          </div>
-                          <div>
-                            <Label
-                              htmlFor="serviceDuration"
-                              className="text-white"
-                            >
-                              Duração
-                            </Label>
-                            <Input
-                              id="serviceDuration"
-                              value={serviceForm.duration}
-                              onChange={(e) =>
-                                handleServiceFormChange(
-                                  "duration",
-                                  e.target.value,
-                                )
-                              }
-                              className="bg-cinema-dark-lighter border-cinema-gray-light text-white"
-                              placeholder="Ex: 4 horas, 1 dia"
-                              required
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex space-x-3 pt-4">
-                          <Button
-                            type="submit"
-                            className="flex-1 bg-cinema-yellow text-cinema-dark hover:bg-cinema-yellow-dark"
-                          >
-                            Criar Serviço
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setShowServiceModal(false)}
-                            className="flex-1 text-gray-400 border-gray-400 hover:text-white hover:border-white"
-                          >
-                            Cancelar
-                          </Button>
-                        </div>
-                      </form>
-                    </div>
-                  </div>
-                )}
-              </div>
             )}
 
             {/* E-commerce Customization Tab */}
@@ -6829,8 +5836,8 @@ export default function PainelAdmin() {
           existingProducts={newOrderForm.equipment || []}
         />
 
-        {/* Modal Adicionar Produto */}
-        {showAddProductModal && (
+        {/* Modal Adicionar Produto - DESABILITADO */}
+        {false && showAddProductModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <Card className="bg-cinema-gray border-cinema-gray-light w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
               <CardHeader>
@@ -7201,6 +6208,53 @@ export default function PainelAdmin() {
           </div>
         )}
 
+        {/* Modal de Fatura de Locação */}
+        {showFaturaModal && pedidoParaFatura && (
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <div className="bg-cinema-dark-lighter border border-cinema-gray rounded-lg max-w-5xl w-full my-8 max-h-[90vh] overflow-y-auto">
+              <div className="p-4 border-b border-cinema-gray flex justify-between items-center sticky top-0 bg-cinema-dark-lighter z-10">
+                <h2 className="text-xl font-bold text-cinema-yellow flex items-center">
+                  <FileText className="w-6 h-6 mr-2" />
+                  Gerar Fatura de Locação - Pedido {pedidoParaFatura.id}
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowFaturaModal(false);
+                    setPedidoParaFatura(null);
+                  }}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+              <div className="p-4">
+                <FaturaLocacao
+                  clienteInicial={{
+                    nome: pedidoParaFatura.client || "",
+                    cnpjCpf: pedidoParaFatura.cpfCnpj || "",
+                    endereco: pedidoParaFatura.endereco || "",
+                    bairro: pedidoParaFatura.bairro || "",
+                    cep: pedidoParaFatura.cep || "",
+                    municipio: pedidoParaFatura.cidade || "Belo Horizonte",
+                    uf: pedidoParaFatura.estado || "MG",
+                    telefone: pedidoParaFatura.phone || "",
+                    inscEstadual: pedidoParaFatura.inscEstadual || "",
+                  }}
+                  itensIniciais={pedidoParaFatura.items?.map((item: string, index: number) => ({
+                    codigo: "",
+                    descricao: item,
+                    quantidade: 1,
+                    valorUnitario: pedidoParaFatura.total / (pedidoParaFatura.items?.length || 1),
+                    valorTotal: pedidoParaFatura.total / (pedidoParaFatura.items?.length || 1),
+                  })) || []}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Modal de Edição de Cliente/Fornecedor */}
         {showEditClientModal && clienteEditando && (
           <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 overflow-y-auto">
@@ -7394,6 +6448,23 @@ export default function PainelAdmin() {
         )}
         </div>
       </div>
+
+      {/* Modal de Edição de Produto - NOVO */}
+      <ProductEditModal
+        open={showAddProductModal}
+        onClose={() => {
+          setShowAddProductModal(false);
+          setEditingProduct(null);
+        }}
+        product={editingProduct}
+        onSave={() => {
+          // Forçar atualização dos componentes de produtos após um pequeno delay
+          // para garantir que o servidor processou os dados
+          setTimeout(() => {
+            setProductsRefreshKey(prev => prev + 1);
+          }, 500);
+        }}
+      />
     </Layout>
   );
 }

@@ -26,7 +26,7 @@ export default defineConfig({
   
   // Configurações compartilhadas
   use: {
-    baseURL: process.env.APP_URL || 'http://localhost:8081',
+    baseURL: process.env.APP_URL || 'http://localhost:8080',
     trace: 'on',
     screenshot: 'only-on-failure',
     video: 'on',

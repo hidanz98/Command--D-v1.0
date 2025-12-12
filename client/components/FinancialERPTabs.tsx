@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1337,54 +1337,386 @@ export const ReportsTab: React.FC = () => {
 };
 
 export const TaxesTab: React.FC = () => {
-  const mockTaxes: TaxCalculation[] = [
-    {
-      name: "DAS - Simples Nacional",
-      rate: 6.0,
-      base: 15000,
-      amount: 900,
-      dueDate: "2025-02-20",
-      paid: false,
-    },
-    {
-      name: "ISS - Imposto sobre Serviços",
-      rate: 5.0,
-      base: 15000,
-      amount: 750,
-      dueDate: "2025-02-10",
-      paid: false,
-    },
-    {
-      name: "PIS",
-      rate: 1.65,
-      base: 15000,
-      amount: 247.5,
-      dueDate: "2025-02-25",
-      paid: false,
-    },
-    {
-      name: "COFINS",
-      rate: 7.6,
-      base: 15000,
-      amount: 1140,
-      dueDate: "2025-02-25",
-      paid: false,
-    },
+  // ===========================================
+  // 🏆 SISTEMA DE IMPOSTOS PROFISSIONAL
+  // Desenvolvido como o melhor contador do mundo
+  // ===========================================
+
+  // Tabela do Simples Nacional - Anexo III (Serviços)
+  const SIMPLES_ANEXO_III = [
+    { faixa: 1, limiteInferior: 0, limiteSuperior: 180000, aliquota: 6.00, deducao: 0 },
+    { faixa: 2, limiteInferior: 180000.01, limiteSuperior: 360000, aliquota: 11.20, deducao: 9360 },
+    { faixa: 3, limiteInferior: 360000.01, limiteSuperior: 720000, aliquota: 13.50, deducao: 17640 },
+    { faixa: 4, limiteInferior: 720000.01, limiteSuperior: 1800000, aliquota: 16.00, deducao: 35640 },
+    { faixa: 5, limiteInferior: 1800000.01, limiteSuperior: 3600000, aliquota: 21.00, deducao: 125640 },
+    { faixa: 6, limiteInferior: 3600000.01, limiteSuperior: 4800000, aliquota: 33.00, deducao: 648000 },
   ];
 
-  const totalTaxes = mockTaxes.reduce((sum, tax) => sum + tax.amount, 0);
-  const overdueTaxes = mockTaxes.filter(tax => new Date(tax.dueDate) < new Date() && !tax.paid);
+  // Estado com histórico de faturamento (12 meses)
+  const [taxConfig, setTaxConfig] = useState(() => {
+    const saved = localStorage.getItem('taxConfig_v2');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Garantir que historicoFaturamento existe
+        if (!parsed.historicoFaturamento || !Array.isArray(parsed.historicoFaturamento)) {
+          parsed.historicoFaturamento = Array(12).fill(15000);
+        }
+        return parsed;
+      } catch {
+        return getDefaultTaxConfig();
+      }
+    }
+    return getDefaultTaxConfig();
+  });
+
+  function getDefaultTaxConfig() {
+    return {
+      regime: 'simples',
+      faturamentoMensal: 15000,
+      folhaDePagamento: 5000, // Para cálculo do Fator R
+      historicoFaturamento: Array(12).fill(15000), // RBT12
+      issRate: 5.0, // ISS municipal (BH = 5%)
+      calcularAutomatico: true,
+    };
+  }
+
+  const [taxes, setTaxes] = useState<TaxCalculation[]>([]);
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [isCalculating, setIsCalculating] = useState(false);
+
+  // Salvar configurações no localStorage
+  useEffect(() => {
+    localStorage.setItem('taxConfig_v2', JSON.stringify(taxConfig));
+  }, [taxConfig]);
+
+  // Calcular RBT12 (Receita Bruta Total dos últimos 12 meses)
+  const calcularRBT12 = (): number => {
+    if (!taxConfig.historicoFaturamento || !Array.isArray(taxConfig.historicoFaturamento)) {
+      return taxConfig.faturamentoMensal * 12;
+    }
+    return taxConfig.historicoFaturamento.reduce((sum: number, val: number) => sum + (val || 0), 0);
+  };
+
+  // Calcular Fator R (Folha de Pagamento / RBT12)
+  const calcularFatorR = (): number => {
+    const rbt12 = calcularRBT12();
+    if (rbt12 === 0) return 0;
+    const folhaAnual = (taxConfig.folhaDePagamento || 0) * 12;
+    return (folhaAnual / rbt12) * 100;
+  };
+
+  // Encontrar faixa do Simples Nacional
+  const encontrarFaixaSimples = (rbt12: number) => {
+    return SIMPLES_ANEXO_III.find(f => rbt12 >= f.limiteInferior && rbt12 <= f.limiteSuperior) || SIMPLES_ANEXO_III[0];
+  };
+
+  // Calcular alíquota efetiva do Simples Nacional
+  const calcularAliquotaEfetiva = (): number => {
+    const rbt12 = calcularRBT12();
+    const faixa = encontrarFaixaSimples(rbt12);
+    
+    if (rbt12 === 0) return faixa.aliquota;
+    
+    // Fórmula: [(RBT12 × Aliq) - PD] / RBT12
+    const aliquotaEfetiva = ((rbt12 * (faixa.aliquota / 100)) - faixa.deducao) / rbt12 * 100;
+    return Math.max(aliquotaEfetiva, 0);
+  };
+
+  // Função principal de cálculo de impostos
+  const calcularImpostos = () => {
+    setIsCalculating(true);
+    
+    setTimeout(() => {
+      const base = taxConfig.faturamentoMensal;
+      const hoje = new Date();
+      const rbt12 = calcularRBT12();
+      const fatorR = calcularFatorR();
+      const aliquotaEfetiva = calcularAliquotaEfetiva();
+      const faixa = encontrarFaixaSimples(rbt12);
+      
+      let novosImpostos: TaxCalculation[] = [];
+
+      if (taxConfig.regime === 'simples') {
+        // ============================================
+        // SIMPLES NACIONAL - Anexo III (Serviços)
+        // ============================================
+        const valorDAS = base * (aliquotaEfetiva / 100);
+        
+        novosImpostos = [
+          {
+            name: `DAS - Simples Nacional (Faixa ${faixa.faixa})`,
+            rate: aliquotaEfetiva,
+            base: base,
+            amount: valorDAS,
+            dueDate: new Date(hoje.getFullYear(), hoje.getMonth() + 1, 20).toISOString().split('T')[0],
+            paid: false,
+          },
+        ];
+
+        // Detalhamento dos tributos dentro do DAS
+        const detalhamento = [
+          { nome: 'IRPJ', percentual: 4.00 },
+          { nome: 'CSLL', percentual: 3.50 },
+          { nome: 'COFINS', percentual: 12.82 },
+          { nome: 'PIS', percentual: 2.78 },
+          { nome: 'CPP', percentual: 43.40 },
+          { nome: 'ISS', percentual: 33.50 },
+        ];
+
+      } else if (taxConfig.regime === 'presumido') {
+        // ============================================
+        // LUCRO PRESUMIDO
+        // ============================================
+        const basePresuncao = base * 0.32; // 32% para serviços
+        
+        novosImpostos = [
+          {
+            name: "ISS - Imposto sobre Serviços (Municipal)",
+            rate: taxConfig.issRate,
+            base: base,
+            amount: base * (taxConfig.issRate / 100),
+            dueDate: new Date(hoje.getFullYear(), hoje.getMonth() + 1, 10).toISOString().split('T')[0],
+            paid: false,
+          },
+          {
+            name: "PIS (Cumulativo)",
+            rate: 0.65,
+            base: base,
+            amount: base * 0.0065,
+            dueDate: new Date(hoje.getFullYear(), hoje.getMonth() + 1, 25).toISOString().split('T')[0],
+            paid: false,
+          },
+          {
+            name: "COFINS (Cumulativo)",
+            rate: 3.00,
+            base: base,
+            amount: base * 0.03,
+            dueDate: new Date(hoje.getFullYear(), hoje.getMonth() + 1, 25).toISOString().split('T')[0],
+            paid: false,
+          },
+          {
+            name: "IRPJ (15% sobre 32%)",
+            rate: 15,
+            base: basePresuncao,
+            amount: basePresuncao * 0.15,
+            dueDate: new Date(hoje.getFullYear(), hoje.getMonth() + 1, 30).toISOString().split('T')[0],
+            paid: false,
+          },
+          {
+            name: "CSLL (9% sobre 32%)",
+            rate: 9,
+            base: basePresuncao,
+            amount: basePresuncao * 0.09,
+            dueDate: new Date(hoje.getFullYear(), hoje.getMonth() + 1, 30).toISOString().split('T')[0],
+            paid: false,
+          },
+        ];
+      } else {
+        // ============================================
+        // LUCRO REAL
+        // ============================================
+        const lucroEstimado = base * 0.20; // Estimativa de 20% de lucro
+        
+        novosImpostos = [
+          {
+            name: "ISS (Municipal)",
+            rate: taxConfig.issRate,
+            base: base,
+            amount: base * (taxConfig.issRate / 100),
+            dueDate: new Date(hoje.getFullYear(), hoje.getMonth() + 1, 10).toISOString().split('T')[0],
+            paid: false,
+          },
+          {
+            name: "PIS (Não-cumulativo)",
+            rate: 1.65,
+            base: base,
+            amount: base * 0.0165,
+            dueDate: new Date(hoje.getFullYear(), hoje.getMonth() + 1, 25).toISOString().split('T')[0],
+            paid: false,
+          },
+          {
+            name: "COFINS (Não-cumulativo)",
+            rate: 7.60,
+            base: base,
+            amount: base * 0.076,
+            dueDate: new Date(hoje.getFullYear(), hoje.getMonth() + 1, 25).toISOString().split('T')[0],
+            paid: false,
+          },
+          {
+            name: "IRPJ (15% sobre lucro real)",
+            rate: 15,
+            base: lucroEstimado,
+            amount: lucroEstimado * 0.15,
+            dueDate: new Date(hoje.getFullYear(), hoje.getMonth() + 1, 30).toISOString().split('T')[0],
+            paid: false,
+          },
+          {
+            name: "Adicional IRPJ (10%)",
+            rate: 10,
+            base: Math.max(lucroEstimado - 20000, 0),
+            amount: Math.max(lucroEstimado - 20000, 0) * 0.10,
+            dueDate: new Date(hoje.getFullYear(), hoje.getMonth() + 1, 30).toISOString().split('T')[0],
+            paid: false,
+          },
+          {
+            name: "CSLL (9% sobre lucro real)",
+            rate: 9,
+            base: lucroEstimado,
+            amount: lucroEstimado * 0.09,
+            dueDate: new Date(hoje.getFullYear(), hoje.getMonth() + 1, 30).toISOString().split('T')[0],
+            paid: false,
+          },
+        ];
+      }
+
+      setTaxes(novosImpostos);
+      localStorage.setItem('calculatedTaxes', JSON.stringify(novosImpostos));
+      setIsCalculating(false);
+      
+      const totalImpostos = novosImpostos.reduce((s, t) => s + t.amount, 0);
+      const cargaTributaria = (totalImpostos / base) * 100;
+      
+      alert(`✅ IMPOSTOS CALCULADOS COM SUCESSO!\n\n📊 RESUMO:\n• Regime: ${taxConfig.regime.toUpperCase()}\n• Faturamento: R$ ${base.toLocaleString('pt-BR')}\n• RBT12: R$ ${rbt12.toLocaleString('pt-BR')}\n${taxConfig.regime === 'simples' ? `• Faixa: ${faixa.faixa}ª\n• Alíquota Nominal: ${faixa.aliquota}%\n• Alíquota Efetiva: ${aliquotaEfetiva.toFixed(2)}%\n• Fator R: ${fatorR.toFixed(2)}%` : ''}\n\n💰 TOTAL A PAGAR: R$ ${totalImpostos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n📈 Carga Tributária: ${cargaTributaria.toFixed(2)}%`);
+    }, 500);
+  };
+
+  // Carregar impostos salvos
+  useEffect(() => {
+    const saved = localStorage.getItem('calculatedTaxes');
+    if (saved) {
+      try {
+        setTaxes(JSON.parse(saved));
+      } catch {
+        // Usar mock se não houver dados salvos
+      }
+    }
+  }, []);
+
+  // Marcar imposto como pago
+  const marcarComoPago = (index: number) => {
+    const novosTaxes = [...taxes];
+    novosTaxes[index].paid = !novosTaxes[index].paid;
+    setTaxes(novosTaxes);
+    localStorage.setItem('calculatedTaxes', JSON.stringify(novosTaxes));
+  };
+
+  // Salvar configurações
+  const salvarConfig = () => {
+    localStorage.setItem('taxConfig', JSON.stringify(taxConfig));
+    setShowConfigModal(false);
+    alert('✅ Configurações salvas!');
+  };
+
+  const totalTaxes = taxes.reduce((sum, tax) => sum + tax.amount, 0);
+  const overdueTaxes = taxes.filter(tax => new Date(tax.dueDate) < new Date() && !tax.paid);
+  const paidTaxes = taxes.filter(tax => tax.paid);
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      {/* Modal de Configuração */}
+      {showConfigModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <Card className="bg-cinema-dark border-cinema-gray-light w-full max-w-lg">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center justify-between">
+                <span>⚙️ Configuração de Impostos</span>
+                <Button variant="ghost" size="sm" onClick={() => setShowConfigModal(false)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label className="text-white">Regime Tributário</Label>
+                <Select 
+                  value={taxConfig.regime} 
+                  onValueChange={(v) => setTaxConfig({...taxConfig, regime: v})}
+                >
+                  <SelectTrigger className="bg-cinema-dark-lighter border-cinema-gray-light text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="simples">Simples Nacional</SelectItem>
+                    <SelectItem value="presumido">Lucro Presumido</SelectItem>
+                    <SelectItem value="real">Lucro Real</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="text-white">Faturamento Mensal (R$)</Label>
+                <Input
+                  type="number"
+                  value={taxConfig.faturamentoMensal}
+                  onChange={(e) => setTaxConfig({...taxConfig, faturamentoMensal: parseFloat(e.target.value) || 0})}
+                  className="bg-cinema-dark-lighter border-cinema-gray-light text-white"
+                />
+              </div>
+
+              {taxConfig.regime === 'simples' && (
+                <div>
+                  <Label className="text-white">Alíquota Simples (%)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={taxConfig.simplesRate}
+                    onChange={(e) => setTaxConfig({...taxConfig, simplesRate: parseFloat(e.target.value) || 0})}
+                    className="bg-cinema-dark-lighter border-cinema-gray-light text-white"
+                  />
+                  <p className="text-gray-400 text-xs mt-1">Anexo III: 6% a 33% (depende do faturamento)</p>
+                </div>
+              )}
+
+              {taxConfig.regime !== 'simples' && (
+                <>
+                  <div>
+                    <Label className="text-white">Alíquota ISS (%)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={taxConfig.issRate}
+                      onChange={(e) => setTaxConfig({...taxConfig, issRate: parseFloat(e.target.value) || 0})}
+                      className="bg-cinema-dark-lighter border-cinema-gray-light text-white"
+                    />
+                    <p className="text-gray-400 text-xs mt-1">Varia de 2% a 5% conforme município</p>
+                  </div>
+                </>
+              )}
+
+              <div className="flex gap-2 pt-4">
+                <Button onClick={salvarConfig} className="flex-1 bg-cinema-yellow text-cinema-dark">
+                  Salvar Configurações
+                </Button>
+                <Button onClick={() => setShowConfigModal(false)} variant="outline" className="flex-1 text-white border-cinema-gray-light">
+                  Cancelar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      <div className="flex flex-wrap justify-between items-center gap-4">
         <h3 className="text-xl font-bold text-white">Gestão de Impostos</h3>
-        <div className="flex space-x-2">
-          <Button className="bg-green-500 text-white hover:bg-green-600">
-            <Zap className="w-4 h-4 mr-2" />
-            Calcular Automaticamente
+        <div className="flex flex-wrap gap-2">
+          <Button 
+            className="bg-green-500 text-white hover:bg-green-600"
+            onClick={calcularImpostos}
+            disabled={isCalculating}
+          >
+            {isCalculating ? (
+              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Zap className="w-4 h-4 mr-2" />
+            )}
+            {isCalculating ? 'Calculando...' : 'Calcular Automaticamente'}
           </Button>
-          <Button variant="outline" className="text-cinema-yellow border-cinema-yellow">
+          <Button 
+            variant="outline" 
+            className="text-cinema-yellow border-cinema-yellow"
+            onClick={() => setShowConfigModal(true)}
+          >
             <Settings className="w-4 h-4 mr-2" />
             Configurar
           </Button>
@@ -1414,18 +1746,16 @@ export const TaxesTab: React.FC = () => {
         <Card className="bg-cinema-dark border-cinema-gray-light">
           <CardContent className="p-4 text-center">
             <Shield className="w-8 h-8 text-blue-400 mx-auto mb-2" />
-            <p className="text-lg font-bold text-blue-400">6.0%</p>
-            <p className="text-gray-400 text-sm">Taxa Simples</p>
+            <p className="text-lg font-bold text-blue-400">{taxConfig.regime.toUpperCase()}</p>
+            <p className="text-gray-400 text-sm">Regime Atual</p>
           </CardContent>
         </Card>
 
         <Card className="bg-cinema-dark border-cinema-gray-light">
           <CardContent className="p-4 text-center">
-            <Target className="w-8 h-8 text-green-400 mx-auto mb-2" />
-            <p className="text-lg font-bold text-green-400">
-              R$ {(totalTaxes * 0.85).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </p>
-            <p className="text-gray-400 text-sm">Economia Anual</p>
+            <CheckCircle className="w-8 h-8 text-green-400 mx-auto mb-2" />
+            <p className="text-lg font-bold text-green-400">{paidTaxes.length}</p>
+            <p className="text-gray-400 text-sm">Pagos</p>
           </CardContent>
         </Card>
       </div>
@@ -1490,44 +1820,59 @@ export const TaxesTab: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {mockTaxes.map((tax, index) => (
-                  <tr key={index} className="border-b border-cinema-gray-light hover:bg-cinema-dark-lighter">
-                    <td className="px-4 py-3 text-white font-medium">{tax.name}</td>
-                    <td className="px-4 py-3 text-gray-400">{tax.rate}%</td>
-                    <td className="px-4 py-3 text-gray-400">
-                      R$ {tax.base.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="px-4 py-3 text-red-400 font-medium">
-                      R$ {tax.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="px-4 py-3 text-gray-400">{tax.dueDate}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
-                        tax.paid ? "text-green-400 bg-green-400/20" :
-                        new Date(tax.dueDate) < new Date() ? "text-red-400 bg-red-400/20" :
-                        "text-yellow-400 bg-yellow-400/20"
-                      }`}>
-                        {tax.paid ? "Pago" :
-                         new Date(tax.dueDate) < new Date() ? "Vencido" : "Pendente"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex space-x-2">
-                        {!tax.paid && (
-                          <Button size="sm" className="bg-green-500 text-white hover:bg-green-600">
-                            <CheckCircle className="w-3 h-3" />
-                          </Button>
-                        )}
-                        <Button size="sm" variant="outline" className="text-cinema-yellow border-cinema-yellow">
-                          <FileText className="w-3 h-3" />
-                        </Button>
-                        <Button size="sm" variant="outline" className="text-blue-400 border-blue-400">
-                          <Download className="w-3 h-3" />
-                        </Button>
-                      </div>
+                {taxes.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                      <Calculator className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p>Nenhum imposto calculado</p>
+                      <p className="text-sm">Clique em "Calcular Automaticamente" para gerar os impostos do mês</p>
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  taxes.map((tax, index) => (
+                    <tr key={index} className="border-b border-cinema-gray-light hover:bg-cinema-dark-lighter">
+                      <td className="px-4 py-3 text-white font-medium">{tax.name}</td>
+                      <td className="px-4 py-3 text-gray-400">{tax.rate}%</td>
+                      <td className="px-4 py-3 text-gray-400">
+                        R$ {tax.base.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className={`px-4 py-3 font-medium ${tax.paid ? 'text-green-400 line-through' : 'text-red-400'}`}>
+                        R$ {tax.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="px-4 py-3 text-gray-400">
+                        {new Date(tax.dueDate).toLocaleDateString('pt-BR')}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
+                          tax.paid ? "text-green-400 bg-green-400/20" :
+                          new Date(tax.dueDate) < new Date() ? "text-red-400 bg-red-400/20" :
+                          "text-yellow-400 bg-yellow-400/20"
+                        }`}>
+                          {tax.paid ? "✓ Pago" :
+                           new Date(tax.dueDate) < new Date() ? "⚠ Vencido" : "⏳ Pendente"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex space-x-2">
+                          <Button 
+                            size="sm" 
+                            className={tax.paid ? "bg-gray-500 text-white" : "bg-green-500 text-white hover:bg-green-600"}
+                            onClick={() => marcarComoPago(index)}
+                            title={tax.paid ? "Marcar como não pago" : "Marcar como pago"}
+                          >
+                            <CheckCircle className="w-3 h-3" />
+                          </Button>
+                          <Button size="sm" variant="outline" className="text-cinema-yellow border-cinema-yellow" title="Gerar guia">
+                            <FileText className="w-3 h-3" />
+                          </Button>
+                          <Button size="sm" variant="outline" className="text-blue-400 border-blue-400" title="Download">
+                            <Download className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

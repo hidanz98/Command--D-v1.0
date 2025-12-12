@@ -8,6 +8,7 @@ import {
   calculateDiscount,
   calculateTotal
 } from '../lib/pricingCalculator';
+import { EmailService } from '../lib/EmailService';
 
 export const getOrders: RequestHandler = async (req: AuthenticatedRequest, res) => {
   try {
@@ -349,6 +350,33 @@ export const createOrder: RequestHandler = async (req: AuthenticatedRequest, res
       return createdOrder;
     });
 
+    // Enviar email de confirmação (não bloqueia a resposta)
+    try {
+      const tenantSettings = await prisma.tenantSettings.findUnique({
+        where: { tenantId }
+      });
+
+      if (tenantSettings && tenantSettings.emailEnabled && order.client.email) {
+        const emailService = new EmailService(tenantSettings);
+        await emailService.sendOrderConfirmation(
+          order.client.email,
+          order.client.name,
+          order.orderNumber,
+          orderStartDate,
+          orderEndDate,
+          order.items.map(item => ({
+            name: item.product.name,
+            quantity: item.quantity,
+            price: item.totalPrice
+          })),
+          total
+        );
+      }
+    } catch (emailError) {
+      // Log erro mas não falha a criação do pedido
+      console.error('Erro ao enviar email de confirmação:', emailError);
+    }
+
     res.status(201).json({
       success: true,
       data: order,
@@ -402,6 +430,34 @@ export const updateOrderStatus: RequestHandler = async (req: AuthenticatedReques
         }
       }
     });
+
+    // Enviar email se status foi confirmado
+    if (status === 'CONFIRMED' && updatedOrder && updatedOrder.client.email) {
+      try {
+        const tenantSettings = await prisma.tenantSettings.findUnique({
+          where: { tenantId }
+        });
+
+        if (tenantSettings && tenantSettings.emailEnabled) {
+          const emailService = new EmailService(tenantSettings);
+          await emailService.sendOrderConfirmation(
+            updatedOrder.client.email,
+            updatedOrder.client.name,
+            updatedOrder.orderNumber,
+            updatedOrder.startDate,
+            updatedOrder.endDate,
+            updatedOrder.items.map(item => ({
+              name: item.product.name,
+              quantity: item.quantity,
+              price: item.totalPrice
+            })),
+            updatedOrder.total
+          );
+        }
+      } catch (emailError) {
+        console.error('Erro ao enviar email de confirmação:', emailError);
+      }
+    }
 
     res.json({
       success: true,

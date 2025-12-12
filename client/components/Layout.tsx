@@ -16,7 +16,7 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const device = useDeviceDetection();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isAuthenticated } = useAuth();
   const location = useLocation();
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -24,6 +24,9 @@ export default function Layout({ children }: LayoutProps) {
   // Páginas onde o Footer NÃO deve aparecer
   const hideFooterPages = ['/painel-admin', '/master-admin'];
   const shouldShowFooter = !hideFooterPages.includes(location.pathname);
+  
+  // Páginas administrativas onde as notificações devem aparecer
+  const isAdminPage = location.pathname.includes('/painel-admin') || location.pathname.includes('/master-admin');
 
   useEffect(() => {
     // Ensure dark mode is applied
@@ -86,14 +89,16 @@ export default function Layout({ children }: LayoutProps) {
 
       {shouldShowFooter && <Footer />}
 
-      {/* Conditional WhatsApp Float - only show on mobile/tablet */}
-      {(device.isMobile || device.isTablet) && <WhatsAppFloat />}
+      {/* WhatsApp Float - apenas para visitantes não logados */}
+      {!isAuthenticated && <WhatsAppFloat />}
 
-      {/* Timesheet Notifications */}
-      <TimesheetNotifications position={device.isMobile ? "top-left" : "top-right"} />
+      {/* Timesheet Notifications - apenas em páginas admin */}
+      {isAdminPage && (
+        <TimesheetNotifications position={device.isMobile ? "top-left" : "top-right"} />
+      )}
 
-      {/* Payroll Notifications - Only for admins */}
-      {isAdmin && (
+      {/* Payroll Notifications - apenas para admins em páginas admin */}
+      {isAdmin && isAdminPage && (
         <PayrollNotifications
           isAdmin={isAdmin}
           position={device.isMobile ? "bottom-left" : "bottom-right"}

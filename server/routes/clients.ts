@@ -97,11 +97,11 @@ export const getPendingClients: RequestHandler = async (req, res) => {
             type: true,
             fileName: true,
             filePath: true,
-            fileSize: true,
-            fileHash: true,
+            size: true,
             uploadedAt: true,
             isValid: true,
-            validationResult: true
+            validatedAt: true,
+            url: true
           },
           orderBy: {
             uploadedAt: 'desc'
@@ -293,20 +293,14 @@ export const registerClient: RequestHandler = async (req, res) => {
 
       // Criar registros de documentos
       for (const docValidation of documentValidations) {
-        await tx.document.create({
+        await tx.clientDocument.create({
           data: {
             clientId: newClient.id,
-            tenantId,
             type: docValidation.type,
-            fileName: docValidation.file.originalname,
-            filePath: docValidation.file.path,
-            fileSize: docValidation.file.size,
-            fileHash: docValidation.hash,
-            mimeType: docValidation.file.mimetype,
-            uploadedAt: new Date(),
-            isValid: docValidation.validation.isValid,
-            validationResult: docValidation.validation as any,
-            validatedAt: new Date()
+            name: docValidation.file.originalname,
+            url: docValidation.file.path,
+            size: docValidation.file.size,
+            mimeType: docValidation.file.mimetype
           }
         });
       }
@@ -322,12 +316,12 @@ export const registerClient: RequestHandler = async (req, res) => {
         type: 'CLIENT_REGISTRATION',
         title: 'Novo cadastro pendente',
         message: `Cliente ${name} enviou documentos para aprovação`,
-        data: {
+        metadata: {
           clientId: client.id,
           clientName: name,
           documentCount: files.length
         } as any,
-        read: false
+        isRead: false
       }
     });
 
@@ -410,11 +404,11 @@ export const approveClient: RequestHandler = async (req, res) => {
         type: 'CLIENT_APPROVED',
         title: 'Cadastro aprovado!',
         message: `Seu cadastro foi aprovado. Você já pode realizar locações.`,
-        data: {
+        metadata: {
           clientId: client.id,
           clientName: client.name
         } as any,
-        read: false
+        isRead: false
       }
     });
 
@@ -482,12 +476,12 @@ export const rejectClient: RequestHandler = async (req, res) => {
         type: 'CLIENT_REJECTED',
         title: 'Cadastro rejeitado',
         message: `Seu cadastro foi rejeitado. Motivo: ${reason}`,
-        data: {
+        metadata: {
           clientId: client.id,
           clientName: client.name,
           reason
         } as any,
-        read: false
+        isRead: false
       }
     });
 
@@ -518,11 +512,10 @@ export const downloadDocument: RequestHandler = async (req, res) => {
     }
 
     // Buscar documento
-    const document = await prisma.document.findFirst({
+    const document = await prisma.clientDocument.findFirst({
       where: {
         id: documentId,
-        clientId: id,
-        tenantId
+        clientId: id
       }
     });
 
@@ -531,12 +524,12 @@ export const downloadDocument: RequestHandler = async (req, res) => {
     }
 
     // Validar path do arquivo
-    if (!validateFilePath(document.filePath)) {
+    if (!validateFilePath(document.url)) {
       return res.status(403).json({ error: "Acesso ao arquivo negado" });
     }
 
     // Enviar arquivo
-    res.download(document.filePath, document.fileName);
+    res.download(document.url, document.name);
   } catch (error) {
     console.error("Erro ao baixar documento:", error);
     res.status(500).json({ error: "Erro ao baixar documento" });
@@ -589,20 +582,14 @@ export const uploadAdditionalDocuments: RequestHandler = async (req, res) => {
       const fileHash = await calculateFileHash(file.path);
       const pdfValidation = await validatePDF(file.path);
 
-      const document = await prisma.document.create({
+      const document = await prisma.clientDocument.create({
         data: {
           clientId: id,
-          tenantId,
           type: docType,
-          fileName: file.originalname,
-          filePath: file.path,
-          fileSize: file.size,
-          fileHash,
-          mimeType: file.mimetype,
-          uploadedAt: new Date(),
-          isValid: pdfValidation.isValid,
-          validationResult: pdfValidation as any,
-          validatedAt: new Date()
+          name: file.originalname,
+          url: file.path,
+          size: file.size,
+          mimeType: file.mimetype
         }
       });
 

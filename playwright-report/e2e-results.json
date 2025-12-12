@@ -1,7 +1,7 @@
 {
   "config": {
-    "configFile": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\playwright.config.ts",
-    "rootDir": "C:/Users/fnune/OneDrive/Documentos/GitHub/Locadora-multi-tenant--main/Sistema-Command-D/tests",
+    "configFile": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Command--D-v1.0\\playwright.config.ts",
+    "rootDir": "C:/Users/fnune/OneDrive/Documentos/GitHub/Command--D-v1.0/tests",
     "forbidOnly": false,
     "fullyParallel": false,
     "globalSetup": null,
@@ -40,7 +40,7 @@
     "quiet": false,
     "projects": [
       {
-        "outputDir": "C:/Users/fnune/OneDrive/Documentos/GitHub/Locadora-multi-tenant--main/Sistema-Command-D/test-results",
+        "outputDir": "C:/Users/fnune/OneDrive/Documentos/GitHub/Command--D-v1.0/test-results",
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
@@ -48,7 +48,7 @@
         },
         "id": "owner",
         "name": "owner",
-        "testDir": "C:/Users/fnune/OneDrive/Documentos/GitHub/Locadora-multi-tenant--main/Sistema-Command-D/tests",
+        "testDir": "C:/Users/fnune/OneDrive/Documentos/GitHub/Command--D-v1.0/tests",
         "testIgnore": [],
         "testMatch": [
           "/.*owner\\.flow\\.spec\\.ts/"
@@ -56,7 +56,7 @@
         "timeout": 240000
       },
       {
-        "outputDir": "C:/Users/fnune/OneDrive/Documentos/GitHub/Locadora-multi-tenant--main/Sistema-Command-D/test-results",
+        "outputDir": "C:/Users/fnune/OneDrive/Documentos/GitHub/Command--D-v1.0/test-results",
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
@@ -64,7 +64,7 @@
         },
         "id": "employee",
         "name": "employee",
-        "testDir": "C:/Users/fnune/OneDrive/Documentos/GitHub/Locadora-multi-tenant--main/Sistema-Command-D/tests",
+        "testDir": "C:/Users/fnune/OneDrive/Documentos/GitHub/Command--D-v1.0/tests",
         "testIgnore": [],
         "testMatch": [
           "/.*employee\\.flow\\.spec\\.ts/"
@@ -72,7 +72,7 @@
         "timeout": 240000
       },
       {
-        "outputDir": "C:/Users/fnune/OneDrive/Documentos/GitHub/Locadora-multi-tenant--main/Sistema-Command-D/test-results",
+        "outputDir": "C:/Users/fnune/OneDrive/Documentos/GitHub/Command--D-v1.0/test-results",
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
@@ -80,7 +80,7 @@
         },
         "id": "client",
         "name": "client",
-        "testDir": "C:/Users/fnune/OneDrive/Documentos/GitHub/Locadora-multi-tenant--main/Sistema-Command-D/tests",
+        "testDir": "C:/Users/fnune/OneDrive/Documentos/GitHub/Command--D-v1.0/tests",
         "testIgnore": [],
         "testMatch": [
           "/.*client\\.flow\\.spec\\.ts/"
@@ -125,7 +125,7 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 8383,
+                      "duration": 8487,
                       "errors": [],
                       "stdout": [
                         {
@@ -135,7 +135,7 @@
                           "text": "✅ Navegou para: /painel-admin\n"
                         },
                         {
-                          "text": "⚠️  Seção de produtos não encontrada (pode estar em outra aba)\n"
+                          "text": "✅ Seção de produtos encontrada: text=/Equipamentos/i\n"
                         },
                         {
                           "text": "⚠️  Não foi possível criar produto (botão/formulário não encontrado)\n"
@@ -144,7 +144,7 @@
                           "text": "✅ Navegou para /equipamentos (visão cliente)\n"
                         },
                         {
-                          "text": "✅ 200 produtos visíveis para clientes\n"
+                          "text": "✅ 30 produtos visíveis para clientes\n"
                         },
                         {
                           "text": "\n✅ Fluxo Dono completado\n\n"
@@ -155,18 +155,18 @@
                       ],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-09T01:53:27.961Z",
+                      "startTime": "2025-10-16T23:09:45.244Z",
                       "annotations": [],
                       "attachments": [
                         {
                           "name": "video",
                           "contentType": "video/webm",
-                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-owner.flow-Fluxo-Dono--59c3a-os-e-verificar-visibilidade-owner\\video.webm"
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Command--D-v1.0\\test-results\\e2e-owner.flow-Fluxo-Dono--59c3a-os-e-verificar-visibilidade-owner\\video.webm"
                         },
                         {
                           "name": "trace",
                           "contentType": "application/zip",
-                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-owner.flow-Fluxo-Dono--59c3a-os-e-verificar-visibilidade-owner\\trace.zip"
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Command--D-v1.0\\test-results\\e2e-owner.flow-Fluxo-Dono--59c3a-os-e-verificar-visibilidade-owner\\trace.zip"
                         }
                       ]
                     }
@@ -195,7 +195,7 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 65209,
+                      "duration": 106071,
                       "errors": [],
                       "stdout": [
                         {
@@ -205,55 +205,13 @@
                           "text": "\n🔍 Escaneando botões em: /\n"
                         },
                         {
-                          "text": "   ✅ Painel Admin\n"
-                        },
-                        {
-                          "text": "   ✅ Editor Inline\n"
-                        },
-                        {
-                          "text": "   ✅ Área Cliente\n"
-                        },
-                        {
-                          "text": "   ✅ Sair\n"
-                        },
-                        {
-                          "text": "   ✅ Adicionar\n"
-                        },
-                        {
-                          "text": "   ✅ [button:6]\n"
-                        },
-                        {
-                          "text": "   ✅ Detalhes\n"
-                        },
-                        {
-                          "text": "\n📊 Total: 7 botões | ✅ 7 OK | ❌ 0 Erros\n\n"
-                        },
-                        {
-                          "text": "\n🔍 Escaneando botões em: /login\n"
-                        },
-                        {
-                          "text": "   ✅ LOGIN\n"
-                        },
-                        {
-                          "text": "   ✅ Carrinho\n1\n"
-                        },
-                        {
-                          "text": "   ✅ [button:3]\n"
-                        },
-                        {
-                          "text": "\n📊 Total: 3 botões | ✅ 3 OK | ❌ 0 Erros\n\n"
-                        },
-                        {
-                          "text": "\n🔍 Escaneando botões em: /equipamentos\n"
-                        },
-                        {
                           "text": "   ✅ LOGIN\n"
                         },
                         {
                           "text": "   ✅ Carrinho\n"
                         },
                         {
-                          "text": "   ✅ 🎬 Ver Equipamentos\n"
+                          "text": "   ❌ 🎬 Ver Equipamentos: 500 GET http://localhost:8080/api/public/products\n"
                         },
                         {
                           "text": "   ✅ Nome\n"
@@ -283,31 +241,151 @@
                           "text": "   ✅ Suportes\n"
                         },
                         {
-                          "text": "   ✅ [button:13]\n"
+                          "text": "   ✅ Limpar Filtros\n"
                         },
                         {
-                          "text": "   ✅ Ver mais\n"
+                          "text": "   ✅ Todas\n"
                         },
                         {
-                          "text": "\n📊 Total: 14 botões | ✅ 14 OK | ❌ 0 Erros\n\n"
+                          "text": "   ✅ Nome\n"
+                        },
+                        {
+                          "text": "\n📊 Total: 15 botões | ✅ 14 OK | ❌ 1 Erros\n\n"
+                        },
+                        {
+                          "text": "\n🔍 Escaneando botões em: /login\n"
+                        },
+                        {
+                          "text": "   ✅ LOGIN\n"
+                        },
+                        {
+                          "text": "   ✅ Carrinho\n"
+                        },
+                        {
+                          "text": "   ✅ 🎬 Ver Equipamentos\n"
+                        },
+                        {
+                          "text": "   ✅ Nome\n"
+                        },
+                        {
+                          "text": "   ✅ Todas\n"
+                        },
+                        {
+                          "text": "   ✅ Câmeras\n"
+                        },
+                        {
+                          "text": "   ✅ Lentes\n"
+                        },
+                        {
+                          "text": "   ✅ Todas\n"
+                        },
+                        {
+                          "text": "   ✅ Nome\n"
+                        },
+                        {
+                          "text": "\n📊 Total: 9 botões | ✅ 9 OK | ❌ 0 Erros\n\n"
+                        },
+                        {
+                          "text": "\n🔍 Escaneando botões em: /equipamentos\n"
+                        },
+                        {
+                          "text": "   ✅ LOGIN\n"
+                        },
+                        {
+                          "text": "   ✅ Carrinho\n"
+                        },
+                        {
+                          "text": "   ❌ 🎬 Ver Equipamentos: 500 GET http://localhost:8080/api/public/products\n"
+                        },
+                        {
+                          "text": "   ✅ Nome\n"
+                        },
+                        {
+                          "text": "   ✅ Todas\n"
+                        },
+                        {
+                          "text": "   ✅ Câmeras\n"
+                        },
+                        {
+                          "text": "   ✅ Lentes\n"
+                        },
+                        {
+                          "text": "   ✅ Monitores\n"
+                        },
+                        {
+                          "text": "   ✅ Eletrônicos\n"
+                        },
+                        {
+                          "text": "   ✅ Iluminação\n"
+                        },
+                        {
+                          "text": "   ✅ Áudio\n"
+                        },
+                        {
+                          "text": "   ✅ Suportes\n"
+                        },
+                        {
+                          "text": "   ✅ Limpar Filtros\n"
+                        },
+                        {
+                          "text": "   ✅ Todas\n"
+                        },
+                        {
+                          "text": "   ✅ Nome\n"
+                        },
+                        {
+                          "text": "\n📊 Total: 15 botões | ✅ 14 OK | ❌ 1 Erros\n\n"
                         },
                         {
                           "text": "\n🔍 Escaneando botões em: /pedidos\n"
                         },
                         {
-                          "text": "\n📊 Total: 0 botões | ✅ 0 OK | ❌ 0 Erros\n\n"
+                          "text": "   ✅ [button:0]\n"
+                        },
+                        {
+                          "text": "   ✅ LOGIN\n"
+                        },
+                        {
+                          "text": "   ✅ Entrar\n"
+                        },
+                        {
+                          "text": "   ✅ Cadastrar\n"
+                        },
+                        {
+                          "text": "   ✅ [[type=\"button\"]:2]\n"
+                        },
+                        {
+                          "text": "   ✅ [[type=\"button\"]:3]\n"
+                        },
+                        {
+                          "text": "\n📊 Total: 6 botões | ✅ 6 OK | ❌ 0 Erros\n\n"
                         },
                         {
                           "text": "\n🔍 Escaneando botões em: /clientes\n"
                         },
                         {
-                          "text": "\n📊 Total: 0 botões | ✅ 0 OK | ❌ 0 Erros\n\n"
+                          "text": "   ✅ [button:0]\n"
                         },
                         {
-                          "text": "📁 Resultados salvos: C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\playwright-report\\e2e-results.jsonl\n"
+                          "text": "   ✅ Entrar\n"
                         },
                         {
-                          "text": "📁 Relatório HTML salvo: C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\playwright-report\\e2e-summary.html\n"
+                          "text": "   ✅ Cadastrar\n"
+                        },
+                        {
+                          "text": "   ✅ [[type=\"button\"]:2]\n"
+                        },
+                        {
+                          "text": "   ✅ [[type=\"button\"]:3]\n"
+                        },
+                        {
+                          "text": "\n📊 Total: 5 botões | ✅ 5 OK | ❌ 0 Erros\n\n"
+                        },
+                        {
+                          "text": "📁 Resultados salvos: C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Command--D-v1.0\\playwright-report\\e2e-results.jsonl\n"
+                        },
+                        {
+                          "text": "📁 Relatório HTML salvo: C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Command--D-v1.0\\playwright-report\\e2e-summary.html\n"
                         },
                         {
                           "text": "\n✅ Escaneamento Dono completado\n\n"
@@ -315,18 +393,18 @@
                       ],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-09T01:53:36.615Z",
+                      "startTime": "2025-10-16T23:09:53.987Z",
                       "annotations": [],
                       "attachments": [
                         {
                           "name": "video",
                           "contentType": "video/webm",
-                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-owner.flow-Fluxo-Dono--c0b80--em-páginas-administrativas-owner\\video.webm"
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Command--D-v1.0\\test-results\\e2e-owner.flow-Fluxo-Dono--c0b80--em-páginas-administrativas-owner\\video.webm"
                         },
                         {
                           "name": "trace",
                           "contentType": "application/zip",
-                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-owner.flow-Fluxo-Dono--c0b80--em-páginas-administrativas-owner\\trace.zip"
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Command--D-v1.0\\test-results\\e2e-owner.flow-Fluxo-Dono--c0b80--em-páginas-administrativas-owner\\trace.zip"
                         }
                       ]
                     }
@@ -355,7 +433,7 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 8076,
+                      "duration": 7643,
                       "errors": [],
                       "stdout": [
                         {
@@ -382,18 +460,18 @@
                       ],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-09T01:54:43.199Z",
+                      "startTime": "2025-10-16T23:11:41.407Z",
                       "annotations": [],
                       "attachments": [
                         {
                           "name": "video",
                           "contentType": "video/webm",
-                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-owner.flow-Fluxo-Dono--9469d-deve-acessar-todas-as-rotas-owner\\video.webm"
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Command--D-v1.0\\test-results\\e2e-owner.flow-Fluxo-Dono--9469d-deve-acessar-todas-as-rotas-owner\\video.webm"
                         },
                         {
                           "name": "trace",
                           "contentType": "application/zip",
-                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-owner.flow-Fluxo-Dono--9469d-deve-acessar-todas-as-rotas-owner\\trace.zip"
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Command--D-v1.0\\test-results\\e2e-owner.flow-Fluxo-Dono--9469d-deve-acessar-todas-as-rotas-owner\\trace.zip"
                         }
                       ]
                     }
@@ -439,7 +517,7 @@
                       "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 5011,
+                      "duration": 4006,
                       "errors": [],
                       "stdout": [
                         {
@@ -449,7 +527,7 @@
                           "text": "✅ Navegou para: /painel-admin\n"
                         },
                         {
-                          "text": "✅ Lista de pedidos encontrada: text=/Cliente/i\n"
+                          "text": "⚠️  Lista de pedidos não encontrada (pode estar em outra aba)\n"
                         },
                         {
                           "text": "⚠️  Nenhum pedido encontrado para abrir (pode não haver pedidos ainda)\n"
@@ -463,18 +541,18 @@
                       ],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-09T01:53:27.961Z",
+                      "startTime": "2025-10-16T23:09:45.242Z",
                       "annotations": [],
                       "attachments": [
                         {
                           "name": "video",
                           "contentType": "video/webm",
-                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-employee.flow-Fluxo-Fu-ec3eb-renciar-pedidos-de-clientes-employee\\video.webm"
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Command--D-v1.0\\test-results\\e2e-employee.flow-Fluxo-Fu-ec3eb-renciar-pedidos-de-clientes-employee\\video.webm"
                         },
                         {
                           "name": "trace",
                           "contentType": "application/zip",
-                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-employee.flow-Fluxo-Fu-ec3eb-renciar-pedidos-de-clientes-employee\\trace.zip"
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Command--D-v1.0\\test-results\\e2e-employee.flow-Fluxo-Fu-ec3eb-renciar-pedidos-de-clientes-employee\\trace.zip"
                         }
                       ]
                     }
@@ -503,7 +581,7 @@
                       "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 17245,
+                      "duration": 48082,
                       "errors": [],
                       "stdout": [
                         {
@@ -513,37 +591,85 @@
                           "text": "\n🔍 Escaneando botões em: /login\n"
                         },
                         {
-                          "text": "   ✅ Área Cliente\n"
+                          "text": "   ✅ LOGIN\n"
                         },
                         {
-                          "text": "   ✅ Sair\n"
+                          "text": "   ✅ Carrinho\n"
                         },
                         {
-                          "text": "   ✅ [button:3]\n"
+                          "text": "   ❌ 🎬 Ver Equipamentos: 500 GET http://localhost:8080/api/public/products\n"
                         },
                         {
-                          "text": "   ✅ Detalhes\n"
+                          "text": "   ✅ Nome\n"
                         },
                         {
-                          "text": "\n📊 Total: 4 botões | ✅ 4 OK | ❌ 0 Erros\n\n"
+                          "text": "   ✅ Todas\n"
+                        },
+                        {
+                          "text": "   ✅ Câmeras\n"
+                        },
+                        {
+                          "text": "   ✅ Lentes\n"
+                        },
+                        {
+                          "text": "   ✅ Todas\n"
+                        },
+                        {
+                          "text": "   ✅ Nome\n"
+                        },
+                        {
+                          "text": "\n📊 Total: 9 botões | ✅ 8 OK | ❌ 1 Erros\n\n"
                         },
                         {
                           "text": "\n🔍 Escaneando botões em: /pedidos\n"
                         },
                         {
-                          "text": "\n📊 Total: 0 botões | ✅ 0 OK | ❌ 0 Erros\n\n"
+                          "text": "   ✅ [button:0]\n"
+                        },
+                        {
+                          "text": "   ✅ LOGIN\n"
+                        },
+                        {
+                          "text": "   ✅ Entrar\n"
+                        },
+                        {
+                          "text": "   ✅ Cadastrar\n"
+                        },
+                        {
+                          "text": "   ✅ [[type=\"button\"]:2]\n"
+                        },
+                        {
+                          "text": "   ✅ [[type=\"button\"]:3]\n"
+                        },
+                        {
+                          "text": "\n📊 Total: 6 botões | ✅ 6 OK | ❌ 0 Erros\n\n"
                         },
                         {
                           "text": "\n🔍 Escaneando botões em: /aprovacoes\n"
                         },
                         {
-                          "text": "\n📊 Total: 0 botões | ✅ 0 OK | ❌ 0 Erros\n\n"
+                          "text": "   ✅ [button:0]\n"
                         },
                         {
-                          "text": "📁 Resultados salvos: C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\playwright-report\\e2e-results.jsonl\n"
+                          "text": "   ✅ Entrar\n"
                         },
                         {
-                          "text": "📁 Relatório HTML salvo: C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\playwright-report\\e2e-summary.html\n"
+                          "text": "   ✅ Cadastrar\n"
+                        },
+                        {
+                          "text": "   ✅ [[type=\"button\"]:2]\n"
+                        },
+                        {
+                          "text": "   ✅ [[type=\"button\"]:3]\n"
+                        },
+                        {
+                          "text": "\n📊 Total: 5 botões | ✅ 5 OK | ❌ 0 Erros\n\n"
+                        },
+                        {
+                          "text": "📁 Resultados salvos: C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Command--D-v1.0\\playwright-report\\e2e-results.jsonl\n"
+                        },
+                        {
+                          "text": "📁 Relatório HTML salvo: C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Command--D-v1.0\\playwright-report\\e2e-summary.html\n"
                         },
                         {
                           "text": "\n✅ Escaneamento Funcionário completado\n\n"
@@ -551,18 +677,18 @@
                       ],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-09T01:53:33.178Z",
+                      "startTime": "2025-10-16T23:09:49.458Z",
                       "annotations": [],
                       "attachments": [
                         {
                           "name": "video",
                           "contentType": "video/webm",
-                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-employee.flow-Fluxo-Fu-644f5-botões-em-páginas-de-gestão-employee\\video.webm"
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Command--D-v1.0\\test-results\\e2e-employee.flow-Fluxo-Fu-644f5-botões-em-páginas-de-gestão-employee\\video.webm"
                         },
                         {
                           "name": "trace",
                           "contentType": "application/zip",
-                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-employee.flow-Fluxo-Fu-644f5-botões-em-páginas-de-gestão-employee\\trace.zip"
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Command--D-v1.0\\test-results\\e2e-employee.flow-Fluxo-Fu-644f5-botões-em-páginas-de-gestão-employee\\trace.zip"
                         }
                       ]
                     }
@@ -591,7 +717,7 @@
                       "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 4751,
+                      "duration": 5119,
                       "errors": [],
                       "stdout": [
                         {
@@ -609,18 +735,18 @@
                       ],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-09T01:53:50.932Z",
+                      "startTime": "2025-10-16T23:10:38.148Z",
                       "annotations": [],
                       "attachments": [
                         {
                           "name": "video",
                           "contentType": "video/webm",
-                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-employee.flow-Fluxo-Fu-51bfd-s-não-configurações-de-Dono-employee\\video.webm"
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Command--D-v1.0\\test-results\\e2e-employee.flow-Fluxo-Fu-51bfd-s-não-configurações-de-Dono-employee\\video.webm"
                         },
                         {
                           "name": "trace",
                           "contentType": "application/zip",
-                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-employee.flow-Fluxo-Fu-51bfd-s-não-configurações-de-Dono-employee\\trace.zip"
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Command--D-v1.0\\test-results\\e2e-employee.flow-Fluxo-Fu-51bfd-s-não-configurações-de-Dono-employee\\trace.zip"
                         }
                       ]
                     }
@@ -666,7 +792,7 @@
                       "workerIndex": 2,
                       "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 17898,
+                      "duration": 16130,
                       "errors": [],
                       "stdout": [
                         {
@@ -679,13 +805,10 @@
                           "text": "   ✅ Chegou em: /equipamentos\n"
                         },
                         {
-                          "text": "   💭 Olhando outras coisas na página...\n"
-                        },
-                        {
                           "text": "\n   👀 Olhando os produtos disponíveis...\n"
                         },
                         {
-                          "text": "   👀 Olhando 24 produtos disponíveis...\n"
+                          "text": "   👀 Olhando 4 produtos disponíveis...\n"
                         },
                         {
                           "text": "   😕 Não encontrou produtos para adicionar\n"
@@ -723,18 +846,18 @@
                       ],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-09T01:53:27.927Z",
+                      "startTime": "2025-10-16T23:09:45.228Z",
                       "annotations": [],
                       "attachments": [
                         {
                           "name": "video",
                           "contentType": "video/webm",
-                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-client.flow-Fluxo-Clie-f916f-e-verificar-na-área-cliente-client\\video.webm"
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Command--D-v1.0\\test-results\\e2e-client.flow-Fluxo-Clie-f916f-e-verificar-na-área-cliente-client\\video.webm"
                         },
                         {
                           "name": "trace",
                           "contentType": "application/zip",
-                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-client.flow-Fluxo-Clie-f916f-e-verificar-na-área-cliente-client\\trace.zip"
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Command--D-v1.0\\test-results\\e2e-client.flow-Fluxo-Clie-f916f-e-verificar-na-área-cliente-client\\trace.zip"
                         }
                       ]
                     }
@@ -763,7 +886,7 @@
                       "workerIndex": 2,
                       "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 68842,
+                      "duration": 93800,
                       "errors": [],
                       "stdout": [
                         {
@@ -773,31 +896,13 @@
                           "text": "\n🔍 Escaneando botões em: /\n"
                         },
                         {
-                          "text": "   ✅ Área Cliente\n"
-                        },
-                        {
-                          "text": "   ✅ Sair\n"
-                        },
-                        {
-                          "text": "   ✅ [button:3]\n"
-                        },
-                        {
-                          "text": "   ✅ Detalhes\n"
-                        },
-                        {
-                          "text": "\n📊 Total: 4 botões | ✅ 4 OK | ❌ 0 Erros\n\n"
-                        },
-                        {
-                          "text": "\n🔍 Escaneando botões em: /equipamentos\n"
-                        },
-                        {
                           "text": "   ✅ LOGIN\n"
                         },
                         {
                           "text": "   ✅ Carrinho\n"
                         },
                         {
-                          "text": "   ✅ 🎬 Ver Equipamentos\n"
+                          "text": "   ❌ 🎬 Ver Equipamentos: 500 GET http://localhost:8080/api/public/products\n"
                         },
                         {
                           "text": "   ✅ Nome\n"
@@ -827,13 +932,67 @@
                           "text": "   ✅ Suportes\n"
                         },
                         {
-                          "text": "   ✅ [button:13]\n"
+                          "text": "   ✅ Limpar Filtros\n"
                         },
                         {
-                          "text": "   ✅ Ver mais\n"
+                          "text": "   ✅ Todas\n"
                         },
                         {
-                          "text": "\n📊 Total: 14 botões | ✅ 14 OK | ❌ 0 Erros\n\n"
+                          "text": "   ✅ Nome\n"
+                        },
+                        {
+                          "text": "\n📊 Total: 15 botões | ✅ 14 OK | ❌ 1 Erros\n\n"
+                        },
+                        {
+                          "text": "\n🔍 Escaneando botões em: /equipamentos\n"
+                        },
+                        {
+                          "text": "   ✅ LOGIN\n"
+                        },
+                        {
+                          "text": "   ✅ Carrinho\n"
+                        },
+                        {
+                          "text": "   ❌ 🎬 Ver Equipamentos: 500 GET http://localhost:8080/api/public/products\n"
+                        },
+                        {
+                          "text": "   ✅ Nome\n"
+                        },
+                        {
+                          "text": "   ✅ Todas\n"
+                        },
+                        {
+                          "text": "   ✅ Câmeras\n"
+                        },
+                        {
+                          "text": "   ✅ Lentes\n"
+                        },
+                        {
+                          "text": "   ✅ Monitores\n"
+                        },
+                        {
+                          "text": "   ✅ Eletrônicos\n"
+                        },
+                        {
+                          "text": "   ✅ Iluminação\n"
+                        },
+                        {
+                          "text": "   ✅ Áudio\n"
+                        },
+                        {
+                          "text": "   ✅ Suportes\n"
+                        },
+                        {
+                          "text": "   ✅ Limpar Filtros\n"
+                        },
+                        {
+                          "text": "   ✅ Todas\n"
+                        },
+                        {
+                          "text": "   ✅ Nome\n"
+                        },
+                        {
+                          "text": "\n📊 Total: 15 botões | ✅ 14 OK | ❌ 1 Erros\n\n"
                         },
                         {
                           "text": "\n🔍 Escaneando botões em: /carrinho\n"
@@ -842,7 +1001,22 @@
                           "text": "   ✅ Voltar\n"
                         },
                         {
-                          "text": "\n📊 Total: 1 botões | ✅ 1 OK | ❌ 0 Erros\n\n"
+                          "text": "   ✅ LOGIN\n"
+                        },
+                        {
+                          "text": "   ✅ Carrinho\n"
+                        },
+                        {
+                          "text": "   ❌ 🎬 Ver Equipamentos: 500 GET http://localhost:8080/api/public/products\n"
+                        },
+                        {
+                          "text": "   ✅ Todas\n"
+                        },
+                        {
+                          "text": "   ✅ Nome\n"
+                        },
+                        {
+                          "text": "\n📊 Total: 6 botões | ✅ 5 OK | ❌ 1 Erros\n\n"
                         },
                         {
                           "text": "\n🔍 Escaneando botões em: /login\n"
@@ -854,7 +1028,7 @@
                           "text": "   ✅ Carrinho\n"
                         },
                         {
-                          "text": "   ✅ 🎬 Ver Equipamentos\n"
+                          "text": "   ❌ 🎬 Ver Equipamentos: 500 GET http://localhost:8080/api/public/products\n"
                         },
                         {
                           "text": "   ✅ Nome\n"
@@ -875,13 +1049,13 @@
                           "text": "   ✅ Nome\n"
                         },
                         {
-                          "text": "\n📊 Total: 9 botões | ✅ 9 OK | ❌ 0 Erros\n\n"
+                          "text": "\n📊 Total: 9 botões | ✅ 8 OK | ❌ 1 Erros\n\n"
                         },
                         {
-                          "text": "📁 Resultados salvos: C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\playwright-report\\e2e-results.jsonl\n"
+                          "text": "📁 Resultados salvos: C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Command--D-v1.0\\playwright-report\\e2e-results.jsonl\n"
                         },
                         {
-                          "text": "📁 Relatório HTML salvo: C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\playwright-report\\e2e-summary.html\n"
+                          "text": "📁 Relatório HTML salvo: C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Command--D-v1.0\\playwright-report\\e2e-summary.html\n"
                         },
                         {
                           "text": "\n✅ Escaneamento Cliente completado\n\n"
@@ -889,18 +1063,18 @@
                       ],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-09T01:53:46.247Z",
+                      "startTime": "2025-10-16T23:10:01.637Z",
                       "annotations": [],
                       "attachments": [
                         {
                           "name": "video",
                           "contentType": "video/webm",
-                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-client.flow-Fluxo-Clie-095de-otões-em-páginas-principais-client\\video.webm"
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Command--D-v1.0\\test-results\\e2e-client.flow-Fluxo-Clie-095de-otões-em-páginas-principais-client\\video.webm"
                         },
                         {
                           "name": "trace",
                           "contentType": "application/zip",
-                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-client.flow-Fluxo-Clie-095de-otões-em-páginas-principais-client\\trace.zip"
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Command--D-v1.0\\test-results\\e2e-client.flow-Fluxo-Clie-095de-otões-em-páginas-principais-client\\trace.zip"
                         }
                       ]
                     }
@@ -929,7 +1103,7 @@
                       "workerIndex": 2,
                       "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 4937,
+                      "duration": 4931,
                       "errors": [],
                       "stdout": [
                         {
@@ -950,18 +1124,18 @@
                       ],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-09T01:54:56.107Z",
+                      "startTime": "2025-10-16T23:11:36.751Z",
                       "annotations": [],
                       "attachments": [
                         {
                           "name": "video",
                           "contentType": "video/webm",
-                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-client.flow-Fluxo-Clie-e3269-deve-acessar-rotas-de-Admin-client\\video.webm"
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Command--D-v1.0\\test-results\\e2e-client.flow-Fluxo-Clie-e3269-deve-acessar-rotas-de-Admin-client\\video.webm"
                         },
                         {
                           "name": "trace",
                           "contentType": "application/zip",
-                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Locadora-multi-tenant--main\\Sistema-Command-D\\test-results\\e2e-client.flow-Fluxo-Clie-e3269-deve-acessar-rotas-de-Admin-client\\trace.zip"
+                          "path": "C:\\Users\\fnune\\OneDrive\\Documentos\\GitHub\\Command--D-v1.0\\test-results\\e2e-client.flow-Fluxo-Clie-e3269-deve-acessar-rotas-de-Admin-client\\trace.zip"
                         }
                       ]
                     }
@@ -981,8 +1155,8 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2025-10-09T01:53:26.802Z",
-    "duration": 94580.233,
+    "startTime": "2025-10-16T23:09:44.290Z",
+    "duration": 125188.413,
     "expected": 9,
     "skipped": 0,
     "unexpected": 0,

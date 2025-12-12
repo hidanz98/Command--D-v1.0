@@ -15,7 +15,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true); // Padrão: lembrar
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   
@@ -40,7 +40,7 @@ export default function Login() {
     setError("");
 
     try {
-      const success = await login(email, password);
+      const success = await login(email, password, rememberMe);
       if (success) {
         // Redirect based on user type
         if (email === "cabecadeefeitocine@gmail.com" || email === "admin@bilscinema.com" || email === "admin@locadora.com") {

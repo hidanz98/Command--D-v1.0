@@ -20,6 +20,7 @@ interface Product {
   brand?: string;
   serialNumber?: string;
   ecommerceEnabled: boolean;
+  visibility: 'PUBLIC' | 'PRIVATE' | 'ECOMMERCE';
   isKit: boolean;
   kitItems?: string[];
   tags: string[];
@@ -46,6 +47,7 @@ const MOCK_PRODUCTS: Product[] = [
     brand: 'Sony',
     serialNumber: 'SN001234',
     ecommerceEnabled: true,
+    visibility: 'PUBLIC',
     isKit: false,
     kitItems: [],
     tags: ['cinema', 'full-frame', '4k', 'profissional'],
@@ -75,6 +77,7 @@ const MOCK_PRODUCTS: Product[] = [
     brand: 'Canon',
     serialNumber: 'CN005678',
     ecommerceEnabled: true,
+    visibility: 'PUBLIC',
     isKit: false,
     kitItems: [],
     tags: ['híbrida', 'canon', '8k', 'fotografia'],
@@ -104,6 +107,7 @@ const MOCK_PRODUCTS: Product[] = [
     brand: 'Zeiss',
     serialNumber: 'ZS009876',
     ecommerceEnabled: false,
+    visibility: 'PRIVATE',
     isKit: false,
     kitItems: [],
     tags: ['zeiss', 'cinema', 'prime', '85mm'],
@@ -181,6 +185,7 @@ export const ProductManager: React.FC<{
     brand: '',
     serialNumber: '',
     ecommerceEnabled: true,
+    visibility: 'PUBLIC',
     isKit: false,
     kitItems: [],
     tags: [],
@@ -190,6 +195,7 @@ export const ProductManager: React.FC<{
     specifications: {},
     images: ['/placeholder.svg']
   });
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Filter and sort products
   const filteredProducts = products
@@ -219,61 +225,250 @@ export const ProductManager: React.FC<{
       return sortOrder === 'asc' ? comparison : -comparison;
     });
 
-  const handleAddProduct = () => {
+  const handleImageUpload = async (file: File): Promise<string | null> => {
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/upload/product-image', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      const result = await response.json();
+      if (result.success && result.url) {
+        return result.url;
+      }
+
+      console.error('Upload failed:', result.error || 'Unknown upload error');
+      return null;
+    } catch (error) {
+      console.error('Upload error:', error);
+      return null;
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleAddProduct = async () => {
     if (!newProduct.name || !newProduct.price) return;
 
-    const product: Product = {
-      id: `product_${Date.now()}`,
-      name: newProduct.name,
-      description: newProduct.description || '',
-      price: newProduct.price,
-      image: newProduct.images?.[0] || '/placeholder.svg',
-      category: newProduct.category || 'Câmeras',
-      subcategory: newProduct.subcategory || '',
-      brand: newProduct.brand || '',
-      serialNumber: newProduct.serialNumber || '',
-      ecommerceEnabled: newProduct.ecommerceEnabled || true,
-      isKit: newProduct.isKit || false,
-      kitItems: newProduct.kitItems || [],
-      tags: newProduct.tags || [],
-      availability: newProduct.availability || 'available',
-      featured: newProduct.featured || false,
-      dailyRate: newProduct.dailyRate || newProduct.price,
-      specifications: newProduct.specifications || {},
-      images: newProduct.images || ['/placeholder.svg'],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+    try {
+      const token = localStorage.getItem('token');
+      
+      const productData = {
+        name: newProduct.name,
+        description: newProduct.description || '',
+        dailyPrice: newProduct.price,
+        weeklyPrice: newProduct.weeklyRate,
+        monthlyPrice: newProduct.monthlyRate,
+        category: newProduct.category || 'Câmeras',
+        brand: newProduct.brand || '',
+        sku: newProduct.serialNumber || '',
+        images: newProduct.images || ['/placeholder.svg'],
+        tags: newProduct.featured ? [...(newProduct.tags || []), 'featured'] : (newProduct.tags || []),
+        status: newProduct.availability?.toUpperCase() || 'AVAILABLE',
+        featured: newProduct.featured || false,
+        visibility: newProduct.visibility || 'PUBLIC',
+        quantity: 1,
+        isActive: true
+      };
 
-    setProducts([...products, product]);
-    setNewProduct({
-      name: '',
-      description: '',
-      price: 0,
-      category: 'Câmeras',
-      subcategory: '',
-      brand: '',
-      serialNumber: '',
-      ecommerceEnabled: true,
-      isKit: false,
-      kitItems: [],
-      tags: [],
-      availability: 'available',
-      featured: false,
-      dailyRate: 0,
-      specifications: {},
-      images: ['/placeholder.svg']
-    });
-    setShowAddModal(false);
+      const response = await fetch('/api/products', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(productData)
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        // Recarregar produtos
+        const res = await fetch('/api/public/products');
+        const json = await res.json();
+        if (json?.success) {
+          const mapped: Product[] = json.data.map((p: any, idx: number) => ({
+            id: p.id ?? String(idx + 1),
+            name: p.name,
+            description: p.description ?? '',
+            price: p.dailyPrice ?? 0,
+            image: (p.images?.[0]) ?? '/placeholder.svg',
+            category: p.category ?? 'REFLETORES',
+            ecommerceEnabled: true,
+            visibility: p.visibility ?? 'PUBLIC',
+            isKit: false,
+            kitItems: [],
+            tags: p.tags ?? [],
+            availability: (p.available ?? true) ? 'available' : 'maintenance',
+            featured: p.featured ?? false,
+            dailyRate: p.dailyPrice ?? 0,
+            specifications: {},
+            images: p.images && p.images.length ? p.images : ['/placeholder.svg'],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }));
+          if (mapped.length) setProducts(mapped);
+        }
+        
+        setNewProduct({
+          name: '',
+          description: '',
+          price: 0,
+          category: 'Câmeras',
+          subcategory: '',
+          brand: '',
+          serialNumber: '',
+          ecommerceEnabled: true,
+          visibility: 'PUBLIC',
+          isKit: false,
+          kitItems: [],
+          tags: [],
+          availability: 'available',
+          featured: false,
+          dailyRate: 0,
+          specifications: {},
+          images: ['/placeholder.svg']
+        });
+        setShowAddModal(false);
+      } else {
+        console.error('Erro ao criar produto:', result.error);
+        alert('Erro ao criar produto: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Erro ao criar produto:', error);
+      alert('Erro ao criar produto');
+    }
   };
 
-  const handleEditProduct = (updatedProduct: Product) => {
-    setProducts(products.map(p => p.id === updatedProduct.id ? updatedProduct : p));
-    setEditingProduct(null);
+  const handleEditProduct = async (updatedProduct: Product) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const productData = {
+        name: updatedProduct.name,
+        description: updatedProduct.description || '',
+        dailyPrice: updatedProduct.price,
+        weeklyPrice: updatedProduct.weeklyRate,
+        monthlyPrice: updatedProduct.monthlyRate,
+        category: updatedProduct.category || 'Câmeras',
+        brand: updatedProduct.brand || '',
+        sku: updatedProduct.serialNumber || '',
+        images: updatedProduct.images || ['/placeholder.svg'],
+        tags: updatedProduct.featured ? [...(updatedProduct.tags || []), 'featured'] : (updatedProduct.tags || []),
+        status: updatedProduct.availability?.toUpperCase() || 'AVAILABLE',
+        featured: updatedProduct.featured || false,
+        visibility: updatedProduct.visibility || 'PUBLIC',
+        isActive: true
+      };
+
+      const response = await fetch(`/api/products/${updatedProduct.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(productData)
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        // Recarregar produtos
+        const res = await fetch('/api/public/products');
+        const json = await res.json();
+        if (json?.success) {
+          const mapped: Product[] = json.data.map((p: any, idx: number) => ({
+            id: p.id ?? String(idx + 1),
+            name: p.name,
+            description: p.description ?? '',
+            price: p.dailyPrice ?? 0,
+            image: (p.images?.[0]) ?? '/placeholder.svg',
+            category: p.category ?? 'REFLETORES',
+            ecommerceEnabled: true,
+            visibility: p.visibility ?? 'PUBLIC',
+            isKit: false,
+            kitItems: [],
+            tags: p.tags ?? [],
+            availability: (p.available ?? true) ? 'available' : 'maintenance',
+            featured: p.featured ?? false,
+            dailyRate: p.dailyPrice ?? 0,
+            specifications: {},
+            images: p.images && p.images.length ? p.images : ['/placeholder.svg'],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }));
+          if (mapped.length) setProducts(mapped);
+        }
+        
+        setEditingProduct(null);
+      } else {
+        console.error('Erro ao atualizar produto:', result.error);
+        alert('Erro ao atualizar produto: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar produto:', error);
+      alert('Erro ao atualizar produto');
+    }
   };
 
-  const handleDeleteProduct = (productId: string) => {
-    setProducts(products.filter(p => p.id !== productId));
+  const handleDeleteProduct = async (productId: string) => {
+    if (!confirm('Tem certeza que deseja deletar este produto?')) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`/api/products/${productId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        // Recarregar produtos
+        const res = await fetch('/api/public/products');
+        const json = await res.json();
+        if (json?.success) {
+          const mapped: Product[] = json.data.map((p: any, idx: number) => ({
+            id: p.id ?? String(idx + 1),
+            name: p.name,
+            description: p.description ?? '',
+            price: p.dailyPrice ?? 0,
+            image: (p.images?.[0]) ?? '/placeholder.svg',
+            category: p.category ?? 'REFLETORES',
+            ecommerceEnabled: true,
+            visibility: p.visibility ?? 'PUBLIC',
+            isKit: false,
+            kitItems: [],
+            tags: p.tags ?? [],
+            availability: (p.available ?? true) ? 'available' : 'maintenance',
+            featured: p.featured ?? false,
+            dailyRate: p.dailyPrice ?? 0,
+            specifications: {},
+            images: p.images && p.images.length ? p.images : ['/placeholder.svg'],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }));
+          if (mapped.length) setProducts(mapped);
+        }
+      } else {
+        console.error('Erro ao deletar produto:', result.error);
+        alert('Erro ao deletar produto: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Erro ao deletar produto:', error);
+      alert('Erro ao deletar produto');
+    }
   };
 
   const getAvailabilityColor = (availability: string) => {
@@ -598,6 +793,44 @@ export const ProductManager: React.FC<{
                 </div>
               </div>
 
+              <div>
+                <Label className="text-white mb-2 block">Imagem do Produto</Label>
+                <div className="flex items-center space-x-4">
+                  {newProduct.images && newProduct.images[0] && newProduct.images[0] !== '/placeholder.svg' && (
+                    <img 
+                      src={newProduct.images[0]} 
+                      alt="Preview" 
+                      className="w-20 h-20 object-cover rounded-lg"
+                    />
+                  )}
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const imageUrl = await handleImageUpload(file);
+                          if (imageUrl) {
+                            setNewProduct({ ...newProduct, images: [imageUrl] });
+                          }
+                        }
+                      }}
+                      className="hidden"
+                      id="product-image-upload"
+                      disabled={uploadingImage}
+                    />
+                    <label
+                      htmlFor="product-image-upload"
+                      className="inline-flex items-center px-4 py-2 bg-cinema-dark-lighter border border-cinema-gray-light text-white rounded-md cursor-pointer hover:bg-cinema-gray transition-colors"
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      {uploadingImage ? 'Enviando...' : 'Escolher Imagem'}
+                    </label>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label className="text-white">Número de Série</Label>
@@ -608,14 +841,17 @@ export const ProductManager: React.FC<{
                     placeholder="Ex: SN001234"
                   />
                 </div>
-                <div className="flex items-center space-x-2 pt-6">
-                  <input
-                    type="checkbox"
-                    checked={newProduct.ecommerceEnabled || false}
-                    onChange={(e) => setNewProduct({ ...newProduct, ecommerceEnabled: e.target.checked })}
-                    className="rounded"
-                  />
-                  <Label className="text-white">Habilitar E-commerce</Label>
+                <div>
+                  <Label className="text-white">Visibilidade</Label>
+                  <select
+                    value={newProduct.visibility || 'PUBLIC'}
+                    onChange={(e) => setNewProduct({ ...newProduct, visibility: e.target.value as any })}
+                    className="w-full bg-cinema-dark-lighter border border-cinema-gray-light text-white rounded-md px-3 py-2"
+                  >
+                    <option value="PUBLIC">Público (E-commerce + Locadora)</option>
+                    <option value="PRIVATE">Privado (Apenas Locadora)</option>
+                    <option value="ECOMMERCE">E-commerce</option>
+                  </select>
                 </div>
               </div>
 
@@ -836,6 +1072,44 @@ export const ProductManager: React.FC<{
                 </div>
               </div>
 
+              <div>
+                <Label className="text-white mb-2 block">Imagem do Produto</Label>
+                <div className="flex items-center space-x-4">
+                  {editingProduct.images && editingProduct.images[0] && editingProduct.images[0] !== '/placeholder.svg' && (
+                    <img 
+                      src={editingProduct.images[0]} 
+                      alt="Preview" 
+                      className="w-20 h-20 object-cover rounded-lg"
+                    />
+                  )}
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const imageUrl = await handleImageUpload(file);
+                          if (imageUrl) {
+                            setEditingProduct({ ...editingProduct, images: [imageUrl] });
+                          }
+                        }
+                      }}
+                      className="hidden"
+                      id="edit-product-image-upload"
+                      disabled={uploadingImage}
+                    />
+                    <label
+                      htmlFor="edit-product-image-upload"
+                      className="inline-flex items-center px-4 py-2 bg-cinema-dark-lighter border border-cinema-gray-light text-white rounded-md cursor-pointer hover:bg-cinema-gray transition-colors"
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      {uploadingImage ? 'Enviando...' : 'Escolher Imagem'}
+                    </label>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label className="text-white">Número de Série</Label>
@@ -846,14 +1120,17 @@ export const ProductManager: React.FC<{
                     placeholder="Ex: SN001234"
                   />
                 </div>
-                <div className="flex items-center space-x-2 pt-6">
-                  <input
-                    type="checkbox"
-                    checked={editingProduct.ecommerceEnabled || false}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, ecommerceEnabled: e.target.checked })}
-                    className="rounded"
-                  />
-                  <Label className="text-white">Habilitar E-commerce</Label>
+                <div>
+                  <Label className="text-white">Visibilidade</Label>
+                  <select
+                    value={editingProduct.visibility || 'PUBLIC'}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, visibility: e.target.value as any })}
+                    className="w-full bg-cinema-dark-lighter border border-cinema-gray-light text-white rounded-md px-3 py-2"
+                  >
+                    <option value="PUBLIC">Público (E-commerce + Locadora)</option>
+                    <option value="PRIVATE">Privado (Apenas Locadora)</option>
+                    <option value="ECOMMERCE">E-commerce</option>
+                  </select>
                 </div>
               </div>
 

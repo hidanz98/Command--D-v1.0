@@ -88,6 +88,8 @@ export class AuthService {
   }
 
   static async authenticateUser(email: string, password: string) {
+    console.log('🔐 Tentativa de login:', { email, passwordLength: password?.length });
+    
     const user = await prisma.user.findUnique({
       where: { email },
       include: {
@@ -96,12 +98,18 @@ export class AuthService {
       }
     });
 
+    console.log('👤 Usuário encontrado:', user ? { id: user.id, email: user.email, isActive: user.isActive } : 'NÃO');
+
     if (!user || !user.isActive) {
+      console.log('❌ Usuário não encontrado ou inativo');
       throw new Error('Invalid credentials');
     }
 
     const isValidPassword = await this.verifyPassword(password, user.password);
+    console.log('🔑 Senha válida:', isValidPassword);
+    
     if (!isValidPassword) {
+      console.log('❌ Senha inválida');
       throw new Error('Invalid credentials');
     }
 

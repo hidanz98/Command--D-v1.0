@@ -211,8 +211,21 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       primaryColor: "#fbbf24",
       secondaryColor: "#1f2937",
       isActive: true,
+      plan: "premium",
       createdAt: new Date(),
-      updatedAt: new Date()
+      lastActive: new Date(),
+      totalRevenue: 0,
+      totalOrders: 0,
+      owner: {
+        name: "Admin",
+        email: "admin@bilscinema.com",
+        phone: ""
+      },
+      settings: {
+        allowOnlinePayments: true,
+        requireApproval: true,
+        showPricing: true
+      }
     }
   );
   const [products, setProducts] = useState<TenantProduct[]>([]);

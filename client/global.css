@@ -3,49 +3,49 @@
 @tailwind utilities;
 
 @layer base {
+  /**
+   * Cinema Equipment Rental - Dark Theme
+   * Dark theme with yellow accents for a modern cinema rental website
+  */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 84% 4.9%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222.2 84% 4.9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
-  }
+    --background: 0 0% 4%;
+    --foreground: 0 0% 95%;
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 84% 4.9%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 94.1%;
+    --card: 0 0% 8%;
+    --card-foreground: 0 0% 95%;
+
+    --popover: 0 0% 8%;
+    --popover-foreground: 0 0% 95%;
+
+    --primary: 51 100% 50%;
+    --primary-foreground: 0 0% 4%;
+
+    --secondary: 0 0% 16%;
+    --secondary-foreground: 0 0% 90%;
+
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 60%;
+
+    --accent: 51 100% 50%;
+    --accent-foreground: 0 0% 4%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 16%;
+    --input: 0 0% 16%;
+    --ring: 51 100% 50%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 6%;
+    --sidebar-foreground: 0 0% 85%;
+    --sidebar-primary: 51 100% 50%;
+    --sidebar-primary-foreground: 0 0% 4%;
+    --sidebar-accent: 0 0% 12%;
+    --sidebar-accent-foreground: 0 0% 85%;
+    --sidebar-border: 0 0% 16%;
+    --sidebar-ring: 51 100% 50%;
   }
 }
 
@@ -53,8 +53,15 @@
   * {
     @apply border-border;
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-cinema-dark text-foreground font-sans;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+  }
+
+  html {
+    scroll-behavior: smooth;
   }
 }
 
@@ -93,6 +100,248 @@ body:has(.nasa-editor-panel) * {
   animation: none !important;
   transform: none !important;
   will-change: auto !important;
+}
+
+/* Fix Recharts SVG overflow issue */
+.recharts-wrapper,
+.recharts-surface,
+.recharts-responsive-container {
+  overflow: hidden !important;
+}
+
+.recharts-wrapper svg {
+  overflow: hidden !important;
+}
+
+/* Ensure charts don't overflow their containers */
+[data-edit-id="charts.container"],
+[data-edit-id="dashboard.charts-container"] {
+  overflow: hidden !important;
+  position: relative !important;
+}
+
+/* Fix for Area chart gradient overflow */
+.recharts-area-area,
+.recharts-area {
+  clip-path: inset(0) !important;
+}
+
+/* Fix for any SVG that might overflow */
+svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Ensure the main content area clips properly */
+.flex-1.overflow-y-auto {
+  isolation: isolate;
+}
+
+/* Fix potential SVG path overflow from Lucide icons */
+.lucide {
+  overflow: visible !important;
+}
+
+/* Sidebar should stay fixed and not overlap with scrolling content */
+[data-edit-id="sidebar.container"] {
+  position: sticky !important;
+  top: 0 !important;
+  height: 100vh !important;
+  overflow-y: auto !important;
+  flex-shrink: 0 !important;
+}
+
+@layer components {
+  .gradient-text {
+    @apply bg-gradient-to-r from-cinema-yellow to-yellow-400 bg-clip-text text-transparent;
+  }
+
+  .hover-glow {
+    transition: box-shadow 0.3s ease;
+  }
+
+  .hover-glow:hover {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+  }
+
+  /* Device-specific responsive styles */
+  .device-mobile {
+    /* Disable hover effects on mobile */
+    --hover-disabled: true;
+  }
+
+  .device-mobile * {
+    /* Optimize text rendering for mobile */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .touch-device {
+    /* Increase touch targets for touch devices */
+    --touch-target: 44px;
+  }
+
+  .no-touch {
+    /* Smaller targets for mouse interaction */
+    --touch-target: 32px;
+  }
+
+  /* Responsive animations */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* Enhanced animations for responsive design */
+  .animate-fade-in {
+    animation: fadeIn 0.6s ease-out forwards;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.8s ease-out forwards;
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  .animate-spin-slow {
+    animation: spin 20s linear infinite;
+  }
+
+  .animate-slide-in {
+    animation: slideInFromRight 0.4s ease-out forwards;
+  }
+
+  /* Custom scrollbar styles for mobile menu */
+  .mobile-menu-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 215, 0, 0.5) rgba(255, 255, 255, 0.1);
+  }
+
+  .mobile-menu-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .mobile-menu-scroll::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+  }
+
+  .mobile-menu-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 215, 0, 0.5);
+    border-radius: 3px;
+  }
+
+  .mobile-menu-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 215, 0, 0.7);
+  }
+
+  /* Stats cards with subtle shadow */
+  .stats-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .stats-card:hover {
+    box-shadow: 0 10px 40px -10px rgba(255, 215, 0, 0.2);
+  }
+
+  /* Touch target optimization */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .touch-target {
+      min-height: 32px;
+      min-width: 32px;
+    }
+  }
+
+  /* Utilities */
+  .delay-300 {
+    animation-delay: 300ms;
+  }
+
+  .delay-500 {
+    animation-delay: 500ms;
+  }
+
+  .delay-700 {
+    animation-delay: 700ms;
+  }
+
+  .delay-1000 {
+    animation-delay: 1000ms;
+  }
+}
+
+/* Keyframe Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.2;
+  }
+  25% {
+    opacity: 0.3;
+  }
+  50% {
+    transform: translateY(-20px) translateX(10px);
+    opacity: 0.4;
+  }
+  75% {
+    opacity: 0.3;
+  }
+}
+
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Modern Scrollbar Styles */

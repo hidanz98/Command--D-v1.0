@@ -1,68 +1,28 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Star, ShoppingCart, Eye, Camera, Monitor, Zap, Aperture, ArrowUp, Edit3, Lightbulb, Mic, User } from "lucide-react";
+import { Star, ShoppingCart, Eye, Camera, Monitor, Zap, Aperture, ArrowUp, Edit3, Lightbulb, Mic, User, Loader2 } from "lucide-react";
 import Footer from "@/components/Footer";
 import Layout from "@/components/Layout";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { useInlineEditor, EditorOverlay, EditPanel } from "@/components/InlineEditor";
-import { SupportChat } from "@/components/SupportChat";
 import { toast } from "sonner";
 
-// Featured products data
-const featuredProducts = [
-  {
-    id: "1",
-    name: "Sony FX6 Full Frame",
-    category: "Câmeras",
-    pricePerDay: 450,
-    image: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'><rect width='400' height='300' fill='%23333'/><rect x='50' y='100' width='300' height='100' rx='10' fill='%23555'/><circle cx='200' cy='150' r='30' fill='%23FFD700'/><text x='200' y='250' text-anchor='middle' fill='%23FFD700' font-size='16'>Sony FX6</text></svg>",
-    rating: 4.0,
-    reviews: 24,
-    available: true,
-    featured: true,
-    description: "Câmera cinematográfica full frame de alta qualidade",
-  },
-  {
-    id: "2",
-    name: "Zeiss CP.3 85mm T2.1",
-    category: "Lentes",
-    pricePerDay: 120,
-    image: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'><rect width='400' height='300' fill='%23333'/><rect x='150' y='120' width='100' height='60' rx='5' fill='%23555'/><circle cx='200' cy='150' r='20' fill='%23FFD700'/><text x='200' y='250' text-anchor='middle' fill='%23FFD700' font-size='14'>Zeiss CP.3</text></svg>",
-    rating: 3.5,
-    reviews: 32,
-    available: true,
-    featured: true,
-    description: "Lente cinematográfica de alta qualidade",
-  },
-  {
-    id: "3",
-    name: "Canon EOS R5C",
-    category: "Câmeras",
-    pricePerDay: 380,
-    image: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'><rect width='400' height='300' fill='%23333'/><rect x='50' y='100' width='300' height='100' rx='10' fill='%23555'/><circle cx='200' cy='150' r='30' fill='%23FFD700'/><text x='200' y='250' text-anchor='middle' fill='%23FFD700' font-size='16'>Canon R5C</text></svg>",
-    rating: 4.0,
-    reviews: 18,
-    available: true,
-    featured: true,
-    description: "Câmera mirrorless com gravação 8K para cinema",
-  },
-  {
-    id: "4",
-    name: "Atomos Ninja V 5\"",
-    category: "Monitores",
-    pricePerDay: 85,
-    image: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'><rect width='400' height='300' fill='%23333'/><rect x='100' y='80' width='200' height='140' rx='10' fill='%23555'/><rect x='120' y='100' width='160' height='100' fill='%23FFD700'/><text x='200' y='250' text-anchor='middle' fill='%23FFD700' font-size='14'>Atomos Ninja</text></svg>",
-    rating: 4.0,
-    reviews: 15,
-    available: false,
-    featured: true,
-    description: "Monitor externo para gravação profissional",
-  },
-];
+interface FeaturedProduct {
+  id: string;
+  name: string;
+  category: string;
+  pricePerDay: number;
+  image: string;
+  rating: number;
+  reviews: number;
+  available: boolean;
+  featured: boolean;
+  description: string;
+}
 
 // Categories data
 const categories = [
@@ -77,10 +37,49 @@ const categories = [
 
 export function CabecaEfeito() {
   const [showNotification, setShowNotification] = useState(true);
+  const [featuredProducts, setFeaturedProducts] = useState<FeaturedProduct[]>([]);
+  const [loading, setLoading] = useState(true);
   const { state, dispatch } = useCart();
   const { isAuthenticated, isAdmin } = useAuth();
   const { state: editorState, toggleEditor } = useInlineEditor();
   const navigate = useNavigate();
+
+  // Buscar produtos em destaque da API
+  useEffect(() => {
+    const fetchFeaturedProducts = async () => {
+      try {
+        const response = await fetch('/api/public/products');
+        const result = await response.json();
+        
+        if (result.success) {
+          // Filtrar apenas produtos em destaque e mapear para o formato esperado
+          const featured = result.data
+            .filter((p: any) => p.featured)
+            .slice(0, 4) // Limitar a 4 produtos
+            .map((p: any) => ({
+              id: p.id,
+              name: p.name,
+              category: p.category || 'REFLETORES',
+              pricePerDay: p.dailyPrice || 0,
+              image: p.images?.[0] || '/placeholder.svg',
+              rating: 4.5,
+              reviews: Math.floor(Math.random() * 50) + 10,
+              available: p.available !== false,
+              featured: true,
+              description: p.description || ''
+            }));
+          
+          setFeaturedProducts(featured);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar produtos em destaque:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeaturedProducts();
+  }, []);
 
   const handleAddToCart = (product: any) => {
     dispatch({
@@ -185,9 +184,20 @@ export function CabecaEfeito() {
         <div className="max-w-7xl mx-auto px-4 py-16">
           <div className="text-center mb-12">
             <h2 className="text-4xl font-bold text-white mb-4" data-edit-id="featured.title">Equipamentos em Destaque</h2>
-            <p className="text-gray-300 text-lg" data-edit-id="featured.subtitle">{featuredProducts.length} equipamentos encontrados</p>
+            <p className="text-gray-300 text-lg" data-edit-id="featured.subtitle">
+              {loading ? 'Carregando...' : `${featuredProducts.length} equipamentos em destaque`}
+            </p>
           </div>
 
+          {loading ? (
+            <div className="flex justify-center items-center py-20">
+              <Loader2 className="w-10 h-10 animate-spin text-cinema-yellow" />
+            </div>
+          ) : featuredProducts.length === 0 ? (
+            <div className="text-center py-20">
+              <p className="text-gray-400">Nenhum produto em destaque no momento.</p>
+            </div>
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
             {featuredProducts.map((product) => (
               <Card 
@@ -199,7 +209,11 @@ export function CabecaEfeito() {
                   <img
                     src={product.image}
                     alt={product.name}
-                    className="w-full h-48 object-cover"
+                    className="w-full h-48 object-cover bg-gray-700"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = '/placeholder.svg';
+                    }}
                     data-edit-id={`product-${product.id}-image`}
                   />
                   
@@ -305,6 +319,7 @@ export function CabecaEfeito() {
               </Card>
             ))}
           </div>
+          )}
         </div>
 
         {/* Categories Section */}
@@ -478,8 +493,7 @@ export function CabecaEfeito() {
         </button>
       </div>
 
-      {/* Support Chat */}
-      <SupportChat />
+      {/* Support Chat - Removido conforme solicitado */}
 
       {/* Inline Editor */}
       <EditorOverlay />

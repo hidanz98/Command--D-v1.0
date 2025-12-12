@@ -49,8 +49,9 @@ model TenantSettings {
   // Site Settings
   siteName        String?
   siteDescription String?
-  primaryColor    String? @default("#3B82F6")
-  secondaryColor  String? @default("#1E40AF")
+  primaryColor    String? @default("#F59E0B")
+  secondaryColor  String? @default("#1F2937")
+  accentColor     String? @default("#3B82F6")
   logo            String?
   favicon         String?
 
@@ -73,6 +74,83 @@ model TenantSettings {
   enablePayroll   Boolean @default(true)
   enableInventory Boolean @default(true)
   enableReports   Boolean @default(true)
+  
+  // Conferência com QR Code / Barcode
+  enableCheckoutScanner Boolean @default(false)  // Conferência na saída
+  enableCheckinScanner  Boolean @default(false)  // Conferência na devolução
+  requireScanOnCheckout Boolean @default(false)  // Obrigatório escanear na saída
+  requireScanOnCheckin  Boolean @default(false)  // Obrigatório escanear na devolução
+
+  // Email Settings (SMTP ou API)
+  emailEnabled      Boolean @default(false)
+  emailProvider     String? @default("smtp") // "smtp", "resend", "sendgrid", "mailgun"
+  
+  // SMTP (tradicional)
+  smtpHost         String?
+  smtpPort         Int?    @default(587)
+  smtpUser         String?
+  smtpPassword     String? // Será encriptado no código
+  smtpUseTLS       Boolean @default(true)
+  
+  // API Keys (encriptadas)
+  resendApiKey     String? // Para Resend
+  sendgridApiKey   String? // Para SendGrid
+  mailgunApiKey    String? // Para Mailgun
+  mailgunDomain    String? // Domínio do Mailgun
+  
+  // Configurações gerais de email
+  emailFromName    String?
+  emailFromAddress String?
+
+  // WhatsApp Settings
+  whatsappEnabled          Boolean @default(false)
+  whatsappApiKey           String?
+  whatsappPhoneNumber      String?
+  whatsappSendOrderConfirm Boolean @default(true)
+  whatsappSendReminder     Boolean @default(true)
+  whatsappSendInvoice      Boolean @default(false)
+  whatsappReminderDays     Int     @default(1)
+
+  // Security Settings
+  require2FA              Boolean @default(false)
+  requireStrongPassword   Boolean @default(true)
+  passwordMinLength       Int     @default(8)
+  requireUppercase        Boolean @default(true)
+  requireNumbers          Boolean @default(true)
+  requireSpecialChars     Boolean @default(false)
+  sessionTimeoutMinutes   Int     @default(30)
+  maxLoginAttempts        Int     @default(5)
+  lockoutDurationMinutes  Int     @default(15)
+  enableIPWhitelist       Boolean @default(false)
+  allowedIPs              String? // Comma-separated IPs
+
+  // Notification Settings
+  notifyEmail             Boolean @default(true)
+  notifyWhatsApp          Boolean @default(false)
+  notifyPush              Boolean @default(false)
+
+  // Rental Settings
+  enableLateFee           Boolean @default(true)
+  lateFeePercentage       Float   @default(5.0)  // % por dia
+  enableDeposit           Boolean @default(true)
+  depositPercentage       Float   @default(30.0) // % do valor
+  enableNFSe              Boolean @default(false)
+  autoIssueNFSe           Boolean @default(false)
+
+  // Payment Settings
+  enablePaymentPix        Boolean @default(true)
+  enablePaymentCard       Boolean @default(false)
+  enablePaymentBoleto     Boolean @default(false)
+  enablePaymentCash       Boolean @default(true)
+  pixKey                  String?
+
+  // Backup Settings
+  autoBackupEnabled       Boolean @default(false)
+  backupFrequency         String? @default("daily") // hourly, daily, weekly, monthly
+  backupRetentionDays     Int     @default(7)
+  backupCloudEnabled      Boolean @default(false)
+  backupCloudProvider     String? @default("local") // local, aws-s3, google-drive, dropbox, azure
+  backupCloudCredentials  String? // JSON encriptado
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -91,6 +169,10 @@ model User {
   name      String
   role      UserRole @default(CLIENT)
   isActive  Boolean  @default(true)
+  
+  // Permissions
+  canEditQuantity Boolean @default(false)  // Permissão para editar quantidade de produtos
+  
   tenantId  String
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
@@ -119,13 +201,22 @@ model Client {
   email       String?
   phone       String?
   document    String? // CPF/CNPJ
+  cpfCnpj     String? // Alias para document
   type        ClientType  @default(INDIVIDUAL)
+  personType  String?     // 'PF' ou 'PJ'
   company     String?
   address     String?
   city        String?
   state       String?
   zipCode     String?
+  status      ClientStatus @default(PENDING)
   isActive    Boolean     @default(true)
+  
+  // Approval fields
+  approvedAt  DateTime?
+  approvedBy  String?
+  rejectionReason String?
+  
   tenantId    String
   tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt   DateTime    @default(now())
@@ -133,6 +224,7 @@ model Client {
 
   // Relations
   orders      Order[]
+  documents   ClientDocument[]
 
   @@map("clients")
 }
@@ -142,6 +234,34 @@ enum ClientType {
   COMPANY
   SUPPLIER
   BOTH
+}
+
+enum ClientStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ACTIVE
+  INACTIVE
+}
+
+model ClientDocument {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  type      String   // "RG", "CPF", "CNPJ", "Contrato", etc
+  name      String
+  fileName  String?  // Alias para name
+  url       String
+  filePath  String?  // Caminho do arquivo (alternativo para url)
+  size      Int?
+  mimeType  String?
+  isValid   Boolean? @default(true)
+  uploadedAt DateTime? @default(now())
+  validatedAt DateTime? // Data de validação do documento
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("client_documents")
 }
 
 // ==============================================
@@ -186,6 +306,11 @@ model Product {
   brand       String?
   model       String?
   
+  // Dados Internos (Não aparecem no site)
+  internalName  String?              // Nome interno para controle
+  internalImage String?              // Foto interna (sistema)
+  warehouse     String?  @default("principal") // principal, secundario, manutencao
+  
   // Pricing
   dailyPrice    Float
   weeklyPrice   Float?
@@ -200,10 +325,46 @@ model Product {
   ownerType     OwnerType  @default(COMPANY)
   ownerId       String?    // ID do cliente se for fornecedor
   
+  // Kit Management
+  isKit         Boolean    @default(false)  // É um kit?
+  kitParentId   String?                     // Faz parte de qual kit?
+  
+  // Identificação e Rastreamento
+  qrCode        String?     @unique  // Código QR único para o produto
+  barcode       String?     @unique  // Código de barras único
+  serialNumber  String?              // Número de série do equipamento
+  uniqueCode    String?              // Código único gerado automaticamente
+  codeSize      String?     @default("medium") // Tamanho de impressão (small, medium, large)
+  
+  // Informações de Aquisição
+  purchaseDate  DateTime?            // Data de compra
+  purchasePrice Float?               // Preço de compra
+  supplier      String?              // Fornecedor
+  warrantyUntil DateTime?            // Garantia válida até
+  
+  // Custos (Controle Interno)
+  costUSD       Float?               // Custo em dólar
+  costBRL       Float?               // Custo em real (calculado)
+  exchangeRate  Float?               // Taxa de câmbio usada
+  
+  // Manutenção
+  inMaintenance        Boolean   @default(false) // Está em manutenção?
+  maintenanceStartDate String?                   // Data de entrada
+  maintenanceEndDate   String?                   // Data de saída (previsão)
+  maintenanceNotes     String?                   // Observações da manutenção
+  
   // Metadata
   images        String[]   @default([])
   tags          String[]   @default([])
   specifications Json?
+  
+  // Visibility and Display
+  featured      Boolean     @default(false)  // Aparecer em "Equipamentos em Destaque"
+  visibility    ProductVisibility @default(PUBLIC)  // Onde o produto é visível
+  
+  // Audit fields
+  createdBy   String?     // ID do usuário que criou
+  updatedBy   String?     // ID do último usuário que atualizou
   
   isActive    Boolean     @default(true)
   tenantId    String
@@ -213,8 +374,139 @@ model Product {
 
   // Relations
   orderItems  OrderItem[]
+  history     ProductHistory[]
+  maintenances ProductMaintenance[]
 
   @@map("products")
+}
+
+// Product History / Audit Log
+model ProductHistory {
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  // What changed
+  action      ProductAction  // CREATE, UPDATE, DELETE, QUANTITY_CHANGE
+  field       String?        // Nome do campo alterado
+  oldValue    String?        // Valor anterior
+  newValue    String?        // Novo valor
+  
+  // Why (obrigatório para mudanças de quantidade)
+  observation String?
+  
+  // Who and When
+  userId      String
+  userName    String         // Nome do usuário (denormalizado para histórico)
+  userEmail   String         // Email do usuário
+  
+  tenantId    String
+  createdAt   DateTime @default(now())
+
+  @@map("product_history")
+  @@index([productId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+enum ProductAction {
+  CREATE
+  UPDATE
+  DELETE
+  QUANTITY_CHANGE
+  PRICE_CHANGE
+  STATUS_CHANGE
+}
+
+// ==============================================
+// PRODUCT MAINTENANCE
+// ==============================================
+
+model ProductMaintenance {
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  // Informações da Manutenção
+  type        MaintenanceType  @default(PREVENTIVE)
+  status      MaintenanceStatus @default(SCHEDULED)
+  priority    MaintenancePriority @default(MEDIUM)
+  
+  // Descrição e detalhes
+  title       String
+  description String?
+  issue       String?              // Problema identificado
+  solution    String?              // Solução aplicada
+  
+  // Custos
+  cost        Float?               // Custo da manutenção
+  laborCost   Float?               // Custo de mão de obra
+  partsCost   Float?               // Custo de peças
+  
+  // Responsáveis
+  technician  String?              // Nome do técnico
+  technicianId String?             // ID do técnico (se for funcionário)
+  serviceProvider String?          // Empresa externa de manutenção
+  
+  // Datas
+  scheduledDate DateTime?          // Data programada
+  startedAt   DateTime?            // Início da manutenção
+  completedAt DateTime?            // Conclusão da manutenção
+  
+  // Peças substituídas
+  replacedParts Json?              // Array de peças: [{name, quantity, cost}]
+  
+  // Observações e anexos
+  notes       String?
+  attachments String[]  @default([])  // URLs de fotos, documentos, etc.
+  
+  // Próxima manutenção
+  nextMaintenanceDate DateTime?
+  
+  // Metadata
+  tenantId    String
+  createdBy   String?              // Usuário que criou
+  updatedBy   String?              // Último usuário que atualizou
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("product_maintenances")
+  @@index([productId])
+  @@index([status])
+  @@index([scheduledDate])
+}
+
+enum MaintenanceType {
+  PREVENTIVE    // Manutenção preventiva
+  CORRECTIVE    // Manutenção corretiva
+  PREDICTIVE    // Manutenção preditiva
+  EMERGENCY     // Manutenção de emergência
+  INSPECTION    // Inspeção
+  CALIBRATION   // Calibração
+  CLEANING      // Limpeza
+  UPGRADE       // Atualização/Melhoria
+}
+
+enum MaintenanceStatus {
+  SCHEDULED     // Agendada
+  IN_PROGRESS   // Em andamento
+  COMPLETED     // Concluída
+  CANCELLED     // Cancelada
+  PENDING       // Pendente
+  ON_HOLD       // Em espera
+}
+
+enum MaintenancePriority {
+  LOW           // Baixa
+  MEDIUM        // Média
+  HIGH          // Alta
+  URGENT        // Urgente
+}
+
+enum ProductVisibility {
+  PUBLIC        // Visível no e-commerce e para a locadora
+  PRIVATE       // Visível apenas para a locadora
+  ECOMMERCE     // Apenas no e-commerce (igual a PUBLIC para compatibilidade)
 }
 
 model Category {
@@ -324,8 +616,8 @@ enum OrderStatus {
 
 model Payment {
   id          String        @id @default(cuid())
-  orderId     String
-  order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId     String?
+  order       Order?        @relation(fields: [orderId], references: [id], onDelete: Cascade)
   
   amount      Float
   method      PaymentMethod
@@ -334,6 +626,9 @@ model Payment {
   // Payment Details
   transactionId String?
   notes         String?
+  referenceMonth String?
+  licenseHolderId String?
+  licenseHolder LicenseHolder? @relation(fields: [licenseHolderId], references: [id])
   
   paidAt      DateTime?
   tenantId    String
@@ -351,6 +646,7 @@ enum PaymentMethod {
   PIX
   BANK_TRANSFER
   CHECK
+  PENDING
 }
 
 enum PaymentStatus {
@@ -464,6 +760,9 @@ enum NotificationType {
   PAYMENT
   TIMESHEET
   SYSTEM
+  CLIENT_REGISTRATION
+  CLIENT_APPROVED
+  CLIENT_REJECTED
 }
 
 // ==============================================
@@ -480,4 +779,129 @@ model SystemConfig {
   updatedAt DateTime @updatedAt
 
   @@map("system_configs")
+}
+
+// ==============================================
+// LICENSING SYSTEM (MASTER)
+// ==============================================
+
+model LicenseHolder {
+  id              String   @id @default(cuid())
+  companyName     String
+  cnpj            String   @unique
+  email           String
+  phone           String?
+  address         String?
+  subdomain       String?  @unique
+  apiKey          String?  @unique
+  
+  // Owner Info
+  ownerName       String?
+  ownerEmail      String?
+  ownerPhone      String?
+  
+  // License Info
+  licenseKey      String   @unique
+  plan            String   // "basic", "pro", "enterprise"
+  status          String   @default("active") // "active", "suspended", "expired"
+  licenseStatus   String?  @default("active")
+  version         String?  @default("1.0.0") // Versão do sistema
+  isActive        Boolean  @default(true)
+  maxUsers        Int      @default(5)
+  maxProducts     Int      @default(100)
+  
+  // Payment Info
+  paymentStatus   String?  @default("pending")
+  monthlyFee      Float?
+  totalRevenue    Float?   @default(0) // Receita total acumulada
+  
+  // Trial & Expiry
+  trialEndsAt     DateTime?
+  licenseExpiry   DateTime?
+  
+  // Dates
+  startDate       DateTime @default(now())
+  expiryDate      DateTime
+  lastPayment     DateTime?
+  nextPayment     DateTime?
+  lastHeartbeat   DateTime?
+  
+  // Features
+  enabledFeatures Json?
+  
+  // Relations
+  payments        Payment[]
+  invoices        Invoice[]
+  auditLogs       MasterAuditLog[]
+  partnerships    Partnership[]
+  partnershipsFrom Partnership[] @relation("PartnerFrom")
+  partnershipsTo   Partnership[] @relation("PartnerTo")
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("license_holders")
+}
+
+model MasterAuditLog {
+  id              String   @id @default(cuid())
+  licenseHolderId String
+  licenseHolder   LicenseHolder @relation(fields: [licenseHolderId], references: [id], onDelete: Cascade)
+  
+  action          String
+  description     String?
+  entity          String?
+  metadata        Json?
+  performedBy     String?
+  
+  createdAt       DateTime @default(now())
+
+  @@map("master_audit_logs")
+}
+
+model Invoice {
+  id              String   @id @default(cuid())
+  licenseHolderId String
+  licenseHolder   LicenseHolder @relation(fields: [licenseHolderId], references: [id], onDelete: Cascade)
+  
+  amount          Float
+  status          String   @default("pending") // "pending", "paid", "overdue", "cancelled"
+  referenceMonth  String   // "2025-01", "2025-02", etc
+  dueDate         DateTime
+  paidAt          DateTime?
+  
+  description     String?
+  notes           String?
+  metadata        Json?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("invoices")
+}
+
+model Partnership {
+  id              String   @id @default(cuid())
+  licenseHolderId String
+  licenseHolder   LicenseHolder @relation(fields: [licenseHolderId], references: [id], onDelete: Cascade)
+  
+  partnerName     String
+  partnerEmail    String
+  partnerPhone    String?
+  partnerFromId   String?
+  partnerFrom     LicenseHolder? @relation("PartnerFrom", fields: [partnerFromId], references: [id], onDelete: SetNull)
+  partnerToId     String?
+  partnerTo       LicenseHolder? @relation("PartnerTo", fields: [partnerToId], references: [id], onDelete: SetNull)
+  status          String   @default("active") // "active", "inactive", "pending"
+  type            String?  // "reseller", "integrator", etc
+  
+  commissionRate  Float?
+  metadata        Json?
+  shareClientData Boolean? @default(false)
+  allowCrossRental Boolean? @default(false) // Permitir aluguel cruzado entre parceiros
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("partnerships")
 }
