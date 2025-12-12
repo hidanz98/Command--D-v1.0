@@ -6,7 +6,7 @@ import { createServer } from "./server";
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
-    host: "::",
+    host: "0.0.0.0", // Permite acesso via rede local (WiFi)
     port: 8080,
     hmr: {
       overlay: false, // Disable Vite's error overlay to prevent dev overlay frame errors

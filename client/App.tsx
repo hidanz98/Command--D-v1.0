@@ -28,6 +28,7 @@ import { MasterAdminPanel } from "./pages/MasterAdminPanel";
 import { ProductDetail } from "./pages/ProductDetail";
 import { Carrinho } from "./pages/Carrinho";
 import Login from "./pages/Login";
+import LoginMobile from "./pages/LoginMobile";
 import ClientRegistrationWithDocuments from "./components/ClientRegistrationWithDocuments";
 import Pedidos from "./pages/Pedidos";
 import Aprovacoes from "./pages/Aprovacoes";
@@ -111,6 +112,8 @@ function AppWrapper() {
                                 <Route path="/backups" element={<Backups />} />
                                 <Route path="/master-admin" element={<MasterAdminPanel />} />
                                 <Route path="/login" element={<Login />} />
+                                <Route path="/login-mobile" element={<LoginMobile />} />
+                                <Route path="/cadastro" element={<LoginMobile />} />
                                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                                 <Route path="*" element={<NotFound />} />
                               </Routes>
