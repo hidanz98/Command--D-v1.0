@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import Layout from "@/components/Layout";
-import { User, Lock, ArrowLeft, Mail, Eye, EyeOff, FileText, Upload } from "lucide-react";
+import FacialCameraCapture from "@/components/FacialCameraCapture";
+import { User, Lock, ArrowLeft, Mail, Eye, EyeOff, FileText, Upload, Camera, CheckCircle } from "lucide-react";
 
 export default function Login() {
   const [activeTab, setActiveTab] = useState("login");
@@ -30,6 +31,8 @@ export default function Login() {
   });
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [showRegConfirmPassword, setShowRegConfirmPassword] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+  const [facialPhoto, setFacialPhoto] = useState<string | null>(null);
   
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -384,6 +387,52 @@ export default function Login() {
                       </div>
                     </div>
 
+                    {/* Reconhecimento Facial */}
+                    <div className="space-y-2">
+                      <Label className="text-white flex items-center gap-2">
+                        <Camera className="w-4 h-4" />
+                        Reconhecimento Facial
+                      </Label>
+                      <p className="text-gray-400 text-sm">
+                        Tire uma selfie para verificação de identidade (obrigatório)
+                      </p>
+                      
+                      {facialPhoto ? (
+                        <div className="flex items-center gap-3 p-3 bg-green-900/30 rounded-lg border border-green-500/30">
+                          <img 
+                            src={facialPhoto} 
+                            alt="Foto facial" 
+                            className="w-16 h-16 rounded-full object-cover border-2 border-green-500"
+                          />
+                          <div className="flex-1">
+                            <p className="text-green-400 font-medium flex items-center gap-1">
+                              <CheckCircle className="w-4 h-4" />
+                              Foto capturada
+                            </p>
+                            <p className="text-gray-400 text-xs">Clique para refazer</p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowCamera(true)}
+                            className="border-green-500 text-green-400"
+                          >
+                            Refazer
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          type="button"
+                          onClick={() => setShowCamera(true)}
+                          className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                        >
+                          <Camera className="w-4 h-4 mr-2" />
+                          Abrir Câmera para Selfie
+                        </Button>
+                      )}
+                    </div>
+
                     <div className="flex items-center space-x-2">
                       <Checkbox
                         id="terms"
@@ -405,12 +454,22 @@ export default function Login() {
 
                     <Button
                       type="submit"
-                      disabled={isLoading}
-                      className="w-full bg-gradient-to-r from-blue-500 to-orange-500 hover:from-blue-600 hover:to-orange-600 text-white font-semibold py-3"
+                      disabled={isLoading || !facialPhoto}
+                      className="w-full bg-gradient-to-r from-blue-500 to-orange-500 hover:from-blue-600 hover:to-orange-600 text-white font-semibold py-3 disabled:opacity-50"
                     >
-                      {isLoading ? "Criando conta..." : "Criar Conta"}
+                      {isLoading ? "Criando conta..." : !facialPhoto ? "📷 Tire a selfie primeiro" : "Criar Conta"}
                     </Button>
                   </form>
+
+                  {/* Componente de Câmera */}
+                  <FacialCameraCapture
+                    isOpen={showCamera}
+                    onCapture={(imageData) => {
+                      setFacialPhoto(imageData);
+                      setShowCamera(false);
+                    }}
+                    onClose={() => setShowCamera(false)}
+                  />
                 </TabsContent>
               </Tabs>
 
