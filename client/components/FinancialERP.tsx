@@ -80,7 +80,7 @@ import {
   ReportsTab,
   TaxesTab,
 } from "./FinancialERPTabs";
-import TimesheetSystem from "./TimesheetSystem";
+import { AutoTimesheetSystem } from "./AutoTimesheetSystem";
 import AutomatedPayroll from "./AutomatedPayroll";
 
 // Interfaces
@@ -578,6 +578,30 @@ const generateMockTransactions = (): Transaction[] => {
       });
     }
   }
+  
+  // Adicionar transação real da NF 4016 - Kilomba Producoes
+  transactions.push({
+    id: "NF-4016-KILOMBA",
+    type: "income",
+    description: "NF 4016 - Kilomba Producoes - Locação Equipamentos",
+    amount: 1360,
+    date: "2025-12-05",
+    dueDate: "2025-12-12",
+    status: "pending",
+    category: "Locação",
+    clientId: "Kilomba Producoes Ltda",
+    invoiceNumber: "NF-4016/2025",
+    installments: 1,
+    currentInstallment: 1,
+    tags: ["kilomba", "riofilme", "locacao"],
+    notes: "Projeto: O que quero dizer quando falo de amor\nProdução: RIOFILME - Contrato nº 1053/2023\nEquipamentos: CANON 24/70, BMPCC 6K PRO, SACHTLER FSB8, SSD Samsung, PowerBank",
+    costCenter: "operacoes",
+    attachments: [],
+    approval: {
+      required: false,
+      approved: true,
+    },
+  });
   
   return transactions.sort((a, b) => b.date.localeCompare(a.date));
 };
@@ -1394,396 +1418,351 @@ export const FinancialERP: React.FC = () => {
 
   return (
     <div className="bg-cinema-dark-lighter">
-      {/* Header */}
-      <div className="p-4 border-b border-cinema-gray-light bg-cinema-dark">
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <h2 className="text-xl font-semibold text-white mb-2 flex items-center">
-              <Building2 className="w-6 h-6 mr-2 text-cinema-yellow" />
-              Sistema Financeiro ERP
-            </h2>
-            <p className="text-gray-400 text-sm">
-              Gestão financeira completa integrada ao sistema
-            </p>
-            <div className="flex items-center space-x-4 mt-2">
-              <button
-                onClick={() => financialMetrics.urgentNotifications > 0 && setActiveTab("notifications")}
-                className={`flex items-center space-x-2 ${financialMetrics.urgentNotifications > 0 ? 'cursor-pointer hover:bg-red-500/20 px-2 py-1 rounded-lg transition-colors' : ''}`}
-                disabled={financialMetrics.urgentNotifications === 0}
-              >
-                <div className={`w-2 h-2 rounded-full ${financialMetrics.urgentNotifications > 0 ? 'bg-red-400 animate-pulse' : 'bg-green-400'}`}></div>
-                <span className={`text-xs ${financialMetrics.urgentNotifications > 0 ? 'text-red-400 font-medium' : 'text-gray-400'}`}>
-                  {financialMetrics.urgentNotifications > 0 ? `⚠️ Ação Urgente (${financialMetrics.urgentNotifications})` : '✅ Sistema OK'}
-                </span>
-              </button>
-              <div className="text-xs text-gray-400">
-                CNPJ: {companyConfig.cnpj}
-              </div>
-              <div className="text-xs text-gray-400">
-                Regime: {companyConfig.regime.toUpperCase()}
-              </div>
+      {/* Header Moderno */}
+      <div className="p-4 space-y-4 bg-gradient-to-b from-zinc-900 to-zinc-950 border-b border-zinc-800">
+        {/* Título e Status */}
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-green-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+              <DollarSign className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-white">Financeiro</h2>
+              <p className="text-zinc-500 text-xs">Gestão completa</p>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
-            {/* Notificações - Só aparece para Master Admin */}
-            {isMasterAdmin && financialMetrics.unreadNotifications > 0 && (
-              <Button
-                variant="outline"
-                className="text-red-400 border-red-400 relative"
+          {/* Status e Ações */}
+          <div className="flex items-center gap-2">
+            {financialMetrics.urgentNotifications > 0 && (
+              <button
                 onClick={() => setActiveTab("notifications")}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors"
               >
-                <Bell className="w-4 h-4 mr-2" />
-                Notificações
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  {financialMetrics.unreadNotifications}
-                </span>
-              </Button>
+                <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
+                <span className="text-red-400 text-xs font-medium">{financialMetrics.urgentNotifications}</span>
+              </button>
             )}
             <Button
               variant="outline"
-              className="text-cinema-yellow border-cinema-yellow"
+              size="sm"
+              className="text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 hidden md:flex"
             >
-              <Download className="w-4 h-4 mr-2" />
+              <Download className="w-4 h-4 mr-1" />
               Backup
-            </Button>
-            <Button
-              variant="outline"
-              className="text-cinema-yellow border-cinema-yellow"
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              Importar
             </Button>
           </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex flex-wrap gap-2">
+        {/* Info Rápida */}
+        <div className="flex flex-wrap gap-2 text-xs">
+          <span className="px-3 py-1.5 bg-zinc-800/80 rounded-lg text-zinc-400 border border-zinc-700/50">
+            {companyConfig.cnpj}
+          </span>
+          <span className="px-3 py-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg border border-emerald-500/30 font-medium">
+            {companyConfig.regime.toUpperCase()}
+          </span>
+        </div>
+
+        {/* Navigation Tabs - Grid 3 colunas no Mobile */}
+        <div className="grid grid-cols-3 md:flex md:flex-wrap gap-2">
           {[
-            { id: "dashboard", name: "Dashboard", icon: BarChart3 },
-            { id: "receivables", name: "Contas a Receber", icon: TrendingUp },
-            { id: "payables", name: "Contas a Pagar", icon: TrendingDown },
-            { id: "cashflow", name: "Fluxo de Caixa", icon: DollarSign },
-            { id: "bank-accounts", name: "Contas Bancárias", icon: CreditCard },
-            { id: "employees", name: "Funcionários", icon: Users },
-            { id: "timesheet", name: "Folha de Ponto", icon: Clock },
-            { id: "payroll", name: "Folha Pagamento", icon: Receipt },
-            { id: "company", name: "Dados da Empresa", icon: Building2 },
-            // Notificações - só para Master Admin
-            ...(isMasterAdmin ? [{ id: "notifications", name: "Notificações", icon: Bell }] : []),
+            { id: "dashboard", name: "Início", icon: BarChart3 },
+            { id: "receivables", name: "Receber", icon: TrendingUp },
+            { id: "payables", name: "Pagar", icon: TrendingDown },
+            { id: "cashflow", name: "Fluxo", icon: DollarSign },
+            { id: "bank-accounts", name: "Bancos", icon: CreditCard },
+            { id: "employees", name: "Equipe", icon: Users },
+            { id: "timesheet", name: "Ponto", icon: Clock },
+            { id: "payroll", name: "Folha", icon: Receipt },
+            { id: "company", name: "Empresa", icon: Building2 },
+            ...(isMasterAdmin ? [{ id: "notifications", name: "Alertas", icon: Bell }] : []),
             { id: "reports", name: "Relatórios", icon: FileText },
             { id: "taxes", name: "Impostos", icon: Calculator },
-            { id: "cost-centers", name: "Centros de Custo", icon: Building },
+            { id: "cost-centers", name: "Custos", icon: Building },
           ].map((tab) => (
-            <Button
+            <button
               key={tab.id}
-              variant={activeTab === tab.id ? "default" : "outline"}
-              size="sm"
               onClick={() => setActiveTab(tab.id)}
-              className={
-                activeTab === tab.id
-                  ? "bg-cinema-yellow text-cinema-dark"
-                  : "text-gray-300 border-cinema-gray-light hover:border-cinema-yellow hover:text-cinema-yellow"
-              }
+              className={`
+                relative flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 
+                p-3 md:px-4 md:py-2 rounded-xl transition-all duration-200
+                ${activeTab === tab.id
+                  ? "bg-gradient-to-r from-amber-400 to-orange-500 text-black font-semibold shadow-lg shadow-amber-500/20"
+                  : "bg-zinc-800/50 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 border border-zinc-700/50"
+                }
+              `}
             >
-              <tab.icon className="w-4 h-4 mr-2" />
-              {tab.name}
+              <tab.icon className={`w-5 h-5 md:w-4 md:h-4 ${activeTab === tab.id ? 'text-black' : ''}`} />
+              <span className="text-[10px] md:text-sm text-center leading-tight">{tab.name}</span>
               {tab.id === "notifications" && financialMetrics.unreadNotifications > 0 && (
-                <span className="ml-2 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full h-4 w-4 flex items-center justify-center font-bold">
                   {financialMetrics.unreadNotifications}
                 </span>
               )}
-            </Button>
+            </button>
           ))}
         </div>
       </div>
 
       {/* Content */}
-      <div className="p-4 bg-cinema-dark-lighter pb-8">
+      <div className="p-4 bg-zinc-950 pb-8">
         {/* Dashboard Tab */}
         {activeTab === "dashboard" && (
-          <div className="space-y-6">
-            {/* Main KPIs */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card className="bg-cinema-dark border-cinema-gray-light">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-gray-400 text-sm">Faturamento Mês</p>
-                      <p className="text-xl font-bold text-green-400">
-                        R$ {financialMetrics.totalIncome.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </p>
-                      <p className="text-xs text-gray-500">+12.5% vs mês anterior</p>
-                    </div>
-                    <TrendingUp className="w-8 h-8 text-green-400" />
-                  </div>
-                </CardContent>
-              </Card>
+          <div className="space-y-4">
+            {/* Main KPIs - Grid 2x2 no mobile */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="bg-gradient-to-br from-emerald-500/20 to-green-600/10 border border-emerald-500/20 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <TrendingUp className="w-5 h-5 text-emerald-400" />
+                  <span className="text-[10px] text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-full">+12.5%</span>
+                </div>
+                <p className="text-zinc-400 text-xs mb-1">Faturamento</p>
+                <p className="text-lg font-bold text-white">
+                  R$ {(financialMetrics.totalIncome / 1000).toFixed(0)}k
+                </p>
+              </div>
 
-              <Card className="bg-cinema-dark border-cinema-gray-light">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-gray-400 text-sm">Despesas Mês</p>
-                      <p className="text-xl font-bold text-red-400">
-                        R$ {financialMetrics.totalExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </p>
-                      <p className="text-xs text-gray-500">-5.2% vs mês anterior</p>
-                    </div>
-                    <TrendingDown className="w-8 h-8 text-red-400" />
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="bg-gradient-to-br from-red-500/20 to-rose-600/10 border border-red-500/20 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <TrendingDown className="w-5 h-5 text-red-400" />
+                  <span className="text-[10px] text-red-400 bg-red-500/20 px-2 py-0.5 rounded-full">-5.2%</span>
+                </div>
+                <p className="text-zinc-400 text-xs mb-1">Despesas</p>
+                <p className="text-lg font-bold text-white">
+                  R$ {(financialMetrics.totalExpenses / 1000).toFixed(0)}k
+                </p>
+              </div>
 
-              <Card className="bg-cinema-dark border-cinema-gray-light">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-gray-400 text-sm">Lucro Líquido</p>
-                      <p className={`text-xl font-bold ${financialMetrics.netProfit >= 0 ? "text-green-400" : "text-red-400"}`}>
-                        R$ {financialMetrics.netProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Margem: {financialMetrics.profitMargin.toFixed(1)}%
-                      </p>
-                    </div>
-                    <CircleDollarSign className={`w-8 h-8 ${financialMetrics.netProfit >= 0 ? "text-green-400" : "text-red-400"}`} />
-                  </div>
-                </CardContent>
-              </Card>
+              <div className={`bg-gradient-to-br ${financialMetrics.netProfit >= 0 ? 'from-cyan-500/20 to-blue-600/10 border-cyan-500/20' : 'from-orange-500/20 to-red-600/10 border-orange-500/20'} border rounded-xl p-4`}>
+                <div className="flex items-center justify-between mb-2">
+                  <CircleDollarSign className={`w-5 h-5 ${financialMetrics.netProfit >= 0 ? 'text-cyan-400' : 'text-orange-400'}`} />
+                  <span className={`text-[10px] ${financialMetrics.netProfit >= 0 ? 'text-cyan-400 bg-cyan-500/20' : 'text-orange-400 bg-orange-500/20'} px-2 py-0.5 rounded-full`}>
+                    {financialMetrics.profitMargin.toFixed(0)}%
+                  </span>
+                </div>
+                <p className="text-zinc-400 text-xs mb-1">Lucro</p>
+                <p className="text-lg font-bold text-white">
+                  R$ {(financialMetrics.netProfit / 1000).toFixed(0)}k
+                </p>
+              </div>
 
-              <Card className="bg-cinema-dark border-cinema-gray-light">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-gray-400 text-sm">Saldo Total</p>
-                      <p className="text-xl font-bold text-blue-400">
-                        R$ {financialMetrics.totalBankBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </p>
-                      <p className="text-xs text-gray-500">{bankAccounts.filter(acc => acc.active).length} contas ativas</p>
-                    </div>
-                    <Wallet className="w-8 h-8 text-blue-400" />
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="bg-gradient-to-br from-purple-500/20 to-indigo-600/10 border border-purple-500/20 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <Wallet className="w-5 h-5 text-purple-400" />
+                  <span className="text-[10px] text-purple-400 bg-purple-500/20 px-2 py-0.5 rounded-full">
+                    {bankAccounts.filter(acc => acc.active).length} contas
+                  </span>
+                </div>
+                <p className="text-zinc-400 text-xs mb-1">Saldo</p>
+                <p className="text-lg font-bold text-white">
+                  R$ {(financialMetrics.totalBankBalance / 1000).toFixed(0)}k
+                </p>
+              </div>
             </div>
 
-            {/* Quick Actions */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Button
+            {/* Quick Actions - Grid 2x2 no mobile */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <button
                 onClick={() => setShowModal("transaction")}
-                className="h-16 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white"
+                className="flex flex-col items-center justify-center gap-2 p-4 bg-gradient-to-br from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 rounded-xl text-white shadow-lg shadow-emerald-500/20 transition-all active:scale-95"
               >
-                <PlusCircle className="w-6 h-6 mr-2" />
-                <div>
-                  <div className="font-semibold">Nova Receita</div>
-                  <div className="text-xs opacity-90">Registrar entrada</div>
-                </div>
-              </Button>
+                <PlusCircle className="w-6 h-6" />
+                <span className="text-xs font-medium">Nova Receita</span>
+              </button>
 
-              <Button
+              <button
                 onClick={() => {
                   setNewTransaction({ ...newTransaction, type: "expense" });
                   setShowModal("transaction");
                 }}
-                className="h-16 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white"
+                className="flex flex-col items-center justify-center gap-2 p-4 bg-gradient-to-br from-red-500 to-rose-600 hover:from-red-400 hover:to-rose-500 rounded-xl text-white shadow-lg shadow-red-500/20 transition-all active:scale-95"
               >
-                <MinusCircle className="w-6 h-6 mr-2" />
-                <div>
-                  <div className="font-semibold">Nova Despesa</div>
-                  <div className="text-xs opacity-90">Registrar saída</div>
-                </div>
-              </Button>
+                <MinusCircle className="w-6 h-6" />
+                <span className="text-xs font-medium">Nova Despesa</span>
+              </button>
 
-              <Button
+              <button
                 onClick={() => setShowModal("employee")}
-                className="h-16 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white"
+                className="flex flex-col items-center justify-center gap-2 p-4 bg-gradient-to-br from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 rounded-xl text-white shadow-lg shadow-blue-500/20 transition-all active:scale-95"
               >
-                <UserCheck className="w-6 h-6 mr-2" />
-                <div>
-                  <div className="font-semibold">Funcionário</div>
-                  <div className="text-xs opacity-90">Cadastrar novo</div>
-                </div>
-              </Button>
+                <UserCheck className="w-6 h-6" />
+                <span className="text-xs font-medium">Funcionário</span>
+              </button>
 
-              <Button
+              <button
                 onClick={() => setActiveTab("reports")}
-                className="h-16 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white"
+                className="flex flex-col items-center justify-center gap-2 p-4 bg-gradient-to-br from-purple-500 to-violet-600 hover:from-purple-400 hover:to-violet-500 rounded-xl text-white shadow-lg shadow-purple-500/20 transition-all active:scale-95"
               >
-                <FileBarChart className="w-6 h-6 mr-2" />
-                <div>
-                  <div className="font-semibold">Relatórios</div>
-                  <div className="text-xs opacity-90">Gerar relatórios</div>
-                </div>
-              </Button>
+                <FileBarChart className="w-6 h-6" />
+                <span className="text-xs font-medium">Relatórios</span>
+              </button>
             </div>
 
-            {/* Financial Overview */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Pending Actions */}
-              <Card className="bg-cinema-dark border-cinema-gray-light">
-                <CardHeader>
-                  <CardTitle className="text-white flex items-center">
-                    <ArrowUpRight className="w-5 h-5 mr-2 text-green-400" />
-                    Contas a Receber
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Em Aberto:</span>
-                      <span className="text-yellow-400 font-medium">
-                        R$ {financialMetrics.pendingReceivables.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Em Atraso:</span>
-                      <span className="text-red-400 font-medium">
-                        R$ {financialMetrics.overdueReceivables.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                    <Button
-                      size="sm"
-                      className="w-full bg-cinema-yellow text-cinema-dark"
-                      onClick={() => setActiveTab("receivables")}
-                    >
-                      Ver Detalhes
-                    </Button>
+            {/* Financial Overview - Mais compacto no mobile */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Contas a Receber */}
+              <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center">
+                    <ArrowUpRight className="w-4 h-4 text-emerald-400" />
                   </div>
-                </CardContent>
-              </Card>
+                  <h3 className="text-white font-medium text-sm">A Receber</h3>
+                </div>
+                <div className="space-y-2 mb-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-zinc-500 text-xs">Em Aberto</span>
+                    <span className="text-amber-400 font-medium text-sm">
+                      R$ {(financialMetrics.pendingReceivables / 1000).toFixed(1)}k
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-zinc-500 text-xs">Em Atraso</span>
+                    <span className="text-red-400 font-medium text-sm">
+                      R$ {(financialMetrics.overdueReceivables / 1000).toFixed(1)}k
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setActiveTab("receivables")}
+                  className="w-full text-center py-2 text-xs font-medium text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-lg transition-colors"
+                >
+                  Ver Detalhes →
+                </button>
+              </div>
 
-              <Card className="bg-cinema-dark border-cinema-gray-light">
-                <CardHeader>
-                  <CardTitle className="text-white flex items-center">
-                    <ArrowDownRight className="w-5 h-5 mr-2 text-red-400" />
-                    Contas a Pagar
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">A Vencer:</span>
-                      <span className="text-yellow-400 font-medium">
-                        R$ {financialMetrics.pendingPayables.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Vencidas:</span>
-                      <span className="text-red-400 font-medium">
-                        R$ {financialMetrics.overduePayables.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                    <Button
-                      size="sm"
-                      className="w-full bg-cinema-yellow text-cinema-dark"
-                      onClick={() => setActiveTab("payables")}
-                    >
-                      Ver Detalhes
-                    </Button>
+              {/* Contas a Pagar */}
+              <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 bg-red-500/20 rounded-lg flex items-center justify-center">
+                    <ArrowDownRight className="w-4 h-4 text-red-400" />
                   </div>
-                </CardContent>
-              </Card>
+                  <h3 className="text-white font-medium text-sm">A Pagar</h3>
+                </div>
+                <div className="space-y-2 mb-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-zinc-500 text-xs">A Vencer</span>
+                    <span className="text-amber-400 font-medium text-sm">
+                      R$ {(financialMetrics.pendingPayables / 1000).toFixed(1)}k
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-zinc-500 text-xs">Vencidas</span>
+                    <span className="text-red-400 font-medium text-sm">
+                      R$ {(financialMetrics.overduePayables / 1000).toFixed(1)}k
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setActiveTab("payables")}
+                  className="w-full text-center py-2 text-xs font-medium text-red-400 bg-red-500/10 hover:bg-red-500/20 rounded-lg transition-colors"
+                >
+                  Ver Detalhes →
+                </button>
+              </div>
             </div>
 
             {/* Bank Accounts */}
-            <Card className="bg-cinema-dark border-cinema-gray-light">
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle className="text-white">Contas Bancárias</CardTitle>
-                  <Button size="sm" variant="outline" className="text-cinema-yellow border-cinema-yellow">
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Atualizar Saldos
-                  </Button>
+            <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                    <CreditCard className="w-4 h-4 text-purple-400" />
+                  </div>
+                  <h3 className="text-white font-medium text-sm">Contas Bancárias</h3>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {bankAccounts.filter(acc => acc.active).map((account) => (
-                    <div
-                      key={account.id}
-                      className="p-4 bg-cinema-dark-lighter rounded-lg border border-cinema-gray-light/50 hover:border-cinema-yellow/50 transition-colors"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="text-white font-medium text-sm">{account.name}</h4>
-                        <div className={`p-1 rounded ${
-                          account.type === "checking" ? "bg-blue-400/20" :
-                          account.type === "savings" ? "bg-green-400/20" :
-                          account.type === "investment" ? "bg-purple-400/20" :
-                          "bg-orange-400/20"
-                        }`}>
-                          <Building className={`w-4 h-4 ${
-                            account.type === "checking" ? "text-blue-400" :
-                            account.type === "savings" ? "text-green-400" :
-                            account.type === "investment" ? "text-purple-400" :
-                            "text-orange-400"
-                          }`} />
-                        </div>
+                <button className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1">
+                  <RefreshCw className="w-3 h-3" />
+                  Atualizar
+                </button>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {bankAccounts.filter(acc => acc.active).slice(0, 4).map((account) => (
+                  <div
+                    key={account.id}
+                    className="p-3 bg-zinc-800/50 rounded-lg border border-zinc-700/50"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className={`w-6 h-6 rounded-md flex items-center justify-center ${
+                        account.type === "checking" ? "bg-blue-500/20" :
+                        account.type === "savings" ? "bg-green-500/20" :
+                        account.type === "investment" ? "bg-purple-500/20" :
+                        "bg-orange-500/20"
+                      }`}>
+                        <Building className={`w-3 h-3 ${
+                          account.type === "checking" ? "text-blue-400" :
+                          account.type === "savings" ? "text-green-400" :
+                          account.type === "investment" ? "text-purple-400" :
+                          "text-orange-400"
+                        }`} />
                       </div>
-                      <p className="text-gray-400 text-xs">{account.bank}</p>
-                      <p className="text-gray-400 text-xs">
-                        Ag: {account.agency} | Cc: {account.account}
-                      </p>
-                      <p className="text-cinema-yellow font-bold text-lg mt-2">
-                        R$ {account.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </p>
-                      <p className="text-gray-500 text-xs mt-1">
-                        Atualizado: {new Date(account.lastUpdate).toLocaleString('pt-BR')}
-                      </p>
+                      <span className="text-white text-xs font-medium truncate">{account.bank}</span>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                    <p className="text-amber-400 font-bold text-sm">
+                      R$ {(account.balance / 1000).toFixed(1)}k
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => setActiveTab("bank-accounts")}
+                className="w-full mt-4 text-center py-2 text-xs font-medium text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 rounded-lg transition-colors"
+              >
+                Ver Todas →
+              </button>
+            </div>
 
             {/* Cost Centers Performance */}
-            <Card className="bg-cinema-dark border-cinema-gray-light">
-              <CardHeader>
-                <CardTitle className="text-white">Performance por Centro de Custo</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {costCenters.filter(center => center.active).map((center) => (
-                    <div key={center.id} className="p-4 bg-cinema-dark-lighter rounded-lg">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <h4 className="text-white font-medium">{center.name}</h4>
-                          <p className="text-gray-400 text-sm">{center.description}</p>
-                          <p className="text-gray-500 text-xs">
-                            Responsável: {center.responsible} • {center.department}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-white font-medium">
-                            R$ {center.spent.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </p>
-                          <p className="text-gray-400 text-sm">
-                            de R$ {center.budget.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </p>
-                        </div>
+            <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 bg-cyan-500/20 rounded-lg flex items-center justify-center">
+                  <Building className="w-4 h-4 text-cyan-400" />
+                </div>
+                <h3 className="text-white font-medium text-sm">Centros de Custo</h3>
+              </div>
+              <div className="space-y-3">
+                {costCenters.filter(center => center.active).slice(0, 3).map((center) => {
+                  const percentage = (center.spent / center.budget) * 100;
+                  return (
+                    <div key={center.id} className="p-3 bg-zinc-800/50 rounded-lg border border-zinc-700/50">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-white text-xs font-medium truncate">{center.name}</span>
+                        <span className={`text-xs font-bold ${
+                          percentage > 95 ? "text-red-400" :
+                          percentage > 80 ? "text-amber-400" :
+                          "text-emerald-400"
+                        }`}>
+                          {percentage.toFixed(0)}%
+                        </span>
                       </div>
-                      <div className="w-full bg-cinema-gray rounded-full h-2">
+                      <div className="w-full bg-zinc-700 rounded-full h-1.5">
                         <div
-                          className={`h-2 rounded-full ${
-                            center.spent / center.budget > 0.95 ? "bg-red-400" :
-                            center.spent / center.budget > 0.8 ? "bg-yellow-400" :
-                            "bg-green-400"
+                          className={`h-1.5 rounded-full transition-all ${
+                            percentage > 95 ? "bg-red-400" :
+                            percentage > 80 ? "bg-amber-400" :
+                            "bg-emerald-400"
                           }`}
-                          style={{ width: `${Math.min((center.spent / center.budget) * 100, 100)}%` }}
+                          style={{ width: `${Math.min(percentage, 100)}%` }}
                         ></div>
                       </div>
                       <div className="flex justify-between items-center mt-2">
-                        <p className="text-xs text-gray-500">
-                          {((center.spent / center.budget) * 100).toFixed(1)}% utilizado
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          Disponível: R$ {(center.budget - center.spent).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </p>
+                        <span className="text-zinc-500 text-[10px]">
+                          R$ {(center.spent / 1000).toFixed(1)}k
+                        </span>
+                        <span className="text-zinc-500 text-[10px]">
+                          R$ {(center.budget / 1000).toFixed(1)}k
+                        </span>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                  );
+                })}
+              </div>
+              <button
+                onClick={() => setActiveTab("cost-centers")}
+                className="w-full mt-4 text-center py-2 text-xs font-medium text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20 rounded-lg transition-colors"
+              >
+                Ver Todos →
+              </button>
+            </div>
           </div>
         )}
 
@@ -2118,9 +2097,9 @@ export const FinancialERP: React.FC = () => {
           <EmployeesTab employees={employees} />
         )}
 
-        {/* Timesheet Tab */}
+        {/* Ponto Automático Tab */}
         {activeTab === "timesheet" && (
-          <TimesheetSystem currentUserId="1" isAdmin={true} />
+          <AutoTimesheetSystem />
         )}
 
         {/* Payroll Tab */}
@@ -3718,3 +3697,5 @@ export const FinancialERP: React.FC = () => {
 };
 
 export default FinancialERP;
+
+

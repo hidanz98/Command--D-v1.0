@@ -71,6 +71,7 @@ import {
 } from "./routes/timesheets";
 import nfseRouter from "./routes/nfse";
 import pluggyRouter from "./routes/pluggy";
+import identityValidationRouter from "./routes/identity-validation";
 import { authenticateToken } from "./lib/auth";
 import { requireRole } from "./middleware/roleMiddleware";
 import { requireTenant } from "./middleware/tenantMiddleware";
@@ -222,6 +223,7 @@ export function createServer() {
   
   // Pluggy Routes (integração bancária - Open Banking)
   app.use("/api/pluggy", authenticateToken, pluggyRouter);
+  app.use("/api/identity", identityValidationRouter); // Validação de identidade (BigDataCorp)
   
   // ==============================================
   // ROTAS DO SERVIDOR MASTER (Otávio)

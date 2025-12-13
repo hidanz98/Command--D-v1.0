@@ -105,8 +105,8 @@ export function CabecaEfeito() {
   return (
     <Layout>
       <div className="min-h-screen bg-black relative overflow-hidden">
-        {/* Background Elements */}
-        <div className="absolute inset-0">
+        {/* Background Elements - pointer-events-none para não bloquear cliques */}
+        <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-20 left-10 w-32 h-32 bg-yellow-400/20 rounded-full blur-xl"></div>
           <div className="absolute top-40 right-20 w-24 h-24 bg-orange-400/20 rounded-full blur-xl"></div>
           <div className="absolute bottom-40 left-1/4 w-20 h-20 bg-blue-400/20 rounded-full blur-xl"></div>

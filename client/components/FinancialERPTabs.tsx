@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import { gerarFaturaPDF } from "./FaturaLocacao";
+import { FaturaPDFEditor } from "./FaturaPDFEditor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -152,7 +154,7 @@ interface PayrollItem {
 interface Report {
   id: string;
   name: string;
-  type: "financial" | "tax" | "payroll" | "cashflow" | "profit_loss" | "balance_sheet";
+  type: string;
   period: string;
   status: "generating" | "ready" | "error";
   generatedAt: string;
@@ -183,187 +185,330 @@ export const ReceivablesTab: React.FC<Props> = ({
   getStatusIcon,
 }) => {
   const receivables = transactions.filter(t => t.type === "income");
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [modalType, setModalType] = useState<'view' | 'edit' | null>(null);
+  const [showFaturaEditor, setShowFaturaEditor] = useState(false);
+
+  const openModal = (transaction: Transaction, type: 'view' | 'edit') => {
+    setSelectedTransaction(transaction);
+    setModalType(type);
+  };
+
+  const closeModal = () => {
+    setSelectedTransaction(null);
+    setModalType(null);
+  };
   
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold text-white">Contas a Receber</h3>
-        <Button className="bg-cinema-yellow text-cinema-dark hover:bg-cinema-yellow-dark">
-          <Plus className="w-4 h-4 mr-2" />
+    <div className="space-y-4">
+      {/* Header Moderno */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-green-600 rounded-xl flex items-center justify-center">
+            <TrendingUp className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-white">Contas a Receber</h3>
+            <p className="text-zinc-500 text-xs">{receivables.length} registros</p>
+          </div>
+        </div>
+        <button className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-medium shadow-lg shadow-emerald-500/20">
+          <Plus className="w-4 h-4" />
           Nova Receita
-        </Button>
+        </button>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            placeholder="Buscar receitas..."
+      {/* Filters - Compacto no Mobile */}
+      <div className="flex flex-wrap gap-2">
+        <div className="relative flex-1 min-w-[150px]">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-500 w-4 h-4" />
+          <input
+            placeholder="Buscar..."
             value={searchTerm}
             onChange={(e) => onSearch(e.target.value)}
-            className="pl-10 bg-cinema-dark border-cinema-gray-light text-white"
+            className="w-full pl-9 pr-3 py-2 bg-zinc-800/50 border border-zinc-700/50 rounded-xl text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500/50"
           />
         </div>
         <select
           value={filterStatus}
           onChange={(e) => onFilterChange(e.target.value)}
-          className="bg-cinema-dark border border-cinema-gray-light text-white rounded-md px-3 py-2"
+          className="px-3 py-2 bg-zinc-800/50 border border-zinc-700/50 text-zinc-300 rounded-xl text-sm"
         >
-          <option value="all">Todos os Status</option>
+          <option value="all">Todos</option>
           <option value="pending">Pendente</option>
           <option value="paid">Pago</option>
           <option value="overdue">Vencido</option>
-          <option value="partial">Parcial</option>
         </select>
-        <Button variant="outline" className="text-cinema-yellow border-cinema-yellow">
-          <Download className="w-4 h-4 mr-2" />
-          Exportar
-        </Button>
       </div>
 
-      {/* Receivables Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-cinema-dark border-cinema-gray-light">
-          <CardContent className="p-4 text-center">
-            <TrendingUp className="w-8 h-8 text-green-400 mx-auto mb-2" />
-            <p className="text-lg font-bold text-green-400">
-              R$ {receivables.filter(r => r.status === "paid").reduce((sum, r) => sum + r.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </p>
-            <p className="text-gray-400 text-sm">Recebido</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-cinema-dark border-cinema-gray-light">
-          <CardContent className="p-4 text-center">
-            <Clock className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
-            <p className="text-lg font-bold text-yellow-400">
-              R$ {receivables.filter(r => r.status === "pending").reduce((sum, r) => sum + r.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </p>
-            <p className="text-gray-400 text-sm">A Receber</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-cinema-dark border-cinema-gray-light">
-          <CardContent className="p-4 text-center">
-            <AlertTriangle className="w-8 h-8 text-red-400 mx-auto mb-2" />
-            <p className="text-lg font-bold text-red-400">
-              R$ {receivables.filter(r => r.status === "overdue").reduce((sum, r) => sum + r.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </p>
-            <p className="text-gray-400 text-sm">Em Atraso</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-cinema-dark border-cinema-gray-light">
-          <CardContent className="p-4 text-center">
-            <DollarSign className="w-8 h-8 text-blue-400 mx-auto mb-2" />
-            <p className="text-lg font-bold text-blue-400">
-              {receivables.length}
-            </p>
-            <p className="text-gray-400 text-sm">Total de Faturas</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Receivables Table */}
-      <Card className="bg-cinema-dark border-cinema-gray-light">
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="border-b border-cinema-gray-light">
-                <tr>
-                  <th className="px-4 py-3 text-left text-cinema-yellow font-medium">Cliente</th>
-                  <th className="px-4 py-3 text-left text-cinema-yellow font-medium">Descrição</th>
-                  <th className="px-4 py-3 text-left text-cinema-yellow font-medium">Valor</th>
-                  <th className="px-4 py-3 text-left text-cinema-yellow font-medium">Vencimento</th>
-                  <th className="px-4 py-3 text-left text-cinema-yellow font-medium">Status</th>
-                  <th className="px-4 py-3 text-left text-cinema-yellow font-medium">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {receivables.map((transaction) => (
-                  <tr key={transaction.id} className="border-b border-cinema-gray-light hover:bg-cinema-dark-lighter">
-                    <td className="px-4 py-3 text-white text-sm">
-                      {transaction.clientId || "Cliente Geral"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div>
-                        <p className="text-white text-sm font-medium">{transaction.description}</p>
-                        <p className="text-gray-400 text-xs">{transaction.category} • {transaction.invoiceNumber}</p>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-green-400 font-medium">
-                        R$ {transaction.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </span>
-                      {transaction.installments > 1 && (
-                        <p className="text-xs text-gray-400">
-                          {transaction.currentInstallment}/{transaction.installments}x
-                        </p>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-gray-400 text-sm">{transaction.dueDate}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${getStatusColor(transaction.status)}`}>
-                        {getStatusIcon(transaction.status)}
-                        <span className="ml-1 capitalize">{transaction.status}</span>
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex space-x-2">
-                        {transaction.status === "pending" && (
-                          <>
-                            <Button
-                              size="sm"
-                              className="bg-green-500 text-white hover:bg-green-600"
-                              onClick={() => onStatusUpdate(transaction.id, "paid")}
-                              title="Marcar como pago"
-                            >
-                              <CheckCircle className="w-3 h-3" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-green-400 border-green-400 hover:bg-green-400 hover:text-white"
-                              title="Emitir NFSe"
-                            >
-                              <FileText className="w-3 h-3" />
-                            </Button>
-                          </>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-blue-400 border-blue-400"
-                          title="Enviar Cobrança"
-                        >
-                          <Send className="w-3 h-3" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-cinema-yellow border-cinema-yellow"
-                          title="Visualizar"
-                        >
-                          <Eye className="w-3 h-3" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-cinema-yellow border-cinema-yellow"
-                          title="Editar"
-                        >
-                          <Edit className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* Summary Cards - Grid 2x2 */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-gradient-to-br from-emerald-500/20 to-green-600/10 border border-emerald-500/20 rounded-xl p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <CheckCircle className="w-4 h-4 text-emerald-400" />
+            <span className="text-zinc-400 text-xs">Recebido</span>
           </div>
-        </CardContent>
-      </Card>
+          <p className="text-white font-bold">
+            R$ {(receivables.filter(r => r.status === "paid").reduce((sum, r) => sum + r.amount, 0) / 1000).toFixed(1)}k
+          </p>
+        </div>
+
+        <div className="bg-gradient-to-br from-amber-500/20 to-yellow-600/10 border border-amber-500/20 rounded-xl p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <Clock className="w-4 h-4 text-amber-400" />
+            <span className="text-zinc-400 text-xs">A Receber</span>
+          </div>
+          <p className="text-white font-bold">
+            R$ {(receivables.filter(r => r.status === "pending").reduce((sum, r) => sum + r.amount, 0) / 1000).toFixed(1)}k
+          </p>
+        </div>
+
+        <div className="bg-gradient-to-br from-red-500/20 to-rose-600/10 border border-red-500/20 rounded-xl p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <AlertTriangle className="w-4 h-4 text-red-400" />
+            <span className="text-zinc-400 text-xs">Atrasado</span>
+          </div>
+          <p className="text-white font-bold">
+            R$ {(receivables.filter(r => r.status === "overdue").reduce((sum, r) => sum + r.amount, 0) / 1000).toFixed(1)}k
+          </p>
+        </div>
+
+        <div className="bg-gradient-to-br from-blue-500/20 to-indigo-600/10 border border-blue-500/20 rounded-xl p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <Receipt className="w-4 h-4 text-blue-400" />
+            <span className="text-zinc-400 text-xs">Faturas</span>
+          </div>
+          <p className="text-white font-bold">{receivables.length}</p>
+        </div>
+      </div>
+
+      {/* Lista de Transações - Cards Expansíveis */}
+      <div className="space-y-2">
+        {receivables
+          .filter(r => filterStatus === 'all' || r.status === filterStatus)
+          .filter(r => !searchTerm || r.description.toLowerCase().includes(searchTerm.toLowerCase()))
+          .slice(0, 15)
+          .map((transaction) => (
+          <details key={transaction.id} className="group">
+            <summary className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-3 hover:border-emerald-500/30 transition-colors cursor-pointer list-none">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-sm font-medium truncate">{transaction.description}</p>
+                  <p className="text-zinc-500 text-xs">{transaction.clientId || "Cliente"} • Venc: {transaction.dueDate}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-emerald-400 font-bold text-sm">
+                    R$ {transaction.amount.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
+                  </p>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                    transaction.status === 'paid' ? 'bg-emerald-500/20 text-emerald-400' :
+                    transaction.status === 'overdue' ? 'bg-red-500/20 text-red-400' :
+                    'bg-amber-500/20 text-amber-400'
+                  }`}>
+                    {transaction.status === 'paid' ? 'Pago' : 
+                     transaction.status === 'overdue' ? 'Vencido' : 'Pendente'}
+                  </span>
+                </div>
+              </div>
+            </summary>
+            
+            {/* Área Expandida com Ações */}
+            <div className="bg-zinc-800/30 border border-zinc-800 border-t-0 rounded-b-xl p-3 -mt-2 pt-4">
+              {/* Detalhes */}
+              <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
+                <div>
+                  <span className="text-zinc-500">Categoria:</span>
+                  <span className="text-white ml-1">{transaction.category}</span>
+                </div>
+                <div>
+                  <span className="text-zinc-500">Nº Fatura:</span>
+                  <span className="text-white ml-1">{transaction.invoiceNumber || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-zinc-500">Parcela:</span>
+                  <span className="text-white ml-1">{transaction.currentInstallment}/{transaction.installments}</span>
+                </div>
+                <div>
+                  <span className="text-zinc-500">Data:</span>
+                  <span className="text-white ml-1">{transaction.date}</span>
+                </div>
+              </div>
+              
+              {/* Botões de Ação */}
+              <div className="flex flex-wrap gap-2">
+                {transaction.status === 'pending' && (
+                  <button 
+                    onClick={() => onStatusUpdate(transaction.id, 'paid')}
+                    className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-emerald-500 hover:bg-emerald-400 text-white rounded-lg text-xs font-medium transition-colors"
+                  >
+                    <CheckCircle className="w-3 h-3" />
+                    Marcar Pago
+                  </button>
+                )}
+                {transaction.status === 'overdue' && (
+                  <button 
+                    onClick={() => onStatusUpdate(transaction.id, 'paid')}
+                    className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-emerald-500 hover:bg-emerald-400 text-white rounded-lg text-xs font-medium transition-colors"
+                  >
+                    <CheckCircle className="w-3 h-3" />
+                    Marcar Pago
+                  </button>
+                )}
+                {(transaction.status === 'pending' || transaction.status === 'overdue') && (
+                  <button className="flex items-center justify-center gap-1 px-3 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg text-xs font-medium transition-colors">
+                    <Send className="w-3 h-3" />
+                    Cobrar
+                  </button>
+                )}
+                <button 
+                  onClick={(e) => { e.stopPropagation(); openModal(transaction, 'view'); }}
+                  className="flex items-center justify-center gap-1 px-3 py-2 bg-zinc-700/50 hover:bg-zinc-700 text-zinc-300 rounded-lg text-xs font-medium transition-colors"
+                >
+                  <Eye className="w-3 h-3" />
+                  Ver
+                </button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); openModal(transaction, 'edit'); }}
+                  className="flex items-center justify-center gap-1 px-3 py-2 bg-zinc-700/50 hover:bg-zinc-700 text-zinc-300 rounded-lg text-xs font-medium transition-colors"
+                >
+                  <Edit className="w-3 h-3" />
+                  Editar
+                </button>
+              </div>
+            </div>
+          </details>
+        ))}
+      </div>
+
+      {/* Modal Ver/Editar Receita */}
+      {selectedTransaction && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={closeModal}>
+          <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-md max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-zinc-800">
+              <h3 className="text-white font-bold">
+                {modalType === 'view' ? 'Detalhes da Receita' : 'Editar Receita'}
+              </h3>
+              <button onClick={closeModal} className="text-zinc-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              {modalType === 'view' ? (
+                <>
+                  <div className="bg-zinc-800/50 rounded-xl p-4">
+                    <p className="text-emerald-400 text-2xl font-bold">
+                      R$ {selectedTransaction.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-zinc-400 text-sm">{selectedTransaction.description}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="bg-zinc-800/30 rounded-lg p-3">
+                      <p className="text-zinc-500 text-xs">Cliente</p>
+                      <p className="text-white">{selectedTransaction.clientId || 'Não informado'}</p>
+                    </div>
+                    <div className="bg-zinc-800/30 rounded-lg p-3">
+                      <p className="text-zinc-500 text-xs">Status</p>
+                      <p className={`font-medium ${selectedTransaction.status === 'paid' ? 'text-emerald-400' : selectedTransaction.status === 'overdue' ? 'text-red-400' : 'text-amber-400'}`}>
+                        {selectedTransaction.status === 'paid' ? 'Pago' : selectedTransaction.status === 'overdue' ? 'Vencido' : 'Pendente'}
+                      </p>
+                    </div>
+                    <div className="bg-zinc-800/30 rounded-lg p-3">
+                      <p className="text-zinc-500 text-xs">Categoria</p>
+                      <p className="text-white">{selectedTransaction.category}</p>
+                    </div>
+                    <div className="bg-zinc-800/30 rounded-lg p-3">
+                      <p className="text-zinc-500 text-xs">Vencimento</p>
+                      <p className="text-white">{selectedTransaction.dueDate}</p>
+                    </div>
+                  </div>
+                  {/* Botões de Ação */}
+                  <div className="space-y-2">
+                    {selectedTransaction.status !== 'paid' && (
+                      <button onClick={() => { onStatusUpdate(selectedTransaction.id, 'paid'); closeModal(); }}
+                        className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-medium">
+                        ✓ Marcar como Pago
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => {
+                        closeModal();
+                        setShowFaturaEditor(true);
+                      }}
+                      className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-black rounded-xl font-medium flex items-center justify-center gap-2"
+                    >
+                      <Printer className="w-4 h-4" />
+                      Gerar Fatura PDF
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-zinc-400 text-xs block mb-1">Descrição</label>
+                      <input type="text" defaultValue={selectedTransaction.description}
+                        className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm" />
+                    </div>
+                    <div>
+                      <label className="text-zinc-400 text-xs block mb-1">Valor (R$)</label>
+                      <input type="text" defaultValue={selectedTransaction.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm" />
+                    </div>
+                    <div>
+                      <label className="text-zinc-400 text-xs block mb-1">Vencimento</label>
+                      <input type="text" defaultValue={selectedTransaction.dueDate}
+                        placeholder="AAAA-MM-DD"
+                        className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm" />
+                    </div>
+                    <div>
+                      <label className="text-zinc-400 text-xs block mb-1">Status</label>
+                      <select defaultValue={selectedTransaction.status}
+                        className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm appearance-none">
+                        <option value="pending">Pendente</option>
+                        <option value="paid">Pago</option>
+                        <option value="overdue">Vencido</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex gap-3 pt-4">
+                    <button onClick={closeModal} className="flex-1 py-3 bg-zinc-700 hover:bg-zinc-600 text-white rounded-xl font-medium">Cancelar</button>
+                    <button onClick={closeModal} className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-medium">Salvar</button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Editor de Fatura PDF */}
+      {showFaturaEditor && selectedTransaction && (
+        <FaturaPDFEditor
+          dados={{
+            clienteNome: selectedTransaction.clientId || '',
+            clienteCNPJ: '',
+            clienteEndereco: '',
+            clienteBairro: '',
+            clienteCEP: '',
+            clienteMunicipio: '',
+            clienteUF: 'MG',
+            clienteTelefone: '',
+            numeroFatura: selectedTransaction.invoiceNumber || '',
+            dataEmissao: selectedTransaction.date,
+            dataVencimento: selectedTransaction.dueDate,
+            naturezaOperacao: 'Locação de Equipamentos',
+            itens: [{
+              descricao: selectedTransaction.description,
+              quantidade: 1,
+              valorUnitario: selectedTransaction.amount,
+              valorTotal: selectedTransaction.amount,
+            }],
+            valorTotal: selectedTransaction.amount,
+            observacoes: selectedTransaction.notes || '',
+          }}
+          onClose={() => setShowFaturaEditor(false)}
+        />
+      )}
     </div>
   );
 };
@@ -379,165 +524,271 @@ export const PayablesTab: React.FC<Props> = ({
   getStatusIcon,
 }) => {
   const payables = transactions.filter(t => t.type === "expense");
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [modalType, setModalType] = useState<'view' | 'edit' | null>(null);
+
+  const openModal = (transaction: Transaction, type: 'view' | 'edit') => {
+    setSelectedTransaction(transaction);
+    setModalType(type);
+  };
+
+  const closeModal = () => {
+    setSelectedTransaction(null);
+    setModalType(null);
+  };
   
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold text-white">Contas a Pagar</h3>
-        <Button className="bg-cinema-yellow text-cinema-dark hover:bg-cinema-yellow-dark">
-          <Plus className="w-4 h-4 mr-2" />
+    <div className="space-y-4">
+      {/* Header Moderno */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-red-400 to-rose-600 rounded-xl flex items-center justify-center">
+            <TrendingDown className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-white">Contas a Pagar</h3>
+            <p className="text-zinc-500 text-xs">{payables.length} registros</p>
+          </div>
+        </div>
+        <button className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-xl text-sm font-medium shadow-lg shadow-red-500/20">
+          <Plus className="w-4 h-4" />
           Nova Despesa
-        </Button>
+        </button>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            placeholder="Buscar despesas..."
+      <div className="flex flex-wrap gap-2">
+        <div className="relative flex-1 min-w-[150px]">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-500 w-4 h-4" />
+          <input
+            placeholder="Buscar..."
             value={searchTerm}
             onChange={(e) => onSearch(e.target.value)}
-            className="pl-10 bg-cinema-dark border-cinema-gray-light text-white"
+            className="w-full pl-9 pr-3 py-2 bg-zinc-800/50 border border-zinc-700/50 rounded-xl text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:border-red-500/50"
           />
         </div>
         <select
           value={filterStatus}
           onChange={(e) => onFilterChange(e.target.value)}
-          className="bg-cinema-dark border border-cinema-gray-light text-white rounded-md px-3 py-2"
+          className="px-3 py-2 bg-zinc-800/50 border border-zinc-700/50 text-zinc-300 rounded-xl text-sm"
         >
-          <option value="all">Todos os Status</option>
+          <option value="all">Todos</option>
           <option value="pending">Pendente</option>
           <option value="paid">Pago</option>
           <option value="overdue">Vencido</option>
         </select>
-        <Button variant="outline" className="text-cinema-yellow border-cinema-yellow">
-          <Download className="w-4 h-4 mr-2" />
-          Exportar
-        </Button>
       </div>
 
-      {/* Payables Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-cinema-dark border-cinema-gray-light">
-          <CardContent className="p-4 text-center">
-            <TrendingDown className="w-8 h-8 text-red-400 mx-auto mb-2" />
-            <p className="text-lg font-bold text-red-400">
-              R$ {payables.filter(p => p.status === "paid").reduce((sum, p) => sum + p.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </p>
-            <p className="text-gray-400 text-sm">Pago</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-cinema-dark border-cinema-gray-light">
-          <CardContent className="p-4 text-center">
-            <Clock className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
-            <p className="text-lg font-bold text-yellow-400">
-              R$ {payables.filter(p => p.status === "pending").reduce((sum, p) => sum + p.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </p>
-            <p className="text-gray-400 text-sm">A Pagar</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-cinema-dark border-cinema-gray-light">
-          <CardContent className="p-4 text-center">
-            <AlertTriangle className="w-8 h-8 text-red-400 mx-auto mb-2" />
-            <p className="text-lg font-bold text-red-400">
-              R$ {payables.filter(p => p.status === "overdue").reduce((sum, p) => sum + p.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </p>
-            <p className="text-gray-400 text-sm">Em Atraso</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-cinema-dark border-cinema-gray-light">
-          <CardContent className="p-4 text-center">
-            <Receipt className="w-8 h-8 text-blue-400 mx-auto mb-2" />
-            <p className="text-lg font-bold text-blue-400">
-              {payables.length}
-            </p>
-            <p className="text-gray-400 text-sm">Total de Contas</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Payables Table */}
-      <Card className="bg-cinema-dark border-cinema-gray-light">
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="border-b border-cinema-gray-light">
-                <tr>
-                  <th className="px-4 py-3 text-left text-cinema-yellow font-medium">Fornecedor</th>
-                  <th className="px-4 py-3 text-left text-cinema-yellow font-medium">Descrição</th>
-                  <th className="px-4 py-3 text-left text-cinema-yellow font-medium">Valor</th>
-                  <th className="px-4 py-3 text-left text-cinema-yellow font-medium">Vencimento</th>
-                  <th className="px-4 py-3 text-left text-cinema-yellow font-medium">Status</th>
-                  <th className="px-4 py-3 text-left text-cinema-yellow font-medium">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {payables.map((transaction) => (
-                  <tr key={transaction.id} className="border-b border-cinema-gray-light hover:bg-cinema-dark-lighter">
-                    <td className="px-4 py-3 text-white text-sm">
-                      {transaction.supplierId || "Fornecedor Geral"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div>
-                        <p className="text-white text-sm font-medium">{transaction.description}</p>
-                        <p className="text-gray-400 text-xs">{transaction.category} • {transaction.invoiceNumber}</p>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-red-400 font-medium">
-                        R$ {transaction.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </span>
-                      {transaction.installments > 1 && (
-                        <p className="text-xs text-gray-400">
-                          {transaction.currentInstallment}/{transaction.installments}x
-                        </p>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-gray-400 text-sm">{transaction.dueDate}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${getStatusColor(transaction.status)}`}>
-                        {getStatusIcon(transaction.status)}
-                        <span className="ml-1 capitalize">{transaction.status}</span>
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex space-x-2">
-                        {transaction.status === "pending" && (
-                          <Button
-                            size="sm"
-                            className="bg-green-500 text-white hover:bg-green-600"
-                            onClick={() => onStatusUpdate(transaction.id, "paid")}
-                          >
-                            <CheckCircle className="w-3 h-3" />
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-cinema-yellow border-cinema-yellow"
-                        >
-                          <Eye className="w-3 h-3" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-cinema-yellow border-cinema-yellow"
-                        >
-                          <Edit className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* Summary Cards - Grid 2x2 */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-gradient-to-br from-red-500/20 to-rose-600/10 border border-red-500/20 rounded-xl p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <CheckCircle className="w-4 h-4 text-red-400" />
+            <span className="text-zinc-400 text-xs">Pago</span>
           </div>
-        </CardContent>
-      </Card>
+          <p className="text-white font-bold">
+            R$ {(payables.filter(p => p.status === "paid").reduce((sum, p) => sum + p.amount, 0) / 1000).toFixed(1)}k
+          </p>
+        </div>
+
+        <div className="bg-gradient-to-br from-amber-500/20 to-yellow-600/10 border border-amber-500/20 rounded-xl p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <Clock className="w-4 h-4 text-amber-400" />
+            <span className="text-zinc-400 text-xs">A Pagar</span>
+          </div>
+          <p className="text-white font-bold">
+            R$ {(payables.filter(p => p.status === "pending").reduce((sum, p) => sum + p.amount, 0) / 1000).toFixed(1)}k
+          </p>
+        </div>
+
+        <div className="bg-gradient-to-br from-orange-500/20 to-red-600/10 border border-orange-500/20 rounded-xl p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <AlertTriangle className="w-4 h-4 text-orange-400" />
+            <span className="text-zinc-400 text-xs">Atrasado</span>
+          </div>
+          <p className="text-white font-bold">
+            R$ {(payables.filter(p => p.status === "overdue").reduce((sum, p) => sum + p.amount, 0) / 1000).toFixed(1)}k
+          </p>
+        </div>
+
+        <div className="bg-gradient-to-br from-purple-500/20 to-indigo-600/10 border border-purple-500/20 rounded-xl p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <Receipt className="w-4 h-4 text-purple-400" />
+            <span className="text-zinc-400 text-xs">Contas</span>
+          </div>
+          <p className="text-white font-bold">{payables.length}</p>
+        </div>
+      </div>
+
+      {/* Lista de Transações - Cards Expansíveis */}
+      <div className="space-y-2">
+        {payables
+          .filter(r => filterStatus === 'all' || r.status === filterStatus)
+          .filter(r => !searchTerm || r.description.toLowerCase().includes(searchTerm.toLowerCase()))
+          .slice(0, 15)
+          .map((transaction) => (
+          <details key={transaction.id} className="group">
+            <summary className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-3 hover:border-red-500/30 transition-colors cursor-pointer list-none">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-sm font-medium truncate">{transaction.description}</p>
+                  <p className="text-zinc-500 text-xs">{transaction.supplierId || "Fornecedor"} • Venc: {transaction.dueDate}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-red-400 font-bold text-sm">
+                    R$ {transaction.amount.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
+                  </p>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                    transaction.status === 'paid' ? 'bg-emerald-500/20 text-emerald-400' :
+                    transaction.status === 'overdue' ? 'bg-red-500/20 text-red-400' :
+                    'bg-amber-500/20 text-amber-400'
+                  }`}>
+                    {transaction.status === 'paid' ? 'Pago' : 
+                     transaction.status === 'overdue' ? 'Vencido' : 'Pendente'}
+                  </span>
+                </div>
+              </div>
+            </summary>
+            
+            {/* Área Expandida com Ações */}
+            <div className="bg-zinc-800/30 border border-zinc-800 border-t-0 rounded-b-xl p-3 -mt-2 pt-4">
+              {/* Detalhes */}
+              <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
+                <div>
+                  <span className="text-zinc-500">Categoria:</span>
+                  <span className="text-white ml-1">{transaction.category}</span>
+                </div>
+                <div>
+                  <span className="text-zinc-500">Nº Nota:</span>
+                  <span className="text-white ml-1">{transaction.invoiceNumber || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-zinc-500">Parcela:</span>
+                  <span className="text-white ml-1">{transaction.currentInstallment}/{transaction.installments}</span>
+                </div>
+                <div>
+                  <span className="text-zinc-500">Data:</span>
+                  <span className="text-white ml-1">{transaction.date}</span>
+                </div>
+              </div>
+              
+              {/* Botões de Ação */}
+              <div className="flex flex-wrap gap-2">
+                {(transaction.status === 'pending' || transaction.status === 'overdue') && (
+                  <button 
+                    onClick={() => onStatusUpdate(transaction.id, 'paid')}
+                    className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-red-500 hover:bg-red-400 text-white rounded-lg text-xs font-medium transition-colors"
+                  >
+                    <CheckCircle className="w-3 h-3" />
+                    Marcar Pago
+                  </button>
+                )}
+                <button 
+                  onClick={(e) => { e.stopPropagation(); openModal(transaction, 'view'); }}
+                  className="flex items-center justify-center gap-1 px-3 py-2 bg-zinc-700/50 hover:bg-zinc-700 text-zinc-300 rounded-lg text-xs font-medium transition-colors"
+                >
+                  <Eye className="w-3 h-3" />
+                  Ver
+                </button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); openModal(transaction, 'edit'); }}
+                  className="flex items-center justify-center gap-1 px-3 py-2 bg-zinc-700/50 hover:bg-zinc-700 text-zinc-300 rounded-lg text-xs font-medium transition-colors"
+                >
+                  <Edit className="w-3 h-3" />
+                  Editar
+                </button>
+              </div>
+            </div>
+          </details>
+        ))}
+      </div>
+
+      {/* Modal Ver/Editar Despesa */}
+      {selectedTransaction && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={closeModal}>
+          <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-md max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-zinc-800">
+              <h3 className="text-white font-bold">
+                {modalType === 'view' ? 'Detalhes da Despesa' : 'Editar Despesa'}
+              </h3>
+              <button onClick={closeModal} className="text-zinc-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              {modalType === 'view' ? (
+                <>
+                  <div className="bg-zinc-800/50 rounded-xl p-4">
+                    <p className="text-red-400 text-2xl font-bold">
+                      R$ {selectedTransaction.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-zinc-400 text-sm">{selectedTransaction.description}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="bg-zinc-800/30 rounded-lg p-3">
+                      <p className="text-zinc-500 text-xs">Fornecedor</p>
+                      <p className="text-white">{selectedTransaction.supplierId || 'Não informado'}</p>
+                    </div>
+                    <div className="bg-zinc-800/30 rounded-lg p-3">
+                      <p className="text-zinc-500 text-xs">Status</p>
+                      <p className={`font-medium ${selectedTransaction.status === 'paid' ? 'text-emerald-400' : selectedTransaction.status === 'overdue' ? 'text-red-400' : 'text-amber-400'}`}>
+                        {selectedTransaction.status === 'paid' ? 'Pago' : selectedTransaction.status === 'overdue' ? 'Vencido' : 'Pendente'}
+                      </p>
+                    </div>
+                    <div className="bg-zinc-800/30 rounded-lg p-3">
+                      <p className="text-zinc-500 text-xs">Categoria</p>
+                      <p className="text-white">{selectedTransaction.category}</p>
+                    </div>
+                    <div className="bg-zinc-800/30 rounded-lg p-3">
+                      <p className="text-zinc-500 text-xs">Vencimento</p>
+                      <p className="text-white">{selectedTransaction.dueDate}</p>
+                    </div>
+                  </div>
+                  {selectedTransaction.status !== 'paid' && (
+                    <button onClick={() => { onStatusUpdate(selectedTransaction.id, 'paid'); closeModal(); }}
+                      className="w-full py-3 bg-red-500 hover:bg-red-400 text-white rounded-xl font-medium">
+                      ✓ Marcar como Pago
+                    </button>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-zinc-400 text-xs block mb-1">Descrição</label>
+                      <input type="text" defaultValue={selectedTransaction.description}
+                        className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm" />
+                    </div>
+                    <div>
+                      <label className="text-zinc-400 text-xs block mb-1">Valor (R$)</label>
+                      <input type="text" defaultValue={selectedTransaction.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm" />
+                    </div>
+                    <div>
+                      <label className="text-zinc-400 text-xs block mb-1">Vencimento</label>
+                      <input type="date" defaultValue={selectedTransaction.dueDate}
+                        className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm" />
+                    </div>
+                    <div>
+                      <label className="text-zinc-400 text-xs block mb-1">Status</label>
+                      <select defaultValue={selectedTransaction.status}
+                        className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm">
+                        <option value="pending">Pendente</option>
+                        <option value="paid">Pago</option>
+                        <option value="overdue">Vencido</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex gap-3 pt-4">
+                    <button onClick={closeModal} className="flex-1 py-3 bg-zinc-700 hover:bg-zinc-600 text-white rounded-xl font-medium">Cancelar</button>
+                    <button onClick={closeModal} className="flex-1 py-3 bg-red-500 hover:bg-red-400 text-white rounded-xl font-medium">Salvar</button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -693,224 +944,207 @@ export const CashFlowTab: React.FC<Props> = ({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold text-white">Fluxo de Caixa</h3>
-        <div className="flex space-x-2">
-          <Button 
-            variant="outline" 
-            className="text-cinema-yellow border-cinema-yellow hover:bg-cinema-yellow/10"
+    <div className="space-y-4">
+      {/* Header Moderno */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-xl flex items-center justify-center">
+            <DollarSign className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-white">Fluxo de Caixa</h3>
+            <p className="text-zinc-500 text-xs">Últimos 30 dias</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button 
             onClick={handleExport}
+            className="flex items-center gap-1 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-xs"
           >
-            <Download className="w-4 h-4 mr-2" />
-            Exportar
-          </Button>
-          <Button 
-            variant="outline" 
-            className="text-cinema-yellow border-cinema-yellow hover:bg-cinema-yellow/10"
+            <Download className="w-3 h-3" />
+            CSV
+          </button>
+          <button 
             onClick={handlePrint}
+            className="flex items-center gap-1 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-xs"
           >
-            <Printer className="w-4 h-4 mr-2" />
-            Imprimir
-          </Button>
+            <Printer className="w-3 h-3" />
+            PDF
+          </button>
         </div>
       </div>
 
-      {/* Cash Flow Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-cinema-dark border-cinema-gray-light">
-          <CardContent className="p-4 text-center">
-            <PlusCircle className="w-8 h-8 text-green-400 mx-auto mb-2" />
-            <p className="text-gray-400 text-sm">Entradas Realizadas</p>
-            <p className="text-xl font-bold text-green-400">
-              R$ {totalReceived.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </p>
-          </CardContent>
-        </Card>
+      {/* Cash Flow Summary - Grid 2x2 */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-gradient-to-br from-emerald-500/20 to-green-600/10 border border-emerald-500/20 rounded-xl p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <PlusCircle className="w-4 h-4 text-emerald-400" />
+            <span className="text-zinc-400 text-xs">Entradas</span>
+          </div>
+          <p className="text-white font-bold">
+            R$ {(totalReceived / 1000).toFixed(1)}k
+          </p>
+        </div>
 
-        <Card className="bg-cinema-dark border-cinema-gray-light">
-          <CardContent className="p-4 text-center">
-            <MinusCircle className="w-8 h-8 text-red-400 mx-auto mb-2" />
-            <p className="text-gray-400 text-sm">Saídas Realizadas</p>
-            <p className="text-xl font-bold text-red-400">
-              R$ {totalPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </p>
-          </CardContent>
-        </Card>
+        <div className="bg-gradient-to-br from-red-500/20 to-rose-600/10 border border-red-500/20 rounded-xl p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <MinusCircle className="w-4 h-4 text-red-400" />
+            <span className="text-zinc-400 text-xs">Saídas</span>
+          </div>
+          <p className="text-white font-bold">
+            R$ {(totalPaid / 1000).toFixed(1)}k
+          </p>
+        </div>
 
-        <Card className="bg-cinema-dark border-cinema-gray-light">
-          <CardContent className="p-4 text-center">
-            <DollarSign className="w-8 h-8 text-blue-400 mx-auto mb-2" />
-            <p className="text-gray-400 text-sm">Saldo Atual</p>
-            <p className={`text-xl font-bold ${(totalReceived - totalPaid) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              R$ {(totalReceived - totalPaid).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </p>
-          </CardContent>
-        </Card>
+        <div className={`bg-gradient-to-br ${(totalReceived - totalPaid) >= 0 ? 'from-cyan-500/20 to-blue-600/10 border-cyan-500/20' : 'from-orange-500/20 to-red-600/10 border-orange-500/20'} border rounded-xl p-3`}>
+          <div className="flex items-center gap-2 mb-1">
+            <DollarSign className={`w-4 h-4 ${(totalReceived - totalPaid) >= 0 ? 'text-cyan-400' : 'text-orange-400'}`} />
+            <span className="text-zinc-400 text-xs">Saldo</span>
+          </div>
+          <p className="text-white font-bold">
+            R$ {((totalReceived - totalPaid) / 1000).toFixed(1)}k
+          </p>
+        </div>
 
-        <Card className="bg-cinema-dark border-cinema-gray-light">
-          <CardContent className="p-4 text-center">
-            <Target className="w-8 h-8 text-purple-400 mx-auto mb-2" />
-            <p className="text-gray-400 text-sm">Projeção (30 dias)</p>
-            <p className={`text-xl font-bold ${((totalReceived + pendingIncome) - (totalPaid + pendingExpenses)) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              R$ {((totalReceived + pendingIncome) - (totalPaid + pendingExpenses)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </p>
-          </CardContent>
-        </Card>
+        <div className="bg-gradient-to-br from-purple-500/20 to-violet-600/10 border border-purple-500/20 rounded-xl p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <Target className="w-4 h-4 text-purple-400" />
+            <span className="text-zinc-400 text-xs">Projeção</span>
+          </div>
+          <p className="text-white font-bold">
+            R$ {(((totalReceived + pendingIncome) - (totalPaid + pendingExpenses)) / 1000).toFixed(1)}k
+          </p>
+        </div>
       </div>
 
-      {/* Cash Flow Chart */}
-      <Card className="bg-cinema-dark border-cinema-gray-light">
-        <CardHeader>
-          <CardTitle className="text-white">Evolução do Fluxo de Caixa (Últimos 30 dias)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-80 bg-cinema-dark-lighter rounded-lg p-4">
-            <svg width="100%" height="100%" viewBox="0 0 1000 300" preserveAspectRatio="xMidYMid meet">
-              {/* Grid lines */}
-              {[0, 1, 2, 3, 4].map((i) => (
-                <g key={i}>
-                  <line
-                    x1="50"
-                    y1={50 + (i * 250) / 4}
-                    x2="950"
-                    y2={50 + (i * 250) / 4}
-                    stroke="#333"
-                    strokeWidth="1"
-                    strokeDasharray="5,5"
-                  />
-                  <text
-                    x="30"
-                    y={55 + (i * 250) / 4}
-                    fill="#999"
-                    fontSize="10"
-                    textAnchor="end"
-                  >
-                    R${((maxValue * (4 - i)) / 4 / 1000).toFixed(1)}k
-                  </text>
-                </g>
-              ))}
-
-              {/* Bars - Income (Green) and Expense (Red) */}
-              {chartData.map((d, i) => {
-                const x = 50 + (i * 900) / 30;
-                const barWidth = 900 / 30 / 2.5;
-                const incomeHeight = maxValue > 0 ? (d.income / maxValue) * 250 : 0;
-                const expenseHeight = maxValue > 0 ? (d.expense / maxValue) * 250 : 0;
-
-                return (
-                  <g key={i}>
-                    {/* Income bar */}
-                    <rect
-                      x={x}
-                      y={300 - incomeHeight - 50}
-                      width={barWidth}
-                      height={incomeHeight}
-                      fill="#4ade80"
-                      opacity="0.8"
-                      rx="2"
-                    >
-                      <title>{`${d.date}\nEntradas: R$ ${d.income.toFixed(2)}`}</title>
-                    </rect>
-                    
-                    {/* Expense bar */}
-                    <rect
-                      x={x + barWidth + 2}
-                      y={300 - expenseHeight - 50}
-                      width={barWidth}
-                      height={expenseHeight}
-                      fill="#f87171"
-                      opacity="0.8"
-                      rx="2"
-                    >
-                      <title>{`${d.date}\nSaídas: R$ ${d.expense.toFixed(2)}`}</title>
-                    </rect>
-
-                    {/* Date labels (show every 5 days) */}
-                    {i % 5 === 0 && (
-                      <text
-                        x={x + barWidth}
-                        y="290"
-                        fill="#999"
-                        fontSize="8"
-                        textAnchor="middle"
-                        transform={`rotate(-45, ${x + barWidth}, 290)`}
-                      >
-                        {d.date.split('-')[2]}/{d.date.split('-')[1]}
-                      </text>
-                    )}
-                  </g>
-                );
-              })}
-
-              {/* Legend */}
-              <g>
-                <rect x="750" y="20" width="15" height="15" fill="#4ade80" opacity="0.8" rx="2" />
-                <text x="770" y="32" fill="#ddd" fontSize="12">Entradas</text>
-                
-                <rect x="850" y="20" width="15" height="15" fill="#f87171" opacity="0.8" rx="2" />
-                <text x="870" y="32" fill="#ddd" fontSize="12">Saídas</text>
-              </g>
-            </svg>
+      {/* Gráfico Compacto para Mobile */}
+      <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="text-white font-medium text-sm">Últimos 7 dias</h4>
+          <div className="flex items-center gap-3 text-[10px]">
+            <span className="flex items-center gap-1"><span className="w-2 h-2 bg-emerald-400 rounded-full"></span> Entrada</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 bg-red-400 rounded-full"></span> Saída</span>
           </div>
+        </div>
+        
+        {/* Mini Barras */}
+        <div className="flex items-end justify-between gap-1 h-24 mb-2">
+          {chartData.slice(-7).map((d, i) => {
+            const maxVal = Math.max(...chartData.slice(-7).map(x => Math.max(x.income, x.expense)));
+            const incomeH = maxVal > 0 ? (d.income / maxVal) * 80 : 0;
+            const expenseH = maxVal > 0 ? (d.expense / maxVal) * 80 : 0;
+            return (
+              <div key={i} className="flex-1 flex items-end gap-0.5">
+                <div 
+                  className="flex-1 bg-emerald-400/80 rounded-t-sm" 
+                  style={{ height: `${incomeH}px` }}
+                ></div>
+                <div 
+                  className="flex-1 bg-red-400/80 rounded-t-sm" 
+                  style={{ height: `${expenseH}px` }}
+                ></div>
+              </div>
+            );
+          })}
+        </div>
+        
+        {/* Dias da semana */}
+        <div className="flex justify-between text-[9px] text-zinc-500">
+          {chartData.slice(-7).map((d, i) => (
+            <span key={i}>{d.date.split('-')[2]}</span>
+          ))}
+        </div>
+      </div>
 
-          {/* Chart Summary */}
-          <div className="mt-4 grid grid-cols-3 gap-4 text-center">
-            <div className="p-2 bg-green-900/20 border border-green-500/30 rounded">
-              <p className="text-green-400 font-bold text-lg">
-                R$ {chartData.reduce((sum, d) => sum + d.income, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-gray-400 text-xs">Total Entradas (30d)</p>
-            </div>
-            <div className="p-2 bg-red-900/20 border border-red-500/30 rounded">
-              <p className="text-red-400 font-bold text-lg">
-                R$ {chartData.reduce((sum, d) => sum + d.expense, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-gray-400 text-xs">Total Saídas (30d)</p>
-            </div>
-            <div className="p-2 bg-blue-900/20 border border-blue-500/30 rounded">
-              <p className={`font-bold text-lg ${chartData.reduce((sum, d) => sum + d.balance, 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                R$ {chartData.reduce((sum, d) => sum + d.balance, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-gray-400 text-xs">Saldo Acumulado (30d)</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Recent Transactions */}
-      <Card className="bg-cinema-dark border-cinema-gray-light">
-        <CardHeader>
-          <CardTitle className="text-white">Movimentações Recentes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {transactions.slice(0, 10).map((transaction) => (
-              <div key={transaction.id} className="flex items-center justify-between p-3 bg-cinema-dark-lighter rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className={`p-2 rounded-lg ${transaction.type === "income" ? "bg-green-400/20" : "bg-red-400/20"}`}>
-                    {transaction.type === "income" ? (
-                      <ArrowUpRight className="w-4 h-4 text-green-400" />
-                    ) : (
-                      <ArrowDownRight className="w-4 h-4 text-red-400" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-white font-medium text-sm">{transaction.description}</p>
-                    <p className="text-gray-400 text-xs">{transaction.date} • {transaction.category}</p>
-                  </div>
+      {/* Movimentações Recentes */}
+      <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+        <h4 className="text-white font-medium text-sm mb-3">Movimentações</h4>
+        <div className="space-y-2">
+          {chartData.slice(-5).reverse().filter(d => d.income > 0 || d.expense > 0).slice(0, 5).map((d, i) => (
+            <div key={i} className="flex items-center justify-between p-2 bg-zinc-800/50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${d.income > d.expense ? 'bg-emerald-500/20' : 'bg-red-500/20'}`}>
+                  {d.income > d.expense ? (
+                    <PlusCircle className="w-4 h-4 text-emerald-400" />
+                  ) : (
+                    <MinusCircle className="w-4 h-4 text-red-400" />
+                  )}
                 </div>
-                <div className="text-right">
-                  <p className={`font-bold ${transaction.type === "income" ? "text-green-400" : "text-red-400"}`}>
-                    {transaction.type === "income" ? "+" : "-"}R$ {transaction.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                <div>
+                  <p className="text-white text-xs font-medium">
+                    {d.date.split('-')[2]}/{d.date.split('-')[1]}
                   </p>
-                  <p className="text-gray-400 text-xs capitalize">{transaction.status}</p>
+                  <p className="text-zinc-500 text-[10px]">
+                    Saldo: R$ {d.balance.toLocaleString('pt-BR')}
+                  </p>
                 </div>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              <div className="text-right">
+                {d.income > 0 && (
+                  <p className="text-emerald-400 text-xs font-medium">
+                    +R$ {(d.income / 1000).toFixed(1)}k
+                  </p>
+                )}
+                {d.expense > 0 && (
+                  <p className="text-red-400 text-xs">
+                    -R$ {(d.expense / 1000).toFixed(1)}k
+                  </p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Gráfico Desktop (escondido no mobile) */}
+      <div className="hidden md:block bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+        <h4 className="text-white font-medium text-sm mb-4">Evolução (30 dias)</h4>
+        <div className="h-48">
+          <svg width="100%" height="100%" viewBox="0 0 1000 200" preserveAspectRatio="xMidYMid meet">
+            {/* Bars */}
+            {chartData.map((d, i) => {
+              const x = (i * 1000) / 30;
+              const barWidth = 1000 / 30 / 2.5;
+              const incomeHeight = maxValue > 0 ? (d.income / maxValue) * 180 : 0;
+              const expenseHeight = maxValue > 0 ? (d.expense / maxValue) * 180 : 0;
+
+              return (
+                <g key={i}>
+                  <rect x={x} y={200 - incomeHeight} width={barWidth} height={incomeHeight} fill="#4ade80" opacity="0.8" rx="1" />
+                  <rect x={x + barWidth + 1} y={200 - expenseHeight} width={barWidth} height={expenseHeight} fill="#f87171" opacity="0.8" rx="1" />
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+      </div>
+
+      {/* Tabela de Transações Desktop */}
+      <div className="hidden md:block bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+        <h4 className="text-white font-medium text-sm mb-3">Transações Recentes</h4>
+        <div className="space-y-2">
+          {transactions.slice(0, 5).map((transaction) => (
+            <div key={transaction.id} className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${transaction.type === "income" ? "bg-emerald-500/20" : "bg-red-500/20"}`}>
+                  {transaction.type === "income" ? (
+                    <ArrowUpRight className="w-4 h-4 text-emerald-400" />
+                  ) : (
+                    <ArrowDownRight className="w-4 h-4 text-red-400" />
+                  )}
+                </div>
+                <div>
+                  <p className="text-white font-medium text-sm">{transaction.description}</p>
+                  <p className="text-zinc-500 text-xs">{transaction.date}</p>
+                </div>
+              </div>
+              <p className={`font-bold text-sm ${transaction.type === "income" ? "text-emerald-400" : "text-red-400"}`}>
+                {transaction.type === "income" ? "+" : "-"}R$ {(transaction.amount / 1000).toFixed(1)}k
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };
@@ -920,54 +1154,63 @@ export const EmployeesTab: React.FC<{ employees: Employee[] }> = ({ employees })
   const totalSalaries = activeEmployees.reduce((sum, e) => sum + e.grossSalary, 0);
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold text-white">Gestão de Funcionários</h3>
-        <Button className="bg-cinema-yellow text-cinema-dark hover:bg-cinema-yellow-dark">
-          <Plus className="w-4 h-4 mr-2" />
-          Novo Funcionário
-        </Button>
+    <div className="space-y-4">
+      {/* Header Moderno */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-xl flex items-center justify-center">
+            <Users className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-white">Equipe</h3>
+            <p className="text-zinc-500 text-xs">{employees.length} funcionários</p>
+          </div>
+        </div>
+        <button className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl text-sm font-medium shadow-lg shadow-cyan-500/20">
+          <Plus className="w-4 h-4" />
+          Novo
+        </button>
       </div>
 
-      {/* Employee Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-cinema-dark border-cinema-gray-light">
-          <CardContent className="p-4 text-center">
-            <Users className="w-8 h-8 text-blue-400 mx-auto mb-2" />
-            <p className="text-lg font-bold text-blue-400">{activeEmployees.length}</p>
-            <p className="text-gray-400 text-sm">Funcionários Ativos</p>
-          </CardContent>
-        </Card>
+      {/* Summary Cards - Grid 2x2 */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-gradient-to-br from-blue-500/20 to-indigo-600/10 border border-blue-500/20 rounded-xl p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <Users className="w-4 h-4 text-blue-400" />
+            <span className="text-zinc-400 text-xs">Ativos</span>
+          </div>
+          <p className="text-white font-bold">{activeEmployees.length}</p>
+        </div>
 
-        <Card className="bg-cinema-dark border-cinema-gray-light">
-          <CardContent className="p-4 text-center">
-            <DollarSign className="w-8 h-8 text-green-400 mx-auto mb-2" />
-            <p className="text-lg font-bold text-green-400">
-              R$ {totalSalaries.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </p>
-            <p className="text-gray-400 text-sm">Folha Total</p>
-          </CardContent>
-        </Card>
+        <div className="bg-gradient-to-br from-emerald-500/20 to-green-600/10 border border-emerald-500/20 rounded-xl p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <DollarSign className="w-4 h-4 text-emerald-400" />
+            <span className="text-zinc-400 text-xs">Folha</span>
+          </div>
+          <p className="text-white font-bold">
+            R$ {(totalSalaries / 1000).toFixed(1)}k
+          </p>
+        </div>
 
-        <Card className="bg-cinema-dark border-cinema-gray-light">
-          <CardContent className="p-4 text-center">
-            <Clock className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
-            <p className="text-lg font-bold text-yellow-400">
-              {employees.filter(e => e.status === "vacation").length}
-            </p>
-            <p className="text-gray-400 text-sm">Em Férias</p>
-          </CardContent>
-        </Card>
+        <div className="bg-gradient-to-br from-amber-500/20 to-yellow-600/10 border border-amber-500/20 rounded-xl p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <Clock className="w-4 h-4 text-amber-400" />
+            <span className="text-zinc-400 text-xs">Férias</span>
+          </div>
+          <p className="text-white font-bold">
+            {employees.filter(e => e.status === "vacation").length}
+          </p>
+        </div>
 
-        <Card className="bg-cinema-dark border-cinema-gray-light">
-          <CardContent className="p-4 text-center">
-            <Briefcase className="w-8 h-8 text-purple-400 mx-auto mb-2" />
-            <p className="text-lg font-bold text-purple-400">
-              {Math.round(totalSalaries / activeEmployees.length) || 0}
-            </p>
-            <p className="text-gray-400 text-sm">Salário Médio</p>
-          </CardContent>
-        </Card>
+        <div className="bg-gradient-to-br from-purple-500/20 to-violet-600/10 border border-purple-500/20 rounded-xl p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <Briefcase className="w-4 h-4 text-purple-400" />
+            <span className="text-zinc-400 text-xs">Média</span>
+          </div>
+          <p className="text-white font-bold">
+            R$ {((totalSalaries / activeEmployees.length) / 1000).toFixed(1)}k
+          </p>
+        </div>
       </div>
 
       {/* Employees Table */}
@@ -1078,125 +1321,112 @@ export const PayrollTab: React.FC<{ employees: Employee[] }> = ({ employees }) =
   const totalDeductions = mockPayroll.reduce((sum, p) => sum + p.deductions.inss + p.deductions.irrf + p.deductions.others, 0);
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold text-white">Folha de Pagamento</h3>
-        <div className="flex space-x-2">
-          <Button className="bg-green-500 text-white hover:bg-green-600">
-            <CheckCircle className="w-4 h-4 mr-2" />
-            Aprovar Folha
-          </Button>
-          <Button variant="outline" className="text-cinema-yellow border-cinema-yellow">
-            <Download className="w-4 h-4 mr-2" />
+    <div className="space-y-4">
+      {/* Header Moderno */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-pink-400 to-rose-600 rounded-xl flex items-center justify-center">
+            <Receipt className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-white">Folha de Pagamento</h3>
+            <p className="text-zinc-500 text-xs">{currentMonth}</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-white rounded-lg text-xs font-medium">
+            <CheckCircle className="w-3 h-3" />
+            Aprovar
+          </button>
+          <button className="flex items-center gap-1 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-xs">
+            <Download className="w-3 h-3" />
             Exportar
-          </Button>
+          </button>
         </div>
       </div>
 
-      {/* Payroll Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-cinema-dark border-cinema-gray-light">
-          <CardContent className="p-4 text-center">
-            <Users className="w-8 h-8 text-blue-400 mx-auto mb-2" />
-            <p className="text-lg font-bold text-blue-400">{activeEmployees.length}</p>
-            <p className="text-gray-400 text-sm">Funcionários</p>
-          </CardContent>
-        </Card>
+      {/* Payroll Summary - Grid 2x2 */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-gradient-to-br from-blue-500/20 to-indigo-600/10 border border-blue-500/20 rounded-xl p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <Users className="w-4 h-4 text-blue-400" />
+            <span className="text-zinc-400 text-xs">Func.</span>
+          </div>
+          <p className="text-white font-bold">{activeEmployees.length}</p>
+        </div>
 
-        <Card className="bg-cinema-dark border-cinema-gray-light">
-          <CardContent className="p-4 text-center">
-            <DollarSign className="w-8 h-8 text-green-400 mx-auto mb-2" />
-            <p className="text-lg font-bold text-green-400">
-              R$ {totalGrossPay.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </p>
-            <p className="text-gray-400 text-sm">Total Bruto</p>
-          </CardContent>
-        </Card>
+        <div className="bg-gradient-to-br from-emerald-500/20 to-green-600/10 border border-emerald-500/20 rounded-xl p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <DollarSign className="w-4 h-4 text-emerald-400" />
+            <span className="text-zinc-400 text-xs">Bruto</span>
+          </div>
+          <p className="text-white font-bold">
+            R$ {(totalGrossPay / 1000).toFixed(1)}k
+          </p>
+        </div>
 
-        <Card className="bg-cinema-dark border-cinema-gray-light">
-          <CardContent className="p-4 text-center">
-            <MinusCircle className="w-8 h-8 text-red-400 mx-auto mb-2" />
-            <p className="text-lg font-bold text-red-400">
-              R$ {totalDeductions.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </p>
-            <p className="text-gray-400 text-sm">Total Descontos</p>
-          </CardContent>
-        </Card>
+        <div className="bg-gradient-to-br from-red-500/20 to-rose-600/10 border border-red-500/20 rounded-xl p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <MinusCircle className="w-4 h-4 text-red-400" />
+            <span className="text-zinc-400 text-xs">Descontos</span>
+          </div>
+          <p className="text-white font-bold">
+            R$ {(totalDeductions / 1000).toFixed(1)}k
+          </p>
+        </div>
 
-        <Card className="bg-cinema-dark border-cinema-gray-light">
-          <CardContent className="p-4 text-center">
-            <PlusCircle className="w-8 h-8 text-blue-400 mx-auto mb-2" />
-            <p className="text-lg font-bold text-blue-400">
-              R$ {totalNetPay.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </p>
-            <p className="text-gray-400 text-sm">Total Líquido</p>
-          </CardContent>
-        </Card>
+        <div className="bg-gradient-to-br from-cyan-500/20 to-blue-600/10 border border-cyan-500/20 rounded-xl p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <PlusCircle className="w-4 h-4 text-cyan-400" />
+            <span className="text-zinc-400 text-xs">Líquido</span>
+          </div>
+          <p className="text-white font-bold">
+            R$ {(totalNetPay / 1000).toFixed(1)}k
+          </p>
+        </div>
       </div>
 
-      {/* Payroll Table */}
-      <Card className="bg-cinema-dark border-cinema-gray-light">
-        <CardHeader>
-          <CardTitle className="text-white">Folha de Pagamento - {currentMonth}</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="border-b border-cinema-gray-light">
-                <tr>
-                  <th className="px-4 py-3 text-left text-cinema-yellow font-medium">Funcionário</th>
-                  <th className="px-4 py-3 text-left text-cinema-yellow font-medium">Salário Base</th>
-                  <th className="px-4 py-3 text-left text-cinema-yellow font-medium">Benefícios</th>
-                  <th className="px-4 py-3 text-left text-cinema-yellow font-medium">Total Bruto</th>
-                  <th className="px-4 py-3 text-left text-cinema-yellow font-medium">INSS</th>
-                  <th className="px-4 py-3 text-left text-cinema-yellow font-medium">IRRF</th>
-                  <th className="px-4 py-3 text-left text-cinema-yellow font-medium">Outros</th>
-                  <th className="px-4 py-3 text-left text-cinema-yellow font-medium">Líquido</th>
-                  <th className="px-4 py-3 text-left text-cinema-yellow font-medium">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {mockPayroll.map((payroll) => (
-                  <tr key={payroll.employeeId} className="border-b border-cinema-gray-light hover:bg-cinema-dark-lighter">
-                    <td className="px-4 py-3 text-white">{payroll.employeeName}</td>
-                    <td className="px-4 py-3 text-gray-400">
-                      R$ {payroll.baseSalary.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="px-4 py-3 text-gray-400">
-                      R$ {payroll.benefits.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="px-4 py-3 text-green-400 font-medium">
-                      R$ {payroll.grossPay.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="px-4 py-3 text-red-400">
-                      R$ {payroll.deductions.inss.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="px-4 py-3 text-red-400">
-                      R$ {payroll.deductions.irrf.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="px-4 py-3 text-red-400">
-                      R$ {payroll.deductions.others.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="px-4 py-3 text-blue-400 font-bold">
-                      R$ {payroll.netPay.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex space-x-2">
-                        <Button size="sm" variant="outline" className="text-cinema-yellow border-cinema-yellow">
-                          <FileText className="w-3 h-3" />
-                        </Button>
-                        <Button size="sm" variant="outline" className="text-blue-400 border-blue-400">
-                          <Send className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* Payroll List - Cards no Mobile */}
+      <div className="space-y-2">
+        {mockPayroll.map((payroll) => (
+          <div key={payroll.employeeId} className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-3 hover:border-pink-500/30 transition-colors">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-white text-sm font-medium truncate">{payroll.employeeName}</p>
+                <p className="text-zinc-500 text-xs">Base: R$ {payroll.baseSalary.toLocaleString('pt-BR')}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-emerald-400 font-bold text-sm">
+                  R$ {payroll.netPay.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
+                </p>
+                <span className="text-[10px] text-zinc-500">Líquido</span>
+              </div>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        ))}
+      </div>
+
+      {/* Tabela Desktop (escondida) */}
+      <div className="hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="border-b border-zinc-700">
+              <tr>
+                <th className="px-4 py-3 text-left text-amber-400 font-medium text-xs">Funcionário</th>
+                <th className="px-4 py-3 text-left text-amber-400 font-medium text-xs">Base</th>
+                <th className="px-4 py-3 text-left text-amber-400 font-medium text-xs">Benefícios</th>
+                <th className="px-4 py-3 text-left text-amber-400 font-medium text-xs">Bruto</th>
+                <th className="px-4 py-3 text-left text-amber-400 font-medium text-xs">INSS</th>
+                <th className="px-4 py-3 text-left text-amber-400 font-medium text-xs">IRRF</th>
+                <th className="px-4 py-3 text-left text-amber-400 font-medium text-xs">Outros</th>
+                <th className="px-4 py-3 text-left text-amber-400 font-medium text-xs">Líquido</th>
+                <th className="px-4 py-3 text-left text-amber-400 font-medium text-xs">Ações</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 };
@@ -1241,97 +1471,77 @@ export const ReportsTab: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold text-white">Relatórios Financeiros</h3>
-        <Button className="bg-cinema-yellow text-cinema-dark hover:bg-cinema-yellow-dark">
-          <Plus className="w-4 h-4 mr-2" />
-          Gerar Relatório
-        </Button>
+    <div className="space-y-4">
+      {/* Header Moderno */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-teal-400 to-cyan-600 rounded-xl flex items-center justify-center">
+            <FileText className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-white">Relatórios</h3>
+            <p className="text-zinc-500 text-xs">Análises financeiras</p>
+          </div>
+        </div>
       </div>
 
-      {/* Quick Reports */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Button className="h-20 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white">
-          <div className="text-center">
-            <FileText className="w-6 h-6 mx-auto mb-1" />
-            <div className="text-sm font-semibold">DRE</div>
-            <div className="text-xs opacity-90">Demonstrativo</div>
-          </div>
-        </Button>
+      {/* Quick Reports - Grid 2x2 */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <button className="flex flex-col items-center justify-center gap-2 p-4 bg-gradient-to-br from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 rounded-xl text-white shadow-lg shadow-blue-500/20 transition-all active:scale-95">
+          <FileText className="w-6 h-6" />
+          <span className="text-xs font-medium">DRE</span>
+        </button>
 
-        <Button className="h-20 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white">
-          <div className="text-center">
-            <BarChart3 className="w-6 h-6 mx-auto mb-1" />
-            <div className="text-sm font-semibold">Fluxo de Caixa</div>
-            <div className="text-xs opacity-90">Movimentações</div>
-          </div>
-        </Button>
+        <button className="flex flex-col items-center justify-center gap-2 p-4 bg-gradient-to-br from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 rounded-xl text-white shadow-lg shadow-emerald-500/20 transition-all active:scale-95">
+          <BarChart3 className="w-6 h-6" />
+          <span className="text-xs font-medium">Fluxo</span>
+        </button>
 
-        <Button className="h-20 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white">
-          <div className="text-center">
-            <Calculator className="w-6 h-6 mx-auto mb-1" />
-            <div className="text-sm font-semibold">Impostos</div>
-            <div className="text-xs opacity-90">Tributos</div>
-          </div>
-        </Button>
+        <button className="flex flex-col items-center justify-center gap-2 p-4 bg-gradient-to-br from-purple-500 to-violet-600 hover:from-purple-400 hover:to-violet-500 rounded-xl text-white shadow-lg shadow-purple-500/20 transition-all active:scale-95">
+          <Calculator className="w-6 h-6" />
+          <span className="text-xs font-medium">Impostos</span>
+        </button>
 
-        <Button className="h-20 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white">
-          <div className="text-center">
-            <Users className="w-6 h-6 mx-auto mb-1" />
-            <div className="text-sm font-semibold">Folha</div>
-            <div className="text-xs opacity-90">Pagamento</div>
-          </div>
-        </Button>
+        <button className="flex flex-col items-center justify-center gap-2 p-4 bg-gradient-to-br from-orange-500 to-amber-600 hover:from-orange-400 hover:to-amber-500 rounded-xl text-white shadow-lg shadow-orange-500/20 transition-all active:scale-95">
+          <Users className="w-6 h-6" />
+          <span className="text-xs font-medium">Folha</span>
+        </button>
       </div>
 
       {/* Reports List */}
-      <Card className="bg-cinema-dark border-cinema-gray-light">
-        <CardHeader>
-          <CardTitle className="text-white">Relatórios Disponíveis</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {mockReports.map((report) => (
-              <div key={report.id} className="flex items-center justify-between p-4 bg-cinema-dark-lighter rounded-lg border border-cinema-gray-light/50">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-cinema-yellow/20 rounded-lg">
-                    <FileText className="w-5 h-5 text-cinema-yellow" />
-                  </div>
-                  <div>
-                    <h4 className="text-white font-medium">{report.name}</h4>
-                    <p className="text-gray-400 text-sm">{report.period} • {report.type}</p>
-                    <p className="text-gray-500 text-xs">
-                      Gerado em: {new Date(report.generatedAt).toLocaleString('pt-BR')}
-                    </p>
-                  </div>
+      <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+        <h4 className="text-white font-medium text-sm mb-3">Relatórios Disponíveis</h4>
+        <div className="space-y-2">
+          {mockReports.map((report) => (
+            <div key={report.id} className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-xl border border-zinc-700/50 hover:border-teal-500/30 transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-teal-500/20 rounded-lg flex items-center justify-center">
+                  <FileText className="w-4 h-4 text-teal-400" />
                 </div>
-                <div className="flex items-center space-x-3">
-                  <span className={`px-2 py-1 rounded-full text-xs ${
-                    report.status === "ready" ? "text-green-400 bg-green-400/20" :
-                    report.status === "generating" ? "text-yellow-400 bg-yellow-400/20" :
-                    "text-red-400 bg-red-400/20"
-                  }`}>
-                    {report.status === "ready" ? "Pronto" :
-                     report.status === "generating" ? "Gerando..." : "Erro"}
-                  </span>
-                  {report.status === "ready" && report.downloadUrl && (
-                    <Button size="sm" className="bg-cinema-yellow text-cinema-dark">
-                      <Download className="w-3 h-3 mr-1" />
-                      Download
-                    </Button>
-                  )}
-                  {report.status === "generating" && (
-                    <div className="animate-spin">
-                      <RefreshCw className="w-4 h-4 text-yellow-400" />
-                    </div>
-                  )}
+                <div>
+                  <h4 className="text-white font-medium text-sm">{report.name}</h4>
+                  <p className="text-zinc-500 text-xs">{report.period}</p>
                 </div>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              <div className="flex items-center gap-2">
+                <span className={`px-2 py-0.5 rounded-full text-[10px] ${
+                  report.status === "ready" ? "text-emerald-400 bg-emerald-500/20" :
+                  report.status === "generating" ? "text-amber-400 bg-amber-500/20" :
+                  "text-red-400 bg-red-500/20"
+                }`}>
+                  {report.status === "ready" ? "Pronto" :
+                   report.status === "generating" ? "Gerando" : "Erro"}
+                </span>
+                {report.status === "ready" && (
+                  <button className="p-1.5 bg-teal-500/20 rounded-lg hover:bg-teal-500/30 transition-colors">
+                    <Download className="w-3 h-3 text-teal-400" />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };

@@ -24,7 +24,7 @@ export default function HeaderNew() {
   const location = useLocation();
 
   return (
-    <header className="bg-cinema-dark-lighter border-b border-cinema-gray sticky top-0 z-40" data-edit-id="header.bar">
+    <header className="bg-cinema-dark-lighter border-b border-cinema-gray sticky top-0 z-[100]" data-edit-id="header.bar">
       <div className="container mx-auto px-4" data-edit-id="header.container">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}

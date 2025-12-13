@@ -36,6 +36,11 @@ interface DadosFatura {
   naturezaOperacao: string;
   enderecoCobranca: string;
   observacoes: string;
+  // Campos específicos para locadora de cinema
+  projeto?: string;
+  direcao?: string;
+  producao?: string;
+  periodoLocacao?: string;
 }
 
 interface FaturaLocacaoProps {
@@ -564,4 +569,241 @@ export function FaturaLocacao({ clienteInicial, itensIniciais, onSave }: FaturaL
 }
 
 export default FaturaLocacao;
+
+// Função para gerar fatura diretamente de um pedido
+export function gerarFaturaPDF(pedido: {
+  id: string;
+  orderNumber: string;
+  cliente: {
+    nome: string;
+    cnpjCpf?: string;
+    endereco?: string;
+    bairro?: string;
+    cep?: string;
+    cidade?: string;
+    uf?: string;
+    telefone?: string;
+  };
+  itens: Array<{
+    nome: string;
+    quantidade: number;
+    valorUnitario: number;
+  }>;
+  valorTotal: number;
+  dataVencimento: string;
+  projeto?: string;
+  direcao?: string;
+  producao?: string;
+  periodoLocacao?: string;
+  observacoes?: string;
+}, empresaConfig?: {
+  nome?: string;
+  cnpj?: string;
+  inscEstadual?: string;
+  inscMunicipal?: string;
+  endereco?: string;
+  telefone?: string;
+  logo?: string;
+}) {
+  // Dados da empresa (padrão ou configurado)
+  const empresa = {
+    nome: empresaConfig?.nome || "Bil's Cinema e Vídeo",
+    cnpj: empresaConfig?.cnpj || "13.250.869/0001-36",
+    inscEstadual: empresaConfig?.inscEstadual || "",
+    inscMunicipal: empresaConfig?.inscMunicipal || "282.440/001-8",
+    endereco: empresaConfig?.endereco || "Belo Horizonte, MG",
+    telefone: empresaConfig?.telefone || "(31) 99999-9999",
+    logo: empresaConfig?.logo || "",
+  };
+
+  // Gerar número da fatura
+  const ultimoNumero = localStorage.getItem('ultimaFaturaNumero') || '3723';
+  const novoNumero = (parseInt(ultimoNumero) + 1).toString().padStart(6, '0');
+  localStorage.setItem('ultimaFaturaNumero', novoNumero);
+
+  const dataEmissao = new Date().toLocaleDateString('pt-BR');
+  const dataVenc = pedido.dataVencimento ? new Date(pedido.dataVencimento).toLocaleDateString('pt-BR') : '';
+
+  // Montar observações com projeto, direção, produção
+  let observacoes = '';
+  if (pedido.projeto) observacoes += `Projeto: ${pedido.projeto}\n`;
+  if (pedido.direcao) observacoes += `Direção: ${pedido.direcao}\n`;
+  if (pedido.producao) observacoes += `Produção: ${pedido.producao}\n`;
+  if (pedido.periodoLocacao) observacoes += `Período: ${pedido.periodoLocacao}\n`;
+  if (pedido.observacoes) observacoes += `\n${pedido.observacoes}`;
+
+  const formatarMoeda = (valor: number) => valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+  const janelaImpressao = window.open('', '_blank');
+  if (!janelaImpressao) {
+    alert('Popup bloqueado! Permita popups para gerar o PDF.');
+    return;
+  }
+
+  janelaImpressao.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Fatura de Locação Nº ${novoNumero}</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; font-size: 11px; padding: 20px; background: #fff; }
+        .fatura { border: 2px solid #000; max-width: 800px; margin: 0 auto; background: #fff; }
+        .header { display: flex; border-bottom: 2px solid #000; }
+        .logo-area { width: 120px; padding: 10px; border-right: 2px solid #000; display: flex; align-items: center; justify-content: center; background: #f5f5f5; }
+        .logo-area img { max-width: 100px; max-height: 80px; }
+        .logo-placeholder { width: 80px; height: 60px; border: 1px dashed #999; display: flex; align-items: center; justify-content: center; color: #999; font-size: 10px; }
+        .titulo-area { flex: 1; }
+        .titulo { background: #333; color: #fff; padding: 10px; text-align: center; font-weight: bold; font-size: 16px; }
+        .subtitulo { padding: 5px; text-align: center; font-size: 11px; border-bottom: 1px solid #000; background: #f0f0f0; }
+        .dados-empresa { display: flex; border-bottom: 1px solid #000; }
+        .dados-empresa > div { flex: 1; padding: 8px; border-right: 1px solid #000; }
+        .dados-empresa > div:last-child { border-right: none; }
+        .row { display: flex; border-bottom: 1px solid #000; }
+        .row > div { padding: 8px; border-right: 1px solid #000; }
+        .row > div:last-child { border-right: none; }
+        .label { font-weight: bold; font-size: 9px; color: #666; text-transform: uppercase; }
+        .value { font-size: 12px; min-height: 18px; margin-top: 2px; }
+        .col-2 { width: 16.66%; }
+        .col-3 { width: 25%; }
+        .col-4 { width: 33.33%; }
+        .col-6 { width: 50%; }
+        .col-8 { width: 66.66%; }
+        .col-12 { width: 100%; }
+        .section-title { background: #333; color: #fff; padding: 8px; font-weight: bold; font-size: 12px; }
+        .items-table { width: 100%; border-collapse: collapse; }
+        .items-table th { background: #f0f0f0; padding: 8px; border: 1px solid #000; font-size: 10px; text-transform: uppercase; }
+        .items-table td { padding: 8px; border: 1px solid #000; font-size: 11px; }
+        .items-table .valor { text-align: right; }
+        .items-table tr:nth-child(even) { background: #fafafa; }
+        .observacoes { min-height: 100px; padding: 10px; white-space: pre-line; line-height: 1.5; }
+        .total-area { background: #333; color: #fff; padding: 15px; text-align: right; font-size: 18px; font-weight: bold; }
+        .rodape { display: flex; border-top: 2px solid #000; }
+        .rodape-left { width: 35%; padding: 15px; border-right: 2px solid #000; background: #f5f5f5; }
+        .rodape-right { flex: 1; padding: 15px; font-size: 10px; }
+        .numero-fatura { font-size: 24px; font-weight: bold; color: #333; margin-top: 10px; }
+        .assinatura { margin-top: 40px; border-top: 1px solid #000; padding-top: 5px; text-align: center; }
+        .assinatura-campos { display: flex; margin-top: 30px; gap: 20px; }
+        .assinatura-campos > div { flex: 1; text-align: center; }
+        @media print {
+          body { padding: 0; }
+          .fatura { border: 1px solid #000; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="fatura">
+        <!-- Cabeçalho -->
+        <div class="header">
+          <div class="logo-area">
+            ${empresa.logo ? `<img src="${empresa.logo}" alt="Logo" />` : `<div class="logo-placeholder">LOGO</div>`}
+          </div>
+          <div class="titulo-area">
+            <div class="titulo">FATURA DE LOCAÇÃO</div>
+            <div class="subtitulo">1ª VIA CLIENTE</div>
+            <div class="dados-empresa">
+              <div><span class="label">Empresa</span><br/><span class="value">${empresa.nome}</span></div>
+              <div><span class="label">CNPJ</span><br/><span class="value">${empresa.cnpj}</span></div>
+              <div><span class="label">Insc. Municipal</span><br/><span class="value">${empresa.inscMunicipal}</span></div>
+            </div>
+            <div class="row">
+              <div class="col-6"><span class="label">Natureza da Operação</span><br/><span class="value">LOCAÇÃO DE EQUIPAMENTOS</span></div>
+              <div class="col-3"><span class="label">Data Emissão</span><br/><span class="value">${dataEmissao}</span></div>
+              <div class="col-3"><span class="label">Nº Pedido</span><br/><span class="value">${pedido.orderNumber}</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dados do Cliente -->
+        <div class="section-title">DADOS DO CLIENTE</div>
+        <div class="row">
+          <div class="col-8"><span class="label">Nome / Razão Social</span><br/><span class="value">${pedido.cliente.nome}</span></div>
+          <div class="col-4"><span class="label">CNPJ / CPF</span><br/><span class="value">${pedido.cliente.cnpjCpf || '-'}</span></div>
+        </div>
+        <div class="row">
+          <div class="col-6"><span class="label">Endereço</span><br/><span class="value">${pedido.cliente.endereco || '-'}</span></div>
+          <div class="col-3"><span class="label">Bairro</span><br/><span class="value">${pedido.cliente.bairro || '-'}</span></div>
+          <div class="col-3"><span class="label">Telefone</span><br/><span class="value">${pedido.cliente.telefone || '-'}</span></div>
+        </div>
+        <div class="row">
+          <div class="col-3"><span class="label">CEP</span><br/><span class="value">${pedido.cliente.cep || '-'}</span></div>
+          <div class="col-6"><span class="label">Cidade</span><br/><span class="value">${pedido.cliente.cidade || '-'}</span></div>
+          <div class="col-3"><span class="label">UF</span><br/><span class="value">${pedido.cliente.uf || 'MG'}</span></div>
+        </div>
+
+        <!-- Dados da Fatura -->
+        <div class="row" style="background: #f5f5f5;">
+          <div class="col-4"><span class="label">Número da Fatura</span><br/><span class="value" style="font-size: 16px; font-weight: bold;">${novoNumero}</span></div>
+          <div class="col-4"><span class="label">Data Vencimento</span><br/><span class="value" style="font-size: 14px; font-weight: bold; color: #c00;">${dataVenc}</span></div>
+          <div class="col-4"><span class="label">Valor Total</span><br/><span class="value" style="font-size: 16px; font-weight: bold; color: #060;">${formatarMoeda(pedido.valorTotal)}</span></div>
+        </div>
+
+        <!-- Itens -->
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th style="width: 55%">Descrição do Equipamento</th>
+              <th style="width: 10%">Qtd</th>
+              <th style="width: 17.5%">Valor Unitário</th>
+              <th style="width: 17.5%">Valor Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${pedido.itens.map(item => `
+              <tr>
+                <td>${item.nome}</td>
+                <td class="valor">${item.quantidade}</td>
+                <td class="valor">${formatarMoeda(item.valorUnitario)}</td>
+                <td class="valor">${formatarMoeda(item.quantidade * item.valorUnitario)}</td>
+              </tr>
+            `).join('')}
+            ${Array(Math.max(0, 6 - pedido.itens.length)).fill('<tr><td>&nbsp;</td><td></td><td></td><td></td></tr>').join('')}
+          </tbody>
+        </table>
+
+        <!-- Observações e Total -->
+        <div class="row">
+          <div class="col-8">
+            <span class="label">Observações</span>
+            <div class="observacoes">${observacoes || 'Sem observações'}</div>
+          </div>
+          <div class="col-4" style="display: flex; flex-direction: column;">
+            <span class="label">Valor Total da Locação</span>
+            <div class="total-area" style="flex: 1; display: flex; align-items: center; justify-content: center;">
+              ${formatarMoeda(pedido.valorTotal)}
+            </div>
+          </div>
+        </div>
+
+        <!-- Rodapé -->
+        <div class="rodape">
+          <div class="rodape-left">
+            <span class="label">FATURA DE LOCAÇÃO Nº</span>
+            <div class="numero-fatura">${novoNumero}</div>
+          </div>
+          <div class="rodape-right">
+            <p>Reconheço(emos) a exatidão desta FATURA DE LOCAÇÃO, na importância acima, que pagarei(emos) à <strong>${empresa.nome}</strong>, ou à sua ordem, na praça e vencimento indicados.</p>
+            <div class="assinatura-campos">
+              <div>
+                <div class="assinatura"></div>
+                <span class="label">Data do Recebimento</span>
+              </div>
+              <div>
+                <div class="assinatura"></div>
+                <span class="label">Identificação e Assinatura</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <script>
+        window.onload = function() { 
+          setTimeout(function() { window.print(); }, 500);
+        };
+      </script>
+    </body>
+    </html>
+  `);
+  janelaImpressao.document.close();
+}
 

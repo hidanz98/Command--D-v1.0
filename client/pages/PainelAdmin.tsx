@@ -393,33 +393,20 @@ export default function PainelAdmin() {
 
   // Configuração das abas responsivas
   const adminTabs = [
-    // Abas principais (sempre visíveis)
-    { id: "Dashboard", name: "Dashboard", icon: LayoutDashboard, priority: 1, mobile: true, desktop: true },
+    // Abas principais
+    { id: "Dashboard", name: "Início", icon: LayoutDashboard, priority: 1, mobile: true, desktop: true },
     { id: "Pedidos", name: "Pedidos", icon: Package, priority: 2, mobile: true, desktop: true },
-    
-    // Abas de Gestão
     { id: "Estoque", name: "Estoque", icon: Package, priority: 3, mobile: true, desktop: true },
     { id: "Categorias", name: "Categorias", icon: Tag, priority: 4, mobile: true, desktop: true },
     { id: "Clientes", name: "Clientes", icon: Users, priority: 5, mobile: true, desktop: true },
     { id: "Aprovacoes", name: "Aprovações", icon: CheckCircle, priority: 6, mobile: true, desktop: true },
-    { id: "Documentos", name: "Documentos", icon: FileText, priority: 7, mobile: true, desktop: true },
     
-    // Abas financeiras
-    { id: "Financeiro", name: "Financeiro", icon: DollarSign, priority: 8, mobile: true, desktop: true },
-    { id: "Importar", name: "Importar", icon: Upload, priority: 9, mobile: true, desktop: true },
+    // Financeiro e Documentos
+    { id: "Financeiro", name: "Financeiro", icon: DollarSign, priority: 7, mobile: true, desktop: true },
+    { id: "Documentos", name: "Documentos", icon: FileText, priority: 8, mobile: true, desktop: true },
     
-    // Abas de E-commerce
-    { id: "ecommerce", name: "E-commerce", icon: ShoppingCart, priority: 10, mobile: true, desktop: true },
-    { id: "area-cliente", name: "Área Cliente", icon: User, priority: 11, mobile: true, desktop: true },
-    
-    // Abas avançadas
-    { id: "Multi-Tenant", name: "Multi-Tenant", icon: Building, priority: 12, mobile: true, desktop: true },
-    { id: "Templates", name: "Templates", icon: FileText, priority: 13, mobile: true, desktop: true },
-    { id: "auto-ponto", name: "Auto Ponto", icon: Clock, priority: 14, mobile: true, desktop: true },
-    { id: "funcionarios", name: "Funcionários", icon: Users, priority: 15, mobile: true, desktop: true },
-    
-    // Abas de configura��o (sempre no final)
-    { id: "configuracoes", name: "Configurações", icon: Settings, priority: 16, mobile: true, desktop: true },
+    // Configurações
+    { id: "configuracoes", name: "Configurações", icon: Settings, priority: 9, mobile: true, desktop: true },
   ];
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
@@ -1827,22 +1814,31 @@ export default function PainelAdmin() {
           />
         )}
 
-        {/* Mobile Menu Drawer */}
-        <div className={`md:hidden fixed top-0 left-0 h-full w-72 bg-cinema-gray border-r border-cinema-gray-light z-50 transform transition-transform duration-300 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-          <div className="p-4 border-b border-cinema-gray-light flex justify-between items-center">
-            <h1 className="text-lg font-bold text-cinema-yellow">
-              Painel da Locadora
-            </h1>
+        {/* Mobile Menu Drawer - Design melhorado */}
+        <div className={`md:hidden fixed top-0 left-0 h-full w-72 bg-zinc-900 border-r border-zinc-800 z-50 transform transition-transform duration-300 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          {/* Header do Menu */}
+          <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/95 backdrop-blur-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center">
+                <span className="font-black text-black text-lg">B</span>
+              </div>
+              <div>
+                <h1 className="text-base font-bold text-white">Bil's Cinema</h1>
+                <p className="text-xs text-zinc-500">Painel Admin</p>
+              </div>
+            </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setMobileMenuOpen(false)}
-              className="text-gray-400 hover:text-white"
+              className="text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-full w-8 h-8 p-0"
             >
               <X className="w-5 h-5" />
             </Button>
           </div>
-          <div className="p-4 overflow-y-auto h-[calc(100vh-80px)]">
+          
+          {/* Lista de Tabs - sem scrollbar visível */}
+          <div className="p-3 overflow-y-auto h-[calc(100vh-80px)] scrollbar-none" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             <ResponsiveSidebarTabs
               tabs={adminTabs}
               activeTab={activeTab}
@@ -1852,13 +1848,23 @@ export default function PainelAdmin() {
         </div>
 
         <div className="flex h-screen">
-          {/* Sidebar - Hidden on mobile, visible on md+ */}
-          <aside className="hidden md:flex w-64 bg-cinema-gray border-r border-cinema-gray-light h-screen sticky top-0 flex-col flex-shrink-0" data-edit-id="sidebar.container">
-            <div className="p-6 flex-1 overflow-y-auto">
-              <h1 className="text-xl font-bold text-cinema-yellow mb-8" data-edit-id="sidebar.title">
-                Painel da Locadora
-              </h1>
+          {/* Sidebar Desktop - Design melhorado */}
+          <aside className="hidden md:flex w-64 bg-zinc-900 border-r border-zinc-800 h-screen sticky top-0 flex-col flex-shrink-0" data-edit-id="sidebar.container">
+            {/* Header da Sidebar */}
+            <div className="p-5 border-b border-zinc-800">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/20">
+                  <span className="font-black text-black text-xl">B</span>
+                </div>
+                <div>
+                  <h1 className="text-lg font-bold text-white" data-edit-id="sidebar.title">Bil's Cinema</h1>
+                  <p className="text-xs text-zinc-500">Painel Administrativo</p>
+                </div>
+              </div>
+            </div>
 
+            {/* Tabs */}
+            <div className="p-4 flex-1 overflow-y-auto scrollbar-none" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
               <ResponsiveSidebarTabs
                 tabs={adminTabs}
                 activeTab={activeTab}
@@ -1867,154 +1873,204 @@ export default function PainelAdmin() {
             </div>
             
             {/* Footer da Sidebar */}
-            <div className="bg-cinema-gray border-t border-cinema-gray-light p-4 flex-shrink-0">
-                <div className="text-xs text-gray-400 text-center" data-edit-id="sidebar.footer">
-                  Sistema Command-D
-                </div>
+            <div className="bg-zinc-900 border-t border-zinc-800 p-4 flex-shrink-0">
+              <div className="text-xs text-zinc-500 text-center" data-edit-id="sidebar.footer">
+                © 2025 Bil's Cinema
               </div>
+            </div>
           </aside>
 
           {/* Main Content */}
-          <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-cinema-yellow scrollbar-track-cinema-dark relative z-10">
-            {/* Mobile Header with Menu Button */}
-            <div className="md:hidden sticky top-0 z-30 bg-cinema-dark border-b border-cinema-gray-light p-4 flex items-center justify-between">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden bg-zinc-950 relative z-10" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {/* Mobile Header - Design melhorado */}
+            <div className="md:hidden sticky top-0 z-30 bg-zinc-900/95 backdrop-blur-sm border-b border-zinc-800 p-3 flex items-center justify-between">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setMobileMenuOpen(true)}
-                className="text-cinema-yellow flex items-center gap-2"
+                className="text-amber-400 hover:text-amber-300 hover:bg-zinc-800 flex items-center gap-2 rounded-lg"
               >
                 <Menu className="w-5 h-5" />
-                <span>Menu</span>
+                <span className="font-medium">Menu</span>
               </Button>
-              <span className="text-cinema-yellow font-semibold text-sm">{adminTabs.find(t => t.id === activeTab)?.name || 'Dashboard'}</span>
+              <span className="text-white font-semibold text-sm">{adminTabs.find(t => t.id === activeTab)?.name || 'Dashboard'}</span>
               <div className="w-16"></div>
             </div>
             
             <div className="p-4 md:p-8 min-h-full">
-            {/* Dashboard Tab */}
+            {/* Dashboard/Início Tab - Design Moderno */}
             {activeTab === "Dashboard" && (
-              <div className="space-y-8">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-3xl font-bold text-white" data-edit-id="Dashboard.title">Dashboard</h2>
-                  <div className="flex items-center space-x-2">
+              <div className="space-y-6">
+                {/* Header - Escondido no mobile (já tem no topo) */}
+                <div className="hidden md:flex justify-between items-center">
+                  <h2 className="text-3xl font-bold text-white">Início</h2>
+                  <div className="flex items-center gap-2">
                     <Button
                       onClick={toggleEditor}
                       variant={editorState.isActive ? "default" : "outline"}
                       size="sm"
-                      className={`transition-all duration-200 ${
-                        editorState.isActive 
-                          ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg" 
-                          : "border-blue-400 text-blue-400 hover:bg-blue-500 hover:text-white"
-                      }`}
-                      data-edit-id="editor.toggle-button"
+                      className={editorState.isActive 
+                        ? "bg-gradient-to-r from-amber-400 to-orange-500 text-black" 
+                        : "border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                      }
                     >
-                      <Edit3 className="w-4 h-4 mr-1" data-edit-id="editor.toggle-icon" />
-                      <span data-edit-id="editor.toggle-text">{editorState.isActive ? "Editor Ativo" : "Editor"}</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="text-cinema-yellow border-cinema-yellow"
-                      onClick={() => handleTabChange("Importar")}
-                      data-edit-id="header.import-button"
-                    >
-                      <Upload className="w-4 h-4 mr-2" data-edit-id="header.import-icon" />
-                      <span data-edit-id="header.import-text">Importar Dados</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="text-cinema-yellow border-cinema-yellow"
-                      data-edit-id="header.today-button"
-                    >
-                      <Calendar className="w-4 h-4 mr-2" data-edit-id="header.today-icon" />
-                      <span data-edit-id="header.today-text">Hoje</span>
+                      <Edit3 className="w-4 h-4 mr-1" />
+                      {editorState.isActive ? "Editor Ativo" : "Editor"}
                     </Button>
                   </div>
                 </div>
 
-                {/* Metrics Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <Card className="bg-cinema-gray border-cinema-gray-light">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-gray-400 text-sm" data-edit-id="Dashboard.equipment-label">
-                            Equipamentos Disponíveis
-                          </p>
-                          <p className="text-3xl font-bold text-white" data-edit-id="Pedidos.title">
-                            {dashboardMetrics.equipmentAvailable}
-                          </p>
-                        </div>
-                        <div className="p-3 bg-cinema-yellow/20 rounded-lg" data-edit-id="Dashboard.equipment-icon-container">
-                          <Package className="w-6 h-6 text-cinema-yellow" data-edit-id="Dashboard.equipment-icon" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="bg-cinema-gray border-cinema-gray-light">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-gray-400 text-sm" data-edit-id="Dashboard.orders-label">
-                            Pedidos Ativos
-                          </p>
-                          <p className="text-3xl font-bold text-white" data-edit-id="Pedidos.title">
-                            {dashboardMetrics.activeOrders}
-                          </p>
-                        </div>
-                        <div className="p-3 bg-green-400/20 rounded-lg" data-edit-id="Dashboard.orders-icon-container">
-                          <TrendingUp className="w-6 h-6 text-green-400" data-edit-id="Dashboard.orders-icon" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="bg-cinema-gray border-cinema-gray-light" data-edit-id="Dashboard.revenue-card">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-gray-400 text-sm" data-edit-id="Dashboard.revenue-label">
-                            Faturamento do Mês
-                          </p>
-                          <p className="text-3xl font-bold text-white" data-edit-id="Pedidos.title">
-                            R${" "}
-                            {dashboardMetrics.monthlyRevenue.toLocaleString()}
-                          </p>
-                        </div>
-                        <div className="p-3 bg-green-400/20 rounded-lg">
-                          <DollarSign className="w-6 h-6 text-green-400" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="bg-cinema-gray border-cinema-gray-light" data-edit-id="Dashboard.alerts-card">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-gray-400 text-sm" data-edit-id="Dashboard.alerts-label">
-                            Alertas de Manutenção
-                          </p>
-                          <p className="text-3xl font-bold text-white" data-edit-id="Pedidos.title">
-                            {dashboardMetrics.maintenanceAlerts}
-                          </p>
-                        </div>
-                        <div className="p-3 bg-red-400/20 rounded-lg">
-                          <AlertTriangle className="w-6 h-6 text-red-400" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                {/* Saudação Mobile */}
+                <div className="md:hidden">
+                  <h1 className="text-2xl font-bold text-white">Olá! 👋</h1>
+                  <p className="text-zinc-400 text-sm">Aqui está o resumo de hoje</p>
                 </div>
 
-                {/* Charts and Recent Activity */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {/* Recent Orders */}
-                  <Card className="bg-cinema-gray border-cinema-gray-light" data-edit-id="Dashboard.recent-orders-card">
+                {/* Cards de Métricas - Design Premium */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
+                  {/* Equipamentos */}
+                  <div className="bg-gradient-to-br from-amber-500/10 to-orange-500/5 border border-amber-500/20 rounded-2xl p-4 md:p-6">
+                    <div className="flex flex-col gap-3">
+                      <div className="w-10 h-10 bg-amber-500/20 rounded-xl flex items-center justify-center">
+                        <Package className="w-5 h-5 text-amber-400" />
+                      </div>
+                      <div>
+                        <p className="text-zinc-400 text-xs md:text-sm">Equipamentos</p>
+                        <p className="text-2xl md:text-3xl font-bold text-white">{dashboardMetrics.equipmentAvailable}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Pedidos Ativos */}
+                  <div className="bg-gradient-to-br from-emerald-500/10 to-green-500/5 border border-emerald-500/20 rounded-2xl p-4 md:p-6">
+                    <div className="flex flex-col gap-3">
+                      <div className="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center">
+                        <TrendingUp className="w-5 h-5 text-emerald-400" />
+                      </div>
+                      <div>
+                        <p className="text-zinc-400 text-xs md:text-sm">Pedidos Ativos</p>
+                        <p className="text-2xl md:text-3xl font-bold text-white">{dashboardMetrics.activeOrders}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Faturamento */}
+                  <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/5 border border-blue-500/20 rounded-2xl p-4 md:p-6">
+                    <div className="flex flex-col gap-3">
+                      <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                        <DollarSign className="w-5 h-5 text-blue-400" />
+                      </div>
+                      <div>
+                        <p className="text-zinc-400 text-xs md:text-sm">Faturamento</p>
+                        <p className="text-xl md:text-3xl font-bold text-white">R$ {dashboardMetrics.monthlyRevenue.toLocaleString()}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Alertas */}
+                  <div className="bg-gradient-to-br from-red-500/10 to-rose-500/5 border border-red-500/20 rounded-2xl p-4 md:p-6">
+                    <div className="flex flex-col gap-3">
+                      <div className="w-10 h-10 bg-red-500/20 rounded-xl flex items-center justify-center">
+                        <AlertTriangle className="w-5 h-5 text-red-400" />
+                      </div>
+                      <div>
+                        <p className="text-zinc-400 text-xs md:text-sm">Alertas</p>
+                        <p className="text-2xl md:text-3xl font-bold text-white">{dashboardMetrics.maintenanceAlerts}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ações Rápidas Mobile */}
+                <div className="md:hidden grid grid-cols-3 gap-3">
+                  <button 
+                    onClick={() => handleTabChange("Pedidos")}
+                    className="flex flex-col items-center gap-2 p-4 bg-zinc-900 border border-zinc-800 rounded-2xl hover:bg-zinc-800 transition"
+                  >
+                    <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center">
+                      <Package className="w-6 h-6 text-amber-400" />
+                    </div>
+                    <span className="text-xs text-zinc-300">Pedidos</span>
+                  </button>
+                  <button 
+                    onClick={() => handleTabChange("Estoque")}
+                    className="flex flex-col items-center gap-2 p-4 bg-zinc-900 border border-zinc-800 rounded-2xl hover:bg-zinc-800 transition"
+                  >
+                    <div className="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center">
+                      <Package className="w-6 h-6 text-emerald-400" />
+                    </div>
+                    <span className="text-xs text-zinc-300">Estoque</span>
+                  </button>
+                  <button 
+                    onClick={() => handleTabChange("Financeiro")}
+                    className="flex flex-col items-center gap-2 p-4 bg-zinc-900 border border-zinc-800 rounded-2xl hover:bg-zinc-800 transition"
+                  >
+                    <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                      <DollarSign className="w-6 h-6 text-blue-400" />
+                    </div>
+                    <span className="text-xs text-zinc-300">Financeiro</span>
+                  </button>
+                </div>
+
+                {/* Pedidos Recentes - Design Moderno */}
+                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                  <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
+                    <h3 className="text-lg font-bold text-white">Pedidos Recentes</h3>
+                    <button 
+                      onClick={() => handleTabChange("Pedidos")}
+                      className="text-amber-400 text-sm hover:underline"
+                    >
+                      Ver todos
+                    </button>
+                  </div>
+                  <div className="divide-y divide-zinc-800">
+                      {allOrders.slice(0, 3).map((order) => (
+                        <div
+                          key={order.id}
+                          className="p-4 hover:bg-zinc-800/50 transition cursor-pointer"
+                          onClick={() => handleTabChange("Pedidos")}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                                order.status === 'em Locação' ? 'bg-emerald-500/20' :
+                                order.status === 'Concluído' ? 'bg-blue-500/20' :
+                                'bg-amber-500/20'
+                              }`}>
+                                <Package className={`w-5 h-5 ${
+                                  order.status === 'em Locação' ? 'text-emerald-400' :
+                                  order.status === 'Concluído' ? 'text-blue-400' :
+                                  'text-amber-400'
+                                }`} />
+                              </div>
+                              <div>
+                                <p className="text-white font-medium text-sm">{order.client}</p>
+                                <p className="text-zinc-500 text-xs">#{order.id} • {order.items.length} item(s)</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-white font-semibold text-sm">R$ {order.total.toLocaleString()}</p>
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                order.status === 'em Locação' ? 'bg-emerald-500/20 text-emerald-400' :
+                                order.status === 'Concluído' ? 'bg-blue-500/20 text-blue-400' :
+                                'bg-amber-500/20 text-amber-400'
+                              }`}>
+                                {order.status}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+                {/* Charts and Recent Activity - Desktop */}
+                <div className="hidden md:grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Recent Orders Desktop */}
+                  <Card className="bg-zinc-900 border-zinc-800">
                     <CardHeader>
-                      <CardTitle className="text-white" data-edit-id="Dashboard.recent-orders-title">
-                        Pedidos Recentes
+                      <CardTitle className="text-white">
+                        Todos os Pedidos Recentes
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">

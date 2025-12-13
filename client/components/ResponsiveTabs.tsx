@@ -61,7 +61,7 @@ export const ResponsiveTabs: React.FC<ResponsiveTabsProps> = ({
   );
 };
 
-// Componente para abas em sidebar (mobile)
+// Componente para abas em sidebar - Design moderno
 export const ResponsiveSidebarTabs: React.FC<ResponsiveTabsProps> = ({
   tabs,
   activeTab,
@@ -73,29 +73,28 @@ export const ResponsiveSidebarTabs: React.FC<ResponsiveTabsProps> = ({
   const responsiveTabs = getResponsiveTabs(tabs);
 
   return (
-    <div className={`space-y-2 ${className}`}>
+    <div className={`space-y-1 ${className}`}>
       {responsiveTabs.map((tab) => (
-        <Button
+        <button
           key={tab.id}
-          variant={activeTab === tab.id ? "default" : "ghost"}
           className={`
-            w-full justify-start
+            w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200
             ${activeTab === tab.id
-              ? "bg-cinema-yellow text-cinema-dark"
-              : "text-white hover:text-cinema-yellow"
+              ? "bg-gradient-to-r from-amber-400 to-orange-500 text-black font-semibold shadow-lg shadow-amber-500/20"
+              : "text-zinc-300 hover:bg-zinc-800 hover:text-white"
             }
           `}
           onClick={() => onTabChange(tab.id)}
           data-edit-id={`sidebar.button.${tab.id}`}
         >
-          <tab.icon className="w-4 h-4 mr-2" data-edit-id={`sidebar.icon.${tab.id}`} />
+          <tab.icon className={`w-5 h-5 ${activeTab === tab.id ? 'text-black' : 'text-zinc-400'}`} data-edit-id={`sidebar.icon.${tab.id}`} />
           <span data-edit-id={`sidebar.text.${tab.id}`}>{tab.name}</span>
           {tab.badge && tab.badge > 0 && (
-            <span className={`ml-auto ${tab.badgeColor || 'bg-red-500'} text-white text-xs rounded-full h-4 w-4 flex items-center justify-center`}>
+            <span className={`ml-auto ${tab.badgeColor || 'bg-red-500'} text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium`}>
               {tab.badge}
             </span>
           )}
-        </Button>
+        </button>
       ))}
     </div>
   );
