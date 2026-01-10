@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => ({
       overlay: false, // Disable Vite's error overlay to prevent dev overlay frame errors
     },
     fs: {
-      allow: ["./client", "./shared"],
+      allow: [".", "./client", "./shared"],
       deny: [".env", ".env.*", "*.{crt,pem}", "**/.git/**", "server/**"],
     },
     // Configure SPA fallback for development

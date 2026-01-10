@@ -75,6 +75,7 @@
     "@tanstack/react-query": "^5.90.2",
     "@types/multer": "^2.0.0",
     "@types/nodemailer": "^7.0.3",
+    "@types/ws": "^8.18.1",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^2.4.3",
     "bwip-js": "^4.8.0",
@@ -110,6 +111,7 @@
     "tailwind-merge": "^2.5.4",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^1.1.0",
+    "ws": "^8.19.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -132,7 +134,7 @@
     "tsx": "^4.19.2",
     "typescript": "~5.6.2",
     "vite": "^6.0.1",
-    "vitest": "^2.1.8"
+    "vitest": "^4.0.15"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

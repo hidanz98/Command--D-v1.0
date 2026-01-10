@@ -306,51 +306,8 @@ const MOCK_DEPARTMENTS: Department[] = [
   }
 ];
 
-// Mock data para Contas Bancárias e Pluggy
-const MOCK_BANK_ACCOUNTS: BankAccount[] = [
-  {
-    id: "1",
-    name: "Conta Corrente Principal",
-    bank: "Banco do Brasil",
-    accountNumber: "12345-6",
-    accountType: "checking",
-    balance: 125680.50,
-    currency: "BRL",
-    isActive: true,
-    pluggyConnectionId: "conn_001",
-    lastSync: "2024-01-10T10:30:00Z",
-    createdAt: "2024-01-01T00:00:00Z",
-    updatedAt: "2024-01-10T10:30:00Z"
-  },
-  {
-    id: "2",
-    name: "Conta Poupança",
-    bank: "Caixa Econômica Federal",
-    accountNumber: "54321-0",
-    accountType: "savings",
-    balance: 45000.00,
-    currency: "BRL",
-    isActive: true,
-    pluggyConnectionId: "conn_002",
-    lastSync: "2024-01-10T09:15:00Z",
-    createdAt: "2024-01-01T00:00:00Z",
-    updatedAt: "2024-01-10T09:15:00Z"
-  },
-  {
-    id: "3",
-    name: "Conta Empresarial",
-    bank: "Itaú",
-    accountNumber: "98765-4",
-    accountType: "business",
-    balance: 95000.00,
-    currency: "BRL",
-    isActive: true,
-    pluggyConnectionId: "conn_003",
-    lastSync: "2024-01-10T11:45:00Z",
-    createdAt: "2024-01-01T00:00:00Z",
-    updatedAt: "2024-01-10T11:45:00Z"
-  }
-];
+// Mock data para Contas Bancárias e Pluggy - ZERADO (locadora iniciando)
+const MOCK_BANK_ACCOUNTS: BankAccount[] = [];
 
 const MOCK_PLUGGY_CREDENTIALS: PluggyCredentials = {
   id: "1",
@@ -362,56 +319,57 @@ const MOCK_PLUGGY_CREDENTIALS: PluggyCredentials = {
   updatedAt: "2024-01-01T00:00:00Z"
 };
 
+// Equipe inicial da Bil's Cinema
 const MOCK_EMPLOYEES: Employee[] = [
   {
     id: "1",
-    name: "João Silva Santos",
-    email: "joao.silva@bilscinema.com",
-    phone: "(31) 99999-9999",
-    cpf: "123.456.789-00",
-    rg: "MG-12.345.678",
-    position: "Técnico de Equipamentos Senior",
-    department: "Operações",
-    baseSalary: 4200.0,
-    benefits: 800.0,
-    discounts: 420.0,
-    grossSalary: 5000.0,
-    netSalary: 3780.0,
-    hireDate: "2023-01-15",
+    name: "Felipe Nunes de Andrade",
+    email: "cabecadeefeitocine@gmail.com",
+    phone: "",
+    cpf: "",
+    rg: "",
+    position: "Administrador",
+    department: "Administração",
+    baseSalary: 0,
+    benefits: 0,
+    discounts: 0,
+    grossSalary: 0,
+    netSalary: 0,
+    hireDate: "2025-01-01",
     status: "active",
-    address: "Rua das Flores, 123 - Centro - Belo Horizonte/MG",
-    birthDate: "1985-03-20",
-    workHours: 220,
-    overtime: 20,
-    bankAccount: "Banco do Brasil - 1234-5 / 12345-6",
-    pix: "joao.silva@bilscinema.com",
-    emergencyContact: "Maria Silva - (31) 98888-8888",
-    hasContract: true,
+    address: "",
+    birthDate: "",
+    workHours: 0,
+    overtime: 0,
+    bankAccount: "",
+    pix: "",
+    emergencyContact: "",
+    hasContract: false,
   },
   {
     id: "2",
-    name: "Maria Santos Oliveira",
-    email: "maria.santos@bilscinema.com",
-    phone: "(31) 98888-8888",
-    cpf: "987.654.321-00",
-    rg: "MG-87.654.321",
-    position: "Assistente Financeiro",
-    department: "Financeiro",
-    baseSalary: 3200.0,
-    benefits: 600.0,
-    discounts: 320.0,
-    grossSalary: 3800.0,
-    netSalary: 2880.0,
-    hireDate: "2023-03-10",
+    name: "Otavio Almeida de Souza",
+    email: "otavioalmeida137@gmail.com",
+    phone: "",
+    cpf: "",
+    rg: "",
+    position: "Funcionário",
+    department: "Operações",
+    baseSalary: 0,
+    benefits: 0,
+    discounts: 0,
+    grossSalary: 0,
+    netSalary: 0,
+    hireDate: "2025-01-01",
     status: "active",
-    address: "Av. Contorno, 456 - Funcionários - Belo Horizonte/MG",
-    birthDate: "1990-07-15",
-    workHours: 220,
+    address: "",
+    birthDate: "",
+    workHours: 0,
     overtime: 0,
-    bankAccount: "Caixa Econômica - 0987 / 98765-4",
-    pix: "(31) 98888-8888",
-    emergencyContact: "João Oliveira - (31) 97777-7777",
-    hasContract: true,
+    bankAccount: "",
+    pix: "",
+    emergencyContact: "",
+    hasContract: false,
   },
 ];
 
@@ -606,7 +564,8 @@ const generateMockTransactions = (): Transaction[] => {
   return transactions.sort((a, b) => b.date.localeCompare(a.date));
 };
 
-const MOCK_TRANSACTIONS: Transaction[] = generateMockTransactions();
+// ZERADO - locadora iniciando do zero
+const MOCK_TRANSACTIONS: Transaction[] = [];
 
 const MOCK_COST_CENTERS: CostCenter[] = [
   {

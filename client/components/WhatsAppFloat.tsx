@@ -74,7 +74,7 @@ export default function WhatsAppFloat() {
             </svg>
 
             {/* Pulse Animation */}
-            <div className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-75"></div>
+            <div className="absolute top-[5px] left-[2px] right-0 bottom-0 rounded-full bg-green-500 animate-ping opacity-75"></div>
 
             {/* Notification Badge */}
             {!isOpen && (

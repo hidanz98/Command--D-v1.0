@@ -1,0 +1,105 @@
+{
+  "name": "Bil's Cinema e Vídeo - Locação",
+  "short_name": "Bil's Cinema",
+  "description": "Sistema de locação de equipamentos cinematográficos e audiovisuais",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#F59E0B",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity", "utilities"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Acesso Mobile",
+      "short_name": "Mobile",
+      "description": "Câmera, localização e biometria",
+      "url": "/mobile",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Diagnóstico do Sistema",
+      "short_name": "Diagnóstico",
+      "description": "Monitorar PC e resolver problemas",
+      "url": "/diagnostico",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Novo Pedido",
+      "short_name": "Pedido",
+      "description": "Criar novo pedido de locação",
+      "url": "/pedidos?action=new",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Equipamentos",
+      "short_name": "Equipamentos",
+      "description": "Ver equipamentos disponíveis",
+      "url": "/equipamentos",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Escanear QR Code",
+      "short_name": "Escanear",
+      "description": "Escanear código de equipamento",
+      "url": "/mobile?action=scan",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "share_target": {
+    "action": "/mobile",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "images",
+          "accept": ["image/*"]
+        }
+      ]
+    }
+  },
+  "capture_links": "new-client",
+  "launch_handler": {
+    "client_mode": ["focus-existing", "auto"]
+  },
+  "handle_links": "preferred",
+  "permissions_policy": {
+    "camera": ["self"],
+    "geolocation": ["self"],
+    "microphone": ["self"]
+  }
+}

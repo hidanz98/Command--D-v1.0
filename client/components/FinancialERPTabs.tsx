@@ -62,6 +62,7 @@ import {
   Mail,
   MapPin,
   Briefcase,
+  CreditCard,
 } from "lucide-react";
 
 // Interfaces (same as main file)
@@ -1150,8 +1151,28 @@ export const CashFlowTab: React.FC<Props> = ({
 };
 
 export const EmployeesTab: React.FC<{ employees: Employee[] }> = ({ employees }) => {
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState<Partial<Employee>>({});
+  
   const activeEmployees = employees.filter(e => e.status === "active");
   const totalSalaries = activeEmployees.reduce((sum, e) => sum + e.grossSalary, 0);
+
+  const handleView = (employee: Employee) => {
+    setSelectedEmployee(employee);
+    setShowViewModal(true);
+  };
+
+  const handleEdit = (employee: Employee) => {
+    setSelectedEmployee(employee);
+    setEditForm(employee);
+    setShowEditModal(true);
+  };
+
+  const handleContract = (employee: Employee) => {
+    alert(`📄 Contrato de ${employee.name}\n\nStatus: ${employee.hasContract ? 'Contrato assinado' : 'Sem contrato'}\n\nPara gerar/visualizar contrato completo, acesse a aba Documentos.`);
+  };
 
   return (
     <div className="space-y-4">
@@ -1208,7 +1229,7 @@ export const EmployeesTab: React.FC<{ employees: Employee[] }> = ({ employees })
             <span className="text-zinc-400 text-xs">Média</span>
           </div>
           <p className="text-white font-bold">
-            R$ {((totalSalaries / activeEmployees.length) / 1000).toFixed(1)}k
+            R$ {activeEmployees.length > 0 ? ((totalSalaries / activeEmployees.length) / 1000).toFixed(1) : '0.0'}k
           </p>
         </div>
       </div>
@@ -1264,13 +1285,13 @@ export const EmployeesTab: React.FC<{ employees: Employee[] }> = ({ employees })
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex space-x-2">
-                        <Button size="sm" variant="outline" className="text-cinema-yellow border-cinema-yellow">
+                        <Button size="sm" variant="outline" className="text-cinema-yellow border-cinema-yellow" onClick={() => handleView(employee)}>
                           <Eye className="w-3 h-3" />
                         </Button>
-                        <Button size="sm" variant="outline" className="text-cinema-yellow border-cinema-yellow">
+                        <Button size="sm" variant="outline" className="text-cinema-yellow border-cinema-yellow" onClick={() => handleEdit(employee)}>
                           <Edit className="w-3 h-3" />
                         </Button>
-                        <Button size="sm" variant="outline" className="text-blue-400 border-blue-400">
+                        <Button size="sm" variant="outline" className="text-blue-400 border-blue-400" onClick={() => handleContract(employee)}>
                           <FileText className="w-3 h-3" />
                         </Button>
                       </div>
@@ -1282,6 +1303,581 @@ export const EmployeesTab: React.FC<{ employees: Employee[] }> = ({ employees })
           </div>
         </CardContent>
       </Card>
+
+      {/* Modal Visualizar Funcionário - Completo */}
+      {showViewModal && selectedEmployee && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-cinema-gray border border-cinema-gray-light rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b border-cinema-gray-light flex justify-between items-center sticky top-0 bg-cinema-gray z-10">
+              <h3 className="text-lg font-bold text-white">Detalhes do Funcionário</h3>
+              <Button size="sm" variant="ghost" onClick={() => setShowViewModal(false)}>
+                <X className="w-4 h-4 text-white" />
+              </Button>
+            </div>
+            <div className="p-4 space-y-6">
+              {/* Header com foto e info principal */}
+              <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-cinema-yellow/20 to-transparent rounded-xl border border-cinema-yellow/30">
+                <div className="w-20 h-20 bg-cinema-yellow/30 rounded-full flex items-center justify-center border-2 border-cinema-yellow">
+                  <Users className="w-10 h-10 text-cinema-yellow" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-2xl font-bold text-white">{selectedEmployee.name}</h4>
+                  <p className="text-cinema-yellow font-medium">{selectedEmployee.position}</p>
+                  <p className="text-zinc-400 text-sm">{selectedEmployee.department}</p>
+                </div>
+                <div className="text-right">
+                  <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${
+                    selectedEmployee.status === "active" ? "text-green-400 bg-green-400/20 border border-green-400/30" :
+                    selectedEmployee.status === "vacation" ? "text-yellow-400 bg-yellow-400/20 border border-yellow-400/30" :
+                    "text-red-400 bg-red-400/20 border border-red-400/30"
+                  }`}>
+                    {selectedEmployee.status === "active" ? "✓ Ativo" :
+                     selectedEmployee.status === "vacation" ? "🏖️ Férias" : "✗ Inativo"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Dados Pessoais */}
+              <div>
+                <h5 className="text-cinema-yellow font-semibold mb-3 flex items-center gap-2">
+                  <User className="w-4 h-4" /> Dados Pessoais
+                </h5>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="bg-cinema-dark p-3 rounded-lg">
+                    <p className="text-zinc-500 text-xs mb-1">CPF</p>
+                    <p className="text-white text-sm font-medium">{selectedEmployee.cpf || 'Não informado'}</p>
+                  </div>
+                  <div className="bg-cinema-dark p-3 rounded-lg">
+                    <p className="text-zinc-500 text-xs mb-1">RG</p>
+                    <p className="text-white text-sm font-medium">{selectedEmployee.rg || 'Não informado'}</p>
+                  </div>
+                  <div className="bg-cinema-dark p-3 rounded-lg">
+                    <p className="text-zinc-500 text-xs mb-1">Data Nascimento</p>
+                    <p className="text-white text-sm font-medium">{selectedEmployee.birthDate || 'Não informado'}</p>
+                  </div>
+                  <div className="bg-cinema-dark p-3 rounded-lg">
+                    <p className="text-zinc-500 text-xs mb-1">Data Admissão</p>
+                    <p className="text-white text-sm font-medium">{selectedEmployee.hireDate}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contato */}
+              <div>
+                <h5 className="text-cinema-yellow font-semibold mb-3 flex items-center gap-2">
+                  <Mail className="w-4 h-4" /> Contato
+                </h5>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="bg-cinema-dark p-3 rounded-lg flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                      <Mail className="w-5 h-5 text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-zinc-500 text-xs">Email</p>
+                      <p className="text-white text-sm font-medium">{selectedEmployee.email || '-'}</p>
+                    </div>
+                  </div>
+                  <div className="bg-cinema-dark p-3 rounded-lg flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
+                      <Phone className="w-5 h-5 text-green-400" />
+                    </div>
+                    <div>
+                      <p className="text-zinc-500 text-xs">Telefone/WhatsApp</p>
+                      <p className="text-white text-sm font-medium">{selectedEmployee.phone || 'Não informado'}</p>
+                    </div>
+                  </div>
+                  {selectedEmployee.address && (
+                    <div className="bg-cinema-dark p-3 rounded-lg flex items-center gap-3 md:col-span-2">
+                      <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                        <MapPin className="w-5 h-5 text-purple-400" />
+                      </div>
+                      <div>
+                        <p className="text-zinc-500 text-xs">Endereço</p>
+                        <p className="text-white text-sm font-medium">{selectedEmployee.address}</p>
+                      </div>
+                    </div>
+                  )}
+                  {selectedEmployee.emergencyContact && (
+                    <div className="bg-cinema-dark p-3 rounded-lg flex items-center gap-3 md:col-span-2">
+                      <div className="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center">
+                        <AlertTriangle className="w-5 h-5 text-red-400" />
+                      </div>
+                      <div>
+                        <p className="text-zinc-500 text-xs">Contato de Emergência</p>
+                        <p className="text-white text-sm font-medium">{selectedEmployee.emergencyContact}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Remuneração */}
+              <div>
+                <h5 className="text-cinema-yellow font-semibold mb-3 flex items-center gap-2">
+                  <DollarSign className="w-4 h-4" /> Remuneração
+                </h5>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="bg-gradient-to-br from-emerald-500/20 to-green-600/10 border border-emerald-500/20 p-3 rounded-lg">
+                    <p className="text-zinc-400 text-xs mb-1">Salário Base</p>
+                    <p className="text-emerald-400 text-lg font-bold">R$ {selectedEmployee.baseSalary.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-blue-500/20 to-indigo-600/10 border border-blue-500/20 p-3 rounded-lg">
+                    <p className="text-zinc-400 text-xs mb-1">Benefícios</p>
+                    <p className="text-blue-400 text-lg font-bold">R$ {selectedEmployee.benefits.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-red-500/20 to-orange-600/10 border border-red-500/20 p-3 rounded-lg">
+                    <p className="text-zinc-400 text-xs mb-1">Descontos</p>
+                    <p className="text-red-400 text-lg font-bold">R$ {selectedEmployee.discounts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-cinema-yellow/20 to-amber-600/10 border border-cinema-yellow/20 p-3 rounded-lg">
+                    <p className="text-zinc-400 text-xs mb-1">Líquido</p>
+                    <p className="text-cinema-yellow text-lg font-bold">R$ {selectedEmployee.netSalary.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Jornada de Trabalho */}
+              <div>
+                <h5 className="text-cinema-yellow font-semibold mb-3 flex items-center gap-2">
+                  <Clock className="w-4 h-4" /> Jornada de Trabalho
+                </h5>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <div className="bg-cinema-dark p-3 rounded-lg text-center">
+                    <p className="text-zinc-500 text-xs mb-1">Carga Horária</p>
+                    <p className="text-white text-xl font-bold">{selectedEmployee.workHours || 220}h</p>
+                    <p className="text-zinc-500 text-xs">por mês</p>
+                  </div>
+                  <div className="bg-cinema-dark p-3 rounded-lg text-center">
+                    <p className="text-zinc-500 text-xs mb-1">Horas Extras</p>
+                    <p className="text-amber-400 text-xl font-bold">{selectedEmployee.overtime || 0}h</p>
+                    <p className="text-zinc-500 text-xs">este mês</p>
+                  </div>
+                  <div className="bg-cinema-dark p-3 rounded-lg text-center">
+                    <p className="text-zinc-500 text-xs mb-1">Contrato</p>
+                    <p className={`text-xl font-bold ${selectedEmployee.hasContract ? 'text-green-400' : 'text-zinc-500'}`}>
+                      {selectedEmployee.hasContract ? '✓ Assinado' : '✗ Pendente'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Dados Bancários */}
+              <div>
+                <h5 className="text-cinema-yellow font-semibold mb-3 flex items-center gap-2">
+                  <CreditCard className="w-4 h-4" /> Dados Bancários
+                </h5>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="bg-cinema-dark p-3 rounded-lg">
+                    <p className="text-zinc-500 text-xs mb-1">Banco / Agência / Conta</p>
+                    <p className="text-white text-sm font-medium">{selectedEmployee.bankAccount || 'Não informado'}</p>
+                  </div>
+                  <div className="bg-cinema-dark p-3 rounded-lg">
+                    <p className="text-zinc-500 text-xs mb-1">Chave PIX</p>
+                    <p className="text-white text-sm font-medium">{selectedEmployee.pix || 'Não informado'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="p-4 border-t border-cinema-gray-light flex gap-2 sticky bottom-0 bg-cinema-gray">
+              <Button variant="outline" className="flex-1 border-cinema-gray-light text-white" onClick={() => {
+                setShowViewModal(false);
+                handleEdit(selectedEmployee);
+              }}>
+                <Edit className="w-4 h-4 mr-2" /> Editar
+              </Button>
+              <Button className="flex-1 bg-cinema-yellow text-cinema-dark" onClick={() => setShowViewModal(false)}>
+                Fechar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Editar Funcionário - Completo */}
+      {showEditModal && selectedEmployee && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-cinema-gray border border-cinema-gray-light rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b border-cinema-gray-light flex justify-between items-center sticky top-0 bg-cinema-gray z-10">
+              <h3 className="text-lg font-bold text-white">Editar Funcionário</h3>
+              <Button size="sm" variant="ghost" onClick={() => setShowEditModal(false)}>
+                <X className="w-4 h-4 text-white" />
+              </Button>
+            </div>
+            <div className="p-4 space-y-6">
+              {/* Dados Pessoais */}
+              <div>
+                <h4 className="text-cinema-yellow font-semibold mb-3 flex items-center gap-2">
+                  <Users className="w-4 h-4" /> Dados Pessoais
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-zinc-400 text-xs">Nome Completo *</label>
+                    <input 
+                      type="text" 
+                      value={editForm.name || ''} 
+                      onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                      className="w-full bg-cinema-dark border border-cinema-gray-light rounded-lg px-3 py-2 text-white mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-zinc-400 text-xs">CPF</label>
+                    <input 
+                      type="text" 
+                      value={editForm.cpf || ''} 
+                      onChange={(e) => setEditForm({...editForm, cpf: e.target.value})}
+                      placeholder="000.000.000-00"
+                      className="w-full bg-cinema-dark border border-cinema-gray-light rounded-lg px-3 py-2 text-white mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-zinc-400 text-xs">RG</label>
+                    <input 
+                      type="text" 
+                      value={editForm.rg || ''} 
+                      onChange={(e) => setEditForm({...editForm, rg: e.target.value})}
+                      className="w-full bg-cinema-dark border border-cinema-gray-light rounded-lg px-3 py-2 text-white mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-zinc-400 text-xs">Data de Nascimento</label>
+                    <input 
+                      type="date" 
+                      value={editForm.birthDate || ''} 
+                      onChange={(e) => setEditForm({...editForm, birthDate: e.target.value})}
+                      className="w-full bg-cinema-dark border border-cinema-gray-light rounded-lg px-3 py-2 text-white mt-1"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Contato */}
+              <div>
+                <h4 className="text-cinema-yellow font-semibold mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4" /> Contato
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-zinc-400 text-xs">Email *</label>
+                    <input 
+                      type="email" 
+                      value={editForm.email || ''} 
+                      onChange={(e) => setEditForm({...editForm, email: e.target.value})}
+                      className="w-full bg-cinema-dark border border-cinema-gray-light rounded-lg px-3 py-2 text-white mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-zinc-400 text-xs">Telefone/WhatsApp</label>
+                    <input 
+                      type="text" 
+                      value={editForm.phone || ''} 
+                      onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
+                      placeholder="(00) 00000-0000"
+                      className="w-full bg-cinema-dark border border-cinema-gray-light rounded-lg px-3 py-2 text-white mt-1"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-zinc-400 text-xs">Endereço Completo</label>
+                    <input 
+                      type="text" 
+                      value={editForm.address || ''} 
+                      onChange={(e) => setEditForm({...editForm, address: e.target.value})}
+                      placeholder="Rua, Número - Bairro - Cidade/UF"
+                      className="w-full bg-cinema-dark border border-cinema-gray-light rounded-lg px-3 py-2 text-white mt-1"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-zinc-400 text-xs">Contato de Emergência</label>
+                    <input 
+                      type="text" 
+                      value={editForm.emergencyContact || ''} 
+                      onChange={(e) => setEditForm({...editForm, emergencyContact: e.target.value})}
+                      placeholder="Nome - (00) 00000-0000"
+                      className="w-full bg-cinema-dark border border-cinema-gray-light rounded-lg px-3 py-2 text-white mt-1"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Dados Profissionais */}
+              <div>
+                <h4 className="text-cinema-yellow font-semibold mb-3 flex items-center gap-2">
+                  <Briefcase className="w-4 h-4" /> Dados Profissionais
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-zinc-400 text-xs">Cargo *</label>
+                    <input 
+                      type="text" 
+                      value={editForm.position || ''} 
+                      onChange={(e) => setEditForm({...editForm, position: e.target.value})}
+                      className="w-full bg-cinema-dark border border-cinema-gray-light rounded-lg px-3 py-2 text-white mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-zinc-400 text-xs">Departamento</label>
+                    <select 
+                      value={editForm.department || ''} 
+                      onChange={(e) => setEditForm({...editForm, department: e.target.value})}
+                      className="w-full bg-cinema-dark border border-cinema-gray-light rounded-lg px-3 py-2 text-white mt-1"
+                    >
+                      <option value="">Selecione...</option>
+                      <option value="Administração">Administração</option>
+                      <option value="Operações">Operações</option>
+                      <option value="Financeiro">Financeiro</option>
+                      <option value="Comercial">Comercial</option>
+                      <option value="Técnico">Técnico</option>
+                      <option value="Logística">Logística</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-zinc-400 text-xs">Centro de Custo (Responsável)</label>
+                    <select 
+                      className="w-full bg-cinema-dark border border-cinema-gray-light rounded-lg px-3 py-2 text-white mt-1"
+                    >
+                      <option value="">Nenhum</option>
+                      <option value="operacoes">Operações (R$ 25.000)</option>
+                      <option value="administrativo">Administrativo (R$ 15.000)</option>
+                      <option value="marketing">Marketing (R$ 8.000)</option>
+                      <option value="manutencao">Manutenção (R$ 10.000)</option>
+                      <option value="tecnologia">Tecnologia (R$ 12.000)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-zinc-400 text-xs">Data de Admissão</label>
+                    <input 
+                      type="date" 
+                      value={editForm.hireDate || ''} 
+                      onChange={(e) => setEditForm({...editForm, hireDate: e.target.value})}
+                      className="w-full bg-cinema-dark border border-cinema-gray-light rounded-lg px-3 py-2 text-white mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-zinc-400 text-xs">Status</label>
+                    <select 
+                      value={editForm.status || 'active'} 
+                      onChange={(e) => setEditForm({...editForm, status: e.target.value as any})}
+                      className="w-full bg-cinema-dark border border-cinema-gray-light rounded-lg px-3 py-2 text-white mt-1"
+                    >
+                      <option value="active">Ativo</option>
+                      <option value="vacation">Férias</option>
+                      <option value="inactive">Inativo</option>
+                      <option value="dismissed">Demitido</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-zinc-400 text-xs">Tipo de Contratação</label>
+                    <select 
+                      className="w-full bg-cinema-dark border border-cinema-gray-light rounded-lg px-3 py-2 text-white mt-1"
+                    >
+                      <option value="clt">CLT</option>
+                      <option value="pj">PJ (Pessoa Jurídica)</option>
+                      <option value="estagio">Estágio</option>
+                      <option value="temporario">Temporário</option>
+                      <option value="freelancer">Freelancer</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Jornada de Trabalho */}
+              <div>
+                <h4 className="text-cinema-yellow font-semibold mb-3 flex items-center gap-2">
+                  <Clock className="w-4 h-4" /> Jornada de Trabalho
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-zinc-400 text-xs">Carga Horária Mensal (horas)</label>
+                    <input 
+                      type="number" 
+                      value={editForm.workHours || 220} 
+                      onChange={(e) => setEditForm({...editForm, workHours: parseInt(e.target.value)})}
+                      className="w-full bg-cinema-dark border border-cinema-gray-light rounded-lg px-3 py-2 text-white mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-zinc-400 text-xs">Horas Extras (mês atual)</label>
+                    <input 
+                      type="number" 
+                      value={editForm.overtime || 0} 
+                      onChange={(e) => setEditForm({...editForm, overtime: parseInt(e.target.value)})}
+                      className="w-full bg-cinema-dark border border-cinema-gray-light rounded-lg px-3 py-2 text-white mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-zinc-400 text-xs">Valor Hora Extra (R$)</label>
+                    <input 
+                      type="number" 
+                      step="0.01"
+                      placeholder="0.00"
+                      className="w-full bg-cinema-dark border border-cinema-gray-light rounded-lg px-3 py-2 text-white mt-1"
+                    />
+                  </div>
+                </div>
+                <p className="text-zinc-500 text-xs mt-3 flex items-center gap-1">
+                  <Clock className="w-3 h-3" /> Horários de entrada/saída são configurados na aba <span className="text-cinema-yellow">Ponto</span>
+                </p>
+              </div>
+
+              {/* Remuneração */}
+              <div>
+                <h4 className="text-cinema-yellow font-semibold mb-3 flex items-center gap-2">
+                  <DollarSign className="w-4 h-4" /> Remuneração
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-zinc-400 text-xs">Salário Base (R$) *</label>
+                    <input 
+                      type="number" 
+                      step="0.01"
+                      value={editForm.baseSalary || 0} 
+                      onChange={(e) => setEditForm({...editForm, baseSalary: parseFloat(e.target.value)})}
+                      className="w-full bg-cinema-dark border border-cinema-gray-light rounded-lg px-3 py-2 text-white mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-zinc-400 text-xs">Descontos (R$)</label>
+                    <input 
+                      type="number" 
+                      step="0.01"
+                      value={editForm.discounts || 0} 
+                      onChange={(e) => setEditForm({...editForm, discounts: parseFloat(e.target.value)})}
+                      className="w-full bg-cinema-dark border border-cinema-gray-light rounded-lg px-3 py-2 text-white mt-1"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Benefícios */}
+              <div>
+                <h4 className="text-cinema-yellow font-semibold mb-3 flex items-center gap-2">
+                  <Receipt className="w-4 h-4" /> Benefícios
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-zinc-400 text-xs">🚗 Vale Gasolina (R$)</label>
+                    <input 
+                      type="number" 
+                      step="0.01"
+                      placeholder="0.00"
+                      className="w-full bg-cinema-dark border border-cinema-gray-light rounded-lg px-3 py-2 text-white mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-zinc-400 text-xs">🍽️ Vale Alimentação Sodexo (R$)</label>
+                    <input 
+                      type="number" 
+                      step="0.01"
+                      placeholder="0.00"
+                      className="w-full bg-cinema-dark border border-cinema-gray-light rounded-lg px-3 py-2 text-white mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-zinc-400 text-xs">🏥 Unimed (R$)</label>
+                    <input 
+                      type="number" 
+                      step="0.01"
+                      placeholder="0.00"
+                      className="w-full bg-cinema-dark border border-cinema-gray-light rounded-lg px-3 py-2 text-white mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-zinc-400 text-xs">🚌 Vale Transporte (R$)</label>
+                    <input 
+                      type="number" 
+                      step="0.01"
+                      placeholder="0.00"
+                      className="w-full bg-cinema-dark border border-cinema-gray-light rounded-lg px-3 py-2 text-white mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-zinc-400 text-xs">🏋️ Auxílio Academia (R$)</label>
+                    <input 
+                      type="number" 
+                      step="0.01"
+                      placeholder="0.00"
+                      className="w-full bg-cinema-dark border border-cinema-gray-light rounded-lg px-3 py-2 text-white mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-zinc-400 text-xs">📱 Auxílio Celular (R$)</label>
+                    <input 
+                      type="number" 
+                      step="0.01"
+                      placeholder="0.00"
+                      className="w-full bg-cinema-dark border border-cinema-gray-light rounded-lg px-3 py-2 text-white mt-1"
+                    />
+                  </div>
+                </div>
+                <div className="mt-3 p-3 bg-cinema-dark rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <span className="text-zinc-400 text-sm">Total de Benefícios:</span>
+                    <span className="text-green-400 font-bold">R$ {(editForm.benefits || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Dados Bancários */}
+              <div>
+                <h4 className="text-cinema-yellow font-semibold mb-3 flex items-center gap-2">
+                  <CreditCard className="w-4 h-4" /> Dados Bancários
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-zinc-400 text-xs">Banco / Agência / Conta</label>
+                    <input 
+                      type="text" 
+                      value={editForm.bankAccount || ''} 
+                      onChange={(e) => setEditForm({...editForm, bankAccount: e.target.value})}
+                      placeholder="Banco do Brasil - 1234-5 / 12345-6"
+                      className="w-full bg-cinema-dark border border-cinema-gray-light rounded-lg px-3 py-2 text-white mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-zinc-400 text-xs">Chave PIX</label>
+                    <input 
+                      type="text" 
+                      value={editForm.pix || ''} 
+                      onChange={(e) => setEditForm({...editForm, pix: e.target.value})}
+                      placeholder="CPF, Email ou Telefone"
+                      className="w-full bg-cinema-dark border border-cinema-gray-light rounded-lg px-3 py-2 text-white mt-1"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Contrato */}
+              <div>
+                <h4 className="text-cinema-yellow font-semibold mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4" /> Contrato
+                </h4>
+                <div className="flex items-center gap-3">
+                  <input 
+                    type="checkbox" 
+                    id="hasContract"
+                    checked={editForm.hasContract || false} 
+                    onChange={(e) => setEditForm({...editForm, hasContract: e.target.checked})}
+                    className="w-4 h-4 rounded border-cinema-gray-light"
+                  />
+                  <label htmlFor="hasContract" className="text-white text-sm">Contrato de trabalho assinado</label>
+                </div>
+              </div>
+
+              <p className="text-zinc-500 text-xs">⚠️ As alterações são salvas apenas localmente nesta sessão. Em produção, os dados serão persistidos no banco de dados.</p>
+            </div>
+            <div className="p-4 border-t border-cinema-gray-light flex gap-2 sticky bottom-0 bg-cinema-gray">
+              <Button variant="outline" className="flex-1 border-cinema-gray-light text-white" onClick={() => setShowEditModal(false)}>
+                Cancelar
+              </Button>
+              <Button className="flex-1 bg-cinema-yellow text-cinema-dark" onClick={() => {
+                alert('✅ Dados do funcionário atualizados com sucesso!');
+                setShowEditModal(false);
+              }}>
+                Salvar Alterações
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

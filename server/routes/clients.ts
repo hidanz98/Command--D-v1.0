@@ -85,6 +85,8 @@ export const getPendingClients: RequestHandler = async (req, res) => {
       return res.status(400).json({ error: "Tenant ID obrigatório" });
     }
 
+    console.log('🔍 Buscando clientes pendentes para tenant:', tenantId);
+
     const pendingClients = await prisma.client.findMany({
       where: {
         tenantId,
@@ -113,10 +115,167 @@ export const getPendingClients: RequestHandler = async (req, res) => {
       }
     });
 
+    console.log('📋 Clientes pendentes encontrados:', pendingClients.length);
+    console.log('Emails:', pendingClients.map(c => c.email));
+
     res.json(pendingClients);
   } catch (error) {
     console.error("Erro ao buscar cadastros pendentes:", error);
     res.status(500).json({ error: "Erro ao buscar cadastros pendentes" });
+  }
+};
+
+/**
+ * GET /api/clients/debug/all
+ * Debug: Listar TODOS os clientes (sem filtro de tenant)
+ */
+export const debugAllClients: RequestHandler = async (req, res) => {
+  try {
+    const allClients = await prisma.client.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        cpfCnpj: true,
+        status: true,
+        tenantId: true,
+        createdAt: true,
+        documents: {
+          select: {
+            type: true,
+            name: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      },
+      take: 50
+    });
+
+    res.json({
+      total: allClients.length,
+      clients: allClients
+    });
+  } catch (error) {
+    console.error("Erro ao buscar todos os clientes:", error);
+    res.status(500).json({ error: "Erro ao buscar clientes" });
+  }
+};
+
+/**
+ * GET /api/clients/search?email=...
+ * Buscar cliente por email
+ */
+export const searchClientByEmail: RequestHandler = async (req, res) => {
+  try {
+    const { email } = req.query;
+    const tenantId = req.tenantId;
+
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({ error: "Email é obrigatório" });
+    }
+
+    const searchEmail = email.toLowerCase().trim();
+    console.log('🔍 Buscando cliente:', searchEmail, 'Tenant:', tenantId);
+
+    // Buscar em TODOS os tenants primeiro (para debug)
+    const allClients = await prisma.client.findMany({
+      where: {
+        email: searchEmail
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        tenantId: true,
+        status: true,
+        createdAt: true
+      }
+    });
+
+    console.log('📋 Clientes encontrados (todos os tenants):', allClients.length);
+
+    // Se tiver tenantId, filtrar por ele
+    let client = null;
+    if (tenantId) {
+      client = await prisma.client.findFirst({
+        where: {
+          email: searchEmail,
+          tenantId
+        },
+        include: {
+          documents: {
+            select: {
+              id: true,
+              type: true,
+              fileName: true,
+              uploadedAt: true,
+              isValid: true,
+              validatedAt: true
+            },
+            orderBy: {
+              uploadedAt: 'desc'
+            }
+          },
+          orders: {
+            select: {
+              id: true,
+              orderNumber: true,
+              status: true,
+              createdAt: true
+            },
+            orderBy: {
+              createdAt: 'desc'
+            },
+            take: 5
+          }
+        }
+      });
+    }
+
+    console.log('📋 Cliente encontrado no tenant:', client ? 'SIM' : 'NÃO');
+
+    if (!client) {
+      // Retornar informações de debug
+      return res.status(404).json({ 
+        error: "Cliente não encontrado",
+        email: searchEmail,
+        tenantId: tenantId,
+        message: "Nenhum cliente cadastrado com este email neste tenant",
+        debug: {
+          allClientsFound: allClients.length,
+          clientsInOtherTenants: allClients.map(c => ({
+            email: c.email,
+            tenantId: c.tenantId,
+            status: c.status
+          }))
+        }
+      });
+    }
+
+    res.json({
+      found: true,
+      client: {
+        id: client.id,
+        name: client.name,
+        email: client.email,
+        phone: client.phone,
+        cpfCnpj: client.cpfCnpj?.substring(0, 3) + '***' + client.cpfCnpj?.substring(client.cpfCnpj.length - 2), // Mascarar CPF/CNPJ
+        personType: client.personType,
+        status: client.status,
+        registrationStatus: client.registrationStatus || 'PENDING',
+        createdAt: client.createdAt,
+        approvedAt: client.approvedAt,
+        documentsCount: client.documents.length,
+        documents: client.documents,
+        ordersCount: client.orders.length
+      }
+    });
+  } catch (error) {
+    console.error("Erro ao buscar cliente por email:", error);
+    res.status(500).json({ error: "Erro ao buscar cliente" });
   }
 };
 
@@ -617,6 +776,8 @@ export const uploadAdditionalDocuments: RequestHandler = async (req, res) => {
 
 // Configurar rotas
 router.get("/", authenticateToken, requireTenant, getClients);
+router.get("/debug/all", debugAllClients); // Debug: todos os clientes
+router.get("/search", requireTenant, searchClientByEmail); // Rota de busca (antes de /:id)
 router.get("/pending", authenticateToken, requireTenant, requireRole(['ADMIN', 'EMPLOYEE', 'MASTER_ADMIN']), getPendingClients);
 router.get("/:id", authenticateToken, requireTenant, getClient);
 

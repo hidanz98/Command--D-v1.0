@@ -25,17 +25,27 @@ export const requireTenant = async (
   next: NextFunction
 ) => {
   try {
+    // Garantir que sempre retornamos JSON
+    res.setHeader('Content-Type', 'application/json');
+    
     // 1) Header tem prioridade
     let tenantId = req.headers['x-tenant-id'] as string;
 
     // 2) Sem header: tente obter o tenant padrão do banco
     if (!tenantId) {
-      const tenant = await prisma.tenant.findFirst({ orderBy: { createdAt: 'asc' } });
-      if (tenant) tenantId = tenant.id;
+      try {
+        const tenant = await prisma.tenant.findFirst({ orderBy: { createdAt: 'asc' } });
+        if (tenant) tenantId = tenant.id;
+      } catch (dbError: any) {
+        console.error('❌ Erro ao buscar tenant no banco:', dbError);
+        // Continuar mesmo se der erro (pode ser que não exista tenant ainda)
+      }
     }
 
     if (!tenantId) {
+      console.warn('⚠️ Tenant ID não encontrado para:', req.url);
       return res.status(400).json({
+        success: false,
         error: 'Tenant ID obrigatório',
         message: 'Nenhum tenant encontrado. Crie um tenant ou envie o header x-tenant-id.'
       });
@@ -43,9 +53,18 @@ export const requireTenant = async (
 
     req.tenantId = tenantId;
     next();
-  } catch (error) {
-    console.error('Erro no middleware de tenant:', error);
-    res.status(500).json({ error: 'Erro ao processar tenant' });
+  } catch (error: any) {
+    console.error('❌ Erro no middleware de tenant:', error);
+    console.error('Stack:', error?.stack);
+    
+    // Garantir que sempre retornamos JSON, mesmo em erro
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        success: false,
+        error: 'Erro ao processar tenant',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
   }
 };
 

@@ -3,6 +3,86 @@ import { AuthService } from '../lib/auth';
 import { prisma } from '../lib/prisma';
 import { AuthenticatedRequest } from '../middleware/auth';
 
+/**
+ * GET /api/auth/debug/user?email=...
+ * Debug: Verificar se usuário existe
+ */
+export const debugUser: RequestHandler = async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({ error: 'Email é obrigatório' });
+    }
+
+    const searchEmail = email.toLowerCase().trim();
+    
+    // Buscar usuário
+    const user = await prisma.user.findUnique({
+      where: { email: searchEmail },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isActive: true,
+        tenantId: true,
+        createdAt: true
+      }
+    });
+
+    // Buscar cliente associado
+    const client = await prisma.client.findFirst({
+      where: { email: searchEmail },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        status: true,
+        tenantId: true,
+        createdAt: true
+      }
+    });
+
+    return res.json({
+      user: user ? {
+        exists: true,
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        isActive: user.isActive,
+        tenantId: user.tenantId,
+        createdAt: user.createdAt
+      } : {
+        exists: false,
+        message: 'Usuário não encontrado na tabela User'
+      },
+      client: client ? {
+        exists: true,
+        id: client.id,
+        name: client.name,
+        email: client.email,
+        status: client.status,
+        tenantId: client.tenantId,
+        createdAt: client.createdAt
+      } : {
+        exists: false,
+        message: 'Cliente não encontrado na tabela Client'
+      },
+      summary: {
+        userExists: !!user,
+        clientExists: !!client,
+        canLogin: !!(user && user.isActive),
+        status: client?.status || 'N/A'
+      }
+    });
+  } catch (error: any) {
+    console.error('Erro ao verificar usuário:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 export const login: RequestHandler = async (req, res) => {
   try {
     const { email, password } = req.body;

@@ -5,6 +5,7 @@ import Footer from "./Footer";
 import WhatsAppFloat from "./WhatsAppFloat";
 import TimesheetNotifications from "./TimesheetNotifications";
 import PayrollNotifications from "./PayrollNotifications";
+import { PWAInstallPrompt } from "./PWAInstallPrompt";
 import { useDeviceDetection } from "@/hooks/use-device-detection";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -115,6 +116,9 @@ export default function Layout({ children }: LayoutProps) {
           <ArrowUp className="w-5 h-5" />
         </Button>
       )}
+
+      {/* PWA Install Prompt */}
+      <PWAInstallPrompt />
     </div>
   );
 }

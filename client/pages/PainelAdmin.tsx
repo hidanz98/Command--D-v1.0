@@ -140,110 +140,14 @@ const numerosSerieEquipamentos: {[key: string]: string} = {
   "SmallHD Monitor": "SHD-2024-007",
 };
 
-const recentOrders = [
-  {
-    id: "005067",
-    client: "Otavio Almeida de Souza",
-    cpfCnpj: "140.341.546-32",
-    email: "otavio.souza@email.com",
-    phone: "(31) 98765-4321",
-    items: ["Sony FX6", "KIT COOKE SP3"],
-    total: 1200.0,
-    status: "em Locação",
-    date: "15/01/2025",
-    dataRetirada: "15/01/2025",
-    horarioRetirada: "08:00",
-    dataDevolucao: "20/01/2025",
-    horarioDevolucao: "18:00",
-    nomeProjeto: "Documentário Amazônia",
-    direcao: "Carlos Mendes",
-    producao: "Ana Paula Souza",
-    observacoes: "Cliente solicitou entrega no local. Equipamentos devem estar com bateria carregada.",
-  },
-  {
-    id: "005068",
-    client: "Maria Santos",
-    cpfCnpj: "25.345.678/0001-90",
-    email: "maria.santos@producoes.com",
-    phone: "(11) 99876-5432",
-    items: ["Canon R5C", "Monitor Atomos"],
-    total: 850.0,
-    status: "Concluído",
-    date: "14/01/2025",
-    dataRetirada: "14/01/2025",
-    horarioRetirada: "10:00",
-    dataDevolucao: "16/01/2025",
-    horarioDevolucao: "16:00",
-    nomeProjeto: "Filme Publicitário XYZ",
-    direcao: "Maria Santos",
-    producao: "Lucas Fernandes",
-    observacoes: "Equipamentos retornados em perfeito estado.",
-  },
-  {
-    id: "005069",
-    client: "Pedro Costa",
-    cpfCnpj: "987.654.321-00",
-    email: "pedro.costa@cinema.com",
-    phone: "(21) 98765-1234",
-    items: ["Blackmagic URSA Mini Pro"],
-    total: 450.0,
-    status: "Em preparação",
-    date: "13/01/2025",
-    dataRetirada: "13/01/2025",
-    horarioRetirada: "09:00",
-    dataDevolucao: "17/01/2025",
-    horarioDevolucao: "18:00",
-    nomeProjeto: "Videoclipe Rock Band",
-    direcao: "Pedro Costa",
-    producao: "Juliana Martins",
-    observacoes: "Cliente regular. Pagamento à vista.",
-  },
-  {
-    id: "005070",
-    client: "Ana Oliveira",
-    cpfCnpj: "12.987.654/0001-33",
-    email: "ana@produtora.tv",
-    phone: "(31) 97654-3210",
-    items: ["DJI Ronin 4D", "SmallHD Monitor"],
-    total: 680.0,
-    status: "em Locação",
-    date: "12/01/2025",
-    dataRetirada: "12/01/2025",
-    horarioRetirada: "14:00",
-    dataDevolucao: "15/01/2025",
-    horarioDevolucao: "17:00",
-    nomeProjeto: "Série Web Fantasia",
-    direcao: "Roberto Lima",
-    producao: "Ana Oliveira",
-    observacoes: "Projeto de longa duração. Possível prorrogação.",
-  },
-];
+// Pedidos serão carregados da API - array inicial vazio
+const recentOrders: any[] = [];
 
-const equipmentStock = [
-  { name: "Sony FX6 Full Frame", available: 3, total: 5, category: "Câmeras" },
-  { name: "Canon EOS R5C", available: 2, total: 4, category: "Câmeras" },
-  { name: "Zeiss CP.3 85mm", available: 1, total: 3, category: "Lentes" },
-  { name: "Atomos Ninja V", available: 4, total: 6, category: "Monitores" },
-  { name: "DJI Ronin 4D", available: 0, total: 2, category: "Estabilizadores" },
-];
+// Estoque será carregado da API - dados reais dos produtos
+const equipmentStock: any[] = [];
 
-const maintenanceAlerts = [
-  {
-    equipment: "Sony FX6 #003",
-    issue: "Limpeza de sensor necessária",
-    priority: "média",
-  },
-  {
-    equipment: "Canon R5C #002",
-    issue: "Bateria com baixa duração",
-    priority: "alta",
-  },
-  {
-    equipment: "Ronin 4D #001",
-    issue: "Calibração de gimbal",
-    priority: "baixa",
-  },
-];
+// Alertas de manutenção - inicialmente vazio
+const maintenanceAlerts: any[] = [];
 
 // Função para calcular equipamentos disponíveis automaticamente
 const calculateAvailableEquipment = () => {
@@ -281,99 +185,23 @@ const calculateMonthlyRevenue = () => {
 
 // DashboardMetrics agora é calculado dinamicamente dentro do componente PainelAdmin
 
+// Clientes serão carregados da API - apenas Victor como cliente inicial
 const clientsData = [
   {
     id: "CLI-001",
-    name: "Otavio Almeida de Souza",
-    email: "otavio.souza@email.com",
-    phone: "(31) 98765-4321",
-    type: "cliente",
-    company: "",
-    cpfCnpj: "140.341.546-32",
-    totalOrders: 5,
-    lastOrder: "2025-01-15",
-  },
-  {
-    id: "CLI-002",
-    name: "João Silva",
-    email: "joao.silva@email.com",
-    phone: "(31) 99999-9999",
+    name: "Victor",
+    email: "victor@exemplo.com",
+    phone: "(11) 88888-7777",
     type: "cliente",
     company: "",
     cpfCnpj: "123.456.789-00",
-    totalOrders: 3,
-    lastOrder: "2025-01-10",
-  },
-  {
-    id: "CLI-002",
-    name: "Maria Santos",
-    email: "maria@produtora.com",
-    phone: "(31) 98888-8888",
-    type: "ambos",
-    company: "Produtora Santos",
-    totalOrders: 12,
-    lastOrder: "2025-01-10",
-  },
-  {
-    id: "FOR-003",
-    name: "Pedro Costa",
-    email: "pedro@equipamentos.com",
-    phone: "(31) 97777-7777",
-    type: "fornecedor",
-    company: "Equipamentos Costa",
     totalOrders: 0,
     lastOrder: "-",
   },
-  {
-    id: "CLI-004",
-    name: "Ana Oliveira",
-    email: "ana@filmestudio.com",
-    phone: "(31) 96666-6666",
-    type: "cliente",
-    company: "Filme Studio",
-    totalOrders: 8,
-    lastOrder: "2025-01-08",
-  },
 ];
 
-const servicesData = [
-  {
-    id: "SRV-001",
-    name: "Gravação de Eventos",
-    description: "Gravação profissional de eventos corporativos e sociais",
-    price: 800.0,
-    duration: "4 horas",
-    category: "Gravação",
-    active: true,
-  },
-  {
-    id: "SRV-002",
-    name: "Produção de Vídeo Corporativo",
-    description: "Produção completa de vídeos institucionais",
-    price: 2500.0,
-    duration: "1-3 dias",
-    category: "Produção",
-    active: true,
-  },
-  {
-    id: "SRV-003",
-    name: "Edição e Pós-Produção",
-    description: "Edição profissional e finalização de vídeos",
-    price: 150.0,
-    duration: "Por hora",
-    category: "Pós-Produção",
-    active: true,
-  },
-  {
-    id: "SRV-004",
-    name: "Live Streaming",
-    description: "Transmissão ao vivo de eventos",
-    price: 1200.0,
-    duration: "Por evento",
-    category: "Streaming",
-    active: false,
-  },
-];
+// Serviços - inicialmente vazio (adicione conforme necessário)
+const servicesData: any[] = [];
 
 // Função para formatar data no padrão brasileiro
 const formatDateBR = (dateString: string) => {
@@ -561,7 +389,7 @@ export default function PainelAdmin() {
       }
       return total;
     }, 0),
-    maintenanceAlerts: 3, // Manter fixo por enquanto
+    maintenanceAlerts: maintenanceAlerts.length, // Usar o array real
   }), [allOrders]);
   
   // Estados para edição inline dos cabeçalhos da tabela
@@ -1222,6 +1050,7 @@ export default function PainelAdmin() {
   const [stockSort, setStockSort] = useState("name");
   const [stockView, setStockView] = useState<"grid" | "list">("grid");
   const [currentPage, setCurrentPage] = useState(1);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const itemsPerPage = 12;
   const [showProductSelectionModal, setShowProductSelectionModal] =
     useState(false);
@@ -1234,11 +1063,15 @@ export default function PainelAdmin() {
     useState<HTMLInputElement | null>(null);
   const { currentLogo, updateLogo } = useLogo();
 
-  const { user, isAuthenticated, isAdmin, isFuncionario } = useAuth();
+  const { user, isAuthenticated, isAdmin, isFuncionario, isInitialized } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if not authenticated or not admin
+  // IMPORTANTE: Só redirecionar DEPOIS que isInitialized for true
   useEffect(() => {
+    // Aguardar a inicialização do contexto de autenticação
+    if (!isInitialized) return;
+    
     // Only redirect if we have confirmed authentication state and we're not already on the target page
     if (isAuthenticated === false && window.location.pathname !== "/login") {
       navigate("/login", { replace: true });
@@ -1246,7 +1079,21 @@ export default function PainelAdmin() {
       // Redirect users without admin or funcionario roles to client area
       navigate("/area-cliente", { replace: true });
     }
-  }, [isAuthenticated, isAdmin, isFuncionario, navigate]);
+  }, [isInitialized, isAuthenticated, isAdmin, isFuncionario, navigate]);
+
+  // Mostrar loading enquanto verifica autenticação
+  if (!isInitialized) {
+    return (
+      <Layout>
+        <div className="min-h-screen bg-cinema-dark flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-white text-xl mb-4">Carregando...</div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500 mx-auto"></div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   // Show loading or redirect if not authenticated or not authorized
   if (!isAuthenticated || !(isAdmin || isFuncionario) || !user) {
@@ -1794,9 +1641,6 @@ export default function PainelAdmin() {
     }));
   };
 
-  // Estado para menu mobile
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
   // Função para mudar aba e fechar menu mobile
   const handleMobileTabChange = (tabId: string) => {
     handleTabChange(tabId);
@@ -2024,7 +1868,13 @@ export default function PainelAdmin() {
                     </button>
                   </div>
                   <div className="divide-y divide-zinc-800">
-                      {allOrders.slice(0, 3).map((order) => (
+                    {allOrders.length === 0 ? (
+                      <div className="p-8 text-center text-zinc-500">
+                        <p className="text-lg">Nenhum pedido ainda</p>
+                        <p className="text-sm mt-2">Crie seu primeiro pedido clicando em "Novo Pedido"</p>
+                      </div>
+                    ) : (
+                      allOrders.slice(0, 3).map((order) => (
                         <div
                           key={order.id}
                           className="p-4 hover:bg-zinc-800/50 transition cursor-pointer"
@@ -2060,7 +1910,8 @@ export default function PainelAdmin() {
                             </div>
                           </div>
                         </div>
-                      ))}
+                      ))
+                    )}
                   </div>
                 </div>
 
@@ -2074,39 +1925,46 @@ export default function PainelAdmin() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      {allOrders.slice(0, 5).map((order) => (
-                        <div
-                          key={order.id}
-                          className="flex justify-between items-center p-3 bg-cinema-dark-lighter rounded-lg"
-                        >
-                          <div>
-                            <p className="text-white font-medium">{order.id}</p>
-                            <p className="text-gray-400 text-sm">
-                              {order.client}
-                            </p>
-                            <p className="text-gray-400 text-xs">
-                              {order.items.join(", ")}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <div
-                              className={`flex items-center ${getStatusColor(order.status)}`}
-                            >
-                              {getStatusIcon(order.status)}
-                              <span className="ml-1 text-sm capitalize">
-                                {order.status === "em Locação" ? (
-                                  <p>em locAções</p>
-                                ) : (
-                                  order.status
-                                )}
-                              </span>
-                            </div>
-                            <p className="text-cinema-yellow text-sm">
-                              R$ {order.total.toFixed(2)}
-                            </p>
-                          </div>
+                      {allOrders.length === 0 ? (
+                        <div className="text-center py-8 text-zinc-500">
+                          <p className="text-lg">Nenhum pedido ainda</p>
+                          <p className="text-sm mt-2">Os pedidos aparecerão aqui conforme forem criados</p>
                         </div>
-                      ))}
+                      ) : (
+                        allOrders.slice(0, 5).map((order) => (
+                          <div
+                            key={order.id}
+                            className="flex justify-between items-center p-3 bg-cinema-dark-lighter rounded-lg"
+                          >
+                            <div>
+                              <p className="text-white font-medium">{order.id}</p>
+                              <p className="text-gray-400 text-sm">
+                                {order.client}
+                              </p>
+                              <p className="text-gray-400 text-xs">
+                                {order.items.join(", ")}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <div
+                                className={`flex items-center ${getStatusColor(order.status)}`}
+                              >
+                                {getStatusIcon(order.status)}
+                                <span className="ml-1 text-sm capitalize">
+                                  {order.status === "em Locação" ? (
+                                    <p>em locAções</p>
+                                  ) : (
+                                    order.status
+                                  )}
+                                </span>
+                              </div>
+                              <p className="text-cinema-yellow text-sm">
+                                R$ {order.total.toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </CardContent>
                   </Card>
 
@@ -2118,28 +1976,35 @@ export default function PainelAdmin() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      {maintenanceAlerts.map((alert, index) => (
-                        <div
-                          key={index}
-                          className="p-3 bg-cinema-dark-lighter rounded-lg border-l-4 border-l-red-400"
-                        >
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="text-white font-medium">
-                                {alert.equipment}
-                              </p>
-                              <p className="text-gray-400 text-sm">
-                                {alert.issue}
-                              </p>
-                            </div>
-                            <span
-                              className={`text-xs px-2 py-1 rounded ${getPriorityColor(alert.priority)}`}
-                            >
-                              {alert.priority}
-                            </span>
-                          </div>
+                      {maintenanceAlerts.length === 0 ? (
+                        <div className="text-center py-8 text-zinc-500">
+                          <p className="text-lg">Nenhum alerta de manutenção</p>
+                          <p className="text-sm mt-2">Os alertas aparecerão quando houver equipamentos precisando de manutenção</p>
                         </div>
-                      ))}
+                      ) : (
+                        maintenanceAlerts.map((alert, index) => (
+                          <div
+                            key={index}
+                            className="p-3 bg-cinema-dark-lighter rounded-lg border-l-4 border-l-red-400"
+                          >
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="text-white font-medium">
+                                  {alert.equipment}
+                                </p>
+                                <p className="text-gray-400 text-sm">
+                                  {alert.issue}
+                                </p>
+                              </div>
+                              <span
+                                className={`text-xs px-2 py-1 rounded ${getPriorityColor(alert.priority)}`}
+                              >
+                                {alert.priority}
+                              </span>
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </CardContent>
                   </Card>
                 </div>

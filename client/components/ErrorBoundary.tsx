@@ -25,6 +25,27 @@ class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("ErrorBoundary caught an error:", error, errorInfo);
+    
+    // Se for erro de DOM (removeChild), tentar limpar
+    if (error.message.includes('removeChild') || error.message.includes('Node')) {
+      console.warn('Erro de DOM detectado, tentando limpar...');
+      try {
+        // Limpar qualquer elemento órfão
+        const orphanElements = document.querySelectorAll('[data-orphan]');
+        orphanElements.forEach(el => {
+          try {
+            if (el.parentNode && el.parentNode.contains(el)) {
+              el.parentNode.removeChild(el);
+            }
+          } catch (e) {
+            // Ignorar erros de limpeza
+          }
+        });
+      } catch (cleanupError) {
+        console.error('Erro ao limpar DOM:', cleanupError);
+      }
+    }
+    
     this.setState({
       error,
       errorInfo,

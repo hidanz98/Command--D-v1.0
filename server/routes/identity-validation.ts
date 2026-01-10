@@ -1,7 +1,11 @@
 import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
+import { PrismaClient } from '@prisma/client';
+import { requireTenant } from '../middleware/tenantMiddleware';
+import bcrypt from 'bcryptjs';
 
 const router = Router();
+const prisma = new PrismaClient();
 
 // ============================================
 // SISTEMA DE VALIDAÇÃO DE IDENTIDADE - 100% REAL
@@ -14,6 +18,8 @@ const router = Router();
 // ============================================
 
 const BIGDATA_ACCESS_TOKEN = process.env.BIGDATA_ACCESS_TOKEN || '';
+const COMPREFACE_URL = process.env.COMPREFACE_URL || '';
+const COMPREFACE_API_KEY = process.env.COMPREFACE_API_KEY || '';
 
 // ============================================
 // VALIDAÇÃO DE CPF - Algoritmo Oficial
@@ -407,11 +413,48 @@ router.post('/validate-face', async (req: Request, res: Response) => {
 
     // Verifica se BigDataCorp está configurado
     if (!BIGDATA_ACCESS_TOKEN) {
+      // Tentar usar CompreFace como fallback gratuito
+      if (COMPREFACE_URL) {
+        try {
+          const { documentPhotoBase64 } = req.body;
+          
+          if (documentPhotoBase64) {
+            const comprefaceResponse = await fetch(`${COMPREFACE_URL}/api/v1/verification/verify`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': COMPREFACE_API_KEY || ''
+              },
+              body: JSON.stringify({
+                source_image: selfieBase64.replace(/^data:image\/\w+;base64,/, ''),
+                target_image: documentPhotoBase64.replace(/^data:image\/\w+;base64,/, '')
+              })
+            });
+
+            const comprefaceResult = await comprefaceResponse.json();
+            
+            return res.json({
+              success: true,
+              configured: true,
+              provider: 'CompreFace (gratuito)',
+              data: {
+                faceMatch: comprefaceResult.result === 'True' || comprefaceResult.result === true,
+                similarity: comprefaceResult.similarity || 0,
+                liveness: false,
+                qualityScore: comprefaceResult.quality || 0
+              }
+            });
+          }
+        } catch (error) {
+          console.log('CompreFace não disponível, usando fallback básico');
+        }
+      }
+      
       return res.json({
         success: true,
         configured: false,
         provider: 'none',
-        message: 'BigDataCorp não configurado. Configure BIGDATA_ACCESS_TOKEN para validação facial.',
+        message: 'BigDataCorp não configurado. Configure BIGDATA_ACCESS_TOKEN ou COMPREFACE_URL para validação facial.',
         data: {
           faceMatch: null,
           similarity: null,
@@ -458,6 +501,103 @@ router.post('/validate-face', async (req: Request, res: Response) => {
 
   } catch (error: any) {
     console.error('Erro ao validar face:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Erro ao validar biometria' 
+    });
+  }
+});
+
+// ============================================
+// VALIDAÇÃO FACIAL GRATUITA - CompreFace (Fallback)
+// ============================================
+router.post('/validate-face-free', async (req: Request, res: Response) => {
+  try {
+    const { selfieBase64, documentPhotoBase64, cpf } = req.body;
+
+    if (!selfieBase64) {
+      return res.status(400).json({ error: 'Selfie é obrigatória' });
+    }
+
+    // Opção 1: CompreFace (se configurado)
+    if (COMPREFACE_URL) {
+      try {
+        console.log('🔍 Validando face via CompreFace (gratuito)...');
+        
+        // Se tiver foto do documento, fazer verificação
+        if (documentPhotoBase64) {
+          const response = await fetch(`${COMPREFACE_URL}/api/v1/verification/verify`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': COMPREFACE_API_KEY || ''
+            },
+            body: JSON.stringify({
+              source_image: selfieBase64.replace(/^data:image\/\w+;base64,/, ''),
+              target_image: documentPhotoBase64.replace(/^data:image\/\w+;base64,/, '')
+            })
+          });
+
+          const result = await response.json();
+          
+          return res.json({
+            success: true,
+            configured: true,
+            provider: 'CompreFace',
+            data: {
+              faceMatch: result.result === 'True' || result.result === true,
+              similarity: result.similarity || 0,
+              liveness: false, // CompreFace não tem liveness nativo
+              qualityScore: result.quality || 0
+            }
+          });
+        } else {
+          // Apenas detecção facial (sem comparação)
+          const response = await fetch(`${COMPREFACE_URL}/api/v1/detection/detect`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': COMPREFACE_API_KEY || ''
+            },
+            body: JSON.stringify({
+              file: selfieBase64.replace(/^data:image\/\w+;base64,/, '')
+            })
+          });
+
+          const result = await response.json();
+          
+          return res.json({
+            success: true,
+            configured: true,
+            provider: 'CompreFace',
+            data: {
+              faceDetected: result.result && result.result.length > 0,
+              faceCount: result.result?.length || 0,
+              qualityScore: result.result?.[0]?.quality || 0
+            }
+          });
+        }
+      } catch (error: any) {
+        console.error('Erro ao usar CompreFace:', error);
+        // Continua para fallback
+      }
+    }
+
+    // Opção 2: Fallback - apenas validação básica (sem API externa)
+    // Retorna sucesso se a imagem foi enviada (validação básica)
+    return res.json({
+      success: true,
+      configured: false,
+      provider: 'fallback',
+      message: 'Apenas validação básica disponível. Configure CompreFace ou BigDataCorp para verificação completa.',
+      data: {
+        faceDetected: true, // Assume que foi detectado no frontend
+        awaitsConfiguration: true
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Erro ao validar face (gratuito):', error);
     res.status(500).json({ 
       success: false, 
       error: error.message || 'Erro ao validar biometria' 
@@ -895,40 +1035,314 @@ interface PendingRegistration {
 const pendingRegistrations: PendingRegistration[] = [];
 
 // Salvar novo cadastro
-router.post('/register', async (req: Request, res: Response) => {
+router.post('/register', requireTenant, async (req: Request, res: Response) => {
   try {
-    const { type, data, validations } = req.body;
+    // Garantir que sempre retornamos JSON válido
+    res.setHeader('Content-Type', 'application/json');
+    
+    console.log('📥 === RECEBENDO REQUISIÇÃO DE CADASTRO ===');
+    console.log('Content-Type:', req.headers['content-type']);
+    console.log('Content-Length:', req.headers['content-length']);
+    console.log('Body existe?', !!req.body);
+    console.log('Body keys:', req.body ? Object.keys(req.body) : 'N/A');
+    
+    // Validar se o body foi parseado corretamente
+    if (!req.body) {
+      console.error('❌ Body vazio ou inválido');
+      return res.status(400).json({
+        success: false,
+        error: 'Dados não recebidos. Verifique se o Content-Type está correto (application/json).'
+      });
+    }
 
+    const { type, data, validations } = req.body;
+    
+    // Validar estrutura básica
+    if (!type || !data) {
+      console.error('❌ Estrutura inválida:', { hasType: !!type, hasData: !!data });
+      return res.status(400).json({
+        success: false,
+        error: 'Estrutura de dados inválida. Campos "type" e "data" são obrigatórios.'
+      });
+    }
+    const tenantId = req.tenantId;
+
+    console.log('📝 === NOVO CADASTRO ===');
+    console.log('Tenant ID:', tenantId);
+    console.log('Tipo:', type);
+    console.log('Email:', data?.email);
+    console.log('Nome:', data?.name);
+    console.log('CPF/CNPJ:', type === 'PF' ? data?.cpf : data?.cnpj);
+
+    if (!tenantId) {
+      console.error('❌ Tenant ID não encontrado');
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Tenant ID obrigatório' 
+      });
+    }
+
+    // Validar dados obrigatórios
+    if (!data || !data.email || !data.password) {
+      console.error('❌ Dados obrigatórios faltando:', { email: !!data?.email, password: !!data?.password });
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Email e senha são obrigatórios' 
+      });
+    }
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailInput = String(data.email || '').toLowerCase().trim();
+    
+    if (!emailRegex.test(emailInput)) {
+      console.error('❌ Email inválido:', emailInput);
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Formato de email inválido' 
+      });
+    }
+
+    const email = emailInput;
+    const cpfCnpj = type === 'PF' 
+      ? (data.cpf ? String(data.cpf).replace(/\D/g, '') : '') 
+      : (data.cnpj ? String(data.cnpj).replace(/\D/g, '') : '');
+
+    console.log('🔍 Verificando se cliente já existe...');
+    // Verificar se já existe cliente com mesmo email ou CPF/CNPJ
+    const existingClient = await prisma.client.findFirst({
+      where: {
+        tenantId,
+        OR: [
+          { email },
+          ...(cpfCnpj ? [{ cpfCnpj }] : [])
+        ]
+      }
+    });
+
+    if (existingClient) {
+      console.log('⚠️ Cliente já existe:', existingClient.id, existingClient.status);
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Já existe um cadastro com este email ou CPF/CNPJ',
+        clientId: existingClient.id,
+        status: existingClient.status
+      });
+    }
+
+    console.log('✅ Cliente não existe, criando novo...');
+
+    // Validar senha
+    if (!data.password || typeof data.password !== 'string' || data.password.length < 6) {
+      console.error('❌ Senha inválida (mínimo 6 caracteres)');
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Senha deve ter no mínimo 6 caracteres' 
+      });
+    }
+
+    // Hash da senha
+    console.log('🔐 Gerando hash da senha...');
+    const hashedPassword = await bcrypt.hash(String(data.password), 10);
+    console.log('✅ Hash gerado');
+
+    // Criar cliente no banco de dados
+    console.log('💾 Criando cliente no banco...');
+    console.log('Dados do cliente:', {
+      tenantId,
+      name: data.name || '',
+      email,
+      phone: data.phone?.replace(/\D/g, '') || '',
+      document: cpfCnpj || '',
+      personType: type === 'PF' ? 'FISICA' : 'JURIDICA'
+    });
+    
+    let client;
+    try {
+      client = await prisma.client.create({
+        data: {
+          tenantId,
+          name: data.name || '',
+          email,
+          phone: data.phone?.replace(/\D/g, '') || '',
+          document: cpfCnpj || '',
+          cpfCnpj: cpfCnpj || '',
+          personType: type === 'PF' ? 'FISICA' : 'JURIDICA',
+          type: type === 'PF' ? 'INDIVIDUAL' : 'COMPANY',
+          address: data.address || '',
+          city: data.city || '',
+          state: data.state || '',
+          zipCode: data.zipCode?.replace(/\D/g, '') || '',
+          status: 'PENDING'
+        }
+      });
+      console.log('✅ Cliente criado:', client.id, client.email);
+    } catch (prismaError: any) {
+      console.error('❌ Erro do Prisma ao criar cliente:', prismaError);
+      console.error('Código do erro:', prismaError.code);
+      console.error('Mensagem:', prismaError.message);
+      throw new Error(`Erro ao criar cliente: ${prismaError.message || 'Erro desconhecido do banco de dados'}`);
+    }
+
+    // Criar usuário para login
+    try {
+      // Verificar se usuário já existe
+      const existingUser = await prisma.user.findUnique({
+        where: { email }
+      });
+
+      if (existingUser) {
+        // Atualizar senha se usuário já existe
+        await prisma.user.update({
+          where: { email },
+          data: {
+            password: hashedPassword,
+            name: data.name || existingUser.name
+          }
+        });
+        console.log('✅ Usuário atualizado para:', email);
+      } else {
+        // Criar novo usuário
+        await prisma.user.create({
+          data: {
+            tenantId,
+            email,
+            password: hashedPassword,
+            name: data.name || '',
+            role: 'CLIENT'
+          }
+        });
+        console.log('✅ Usuário criado para:', email);
+      }
+    } catch (userError: any) {
+      console.error('⚠️ Erro ao criar/atualizar usuário:', userError);
+      // Não falhar o cadastro se usuário der erro (pode ser criado depois)
+    }
+
+    // Salvar foto facial como documento se existir
+    if (data.selfieBase64) {
+      try {
+        console.log('📸 Processando foto facial...');
+        console.log('Tamanho base64 (chars):', data.selfieBase64?.length || 0);
+        
+        // Validar se é base64 válido
+        if (typeof data.selfieBase64 !== 'string') {
+          throw new Error('Foto facial deve ser uma string base64');
+        }
+        
+        // Converter base64 para buffer
+        const base64Data = data.selfieBase64.replace(/^data:image\/\w+;base64,/, '');
+        
+        if (!base64Data || base64Data.length === 0) {
+          throw new Error('Base64 da foto facial está vazio');
+        }
+        
+        console.log('Tamanho base64 limpo (chars):', base64Data.length);
+        
+        let buffer;
+        try {
+          buffer = Buffer.from(base64Data, 'base64');
+        } catch (bufferError: any) {
+          console.error('❌ Erro ao converter base64 para buffer:', bufferError);
+          throw new Error('Base64 inválido: ' + bufferError.message);
+        }
+        
+        console.log('Tamanho do buffer (bytes):', buffer.length);
+        
+        if (buffer.length === 0) {
+          throw new Error('Buffer da imagem está vazio');
+        }
+        
+        // Salvar arquivo temporário (em produção, usar storage adequado)
+        const fs = require('fs');
+        const path = require('path');
+        const uploadsDir = path.join(process.cwd(), 'uploads', 'documents');
+        if (!fs.existsSync(uploadsDir)) {
+          fs.mkdirSync(uploadsDir, { recursive: true });
+        }
+        
+        const fileName = `selfie_${client.id}_${Date.now()}.jpg`;
+        const filePath = path.join(uploadsDir, fileName);
+        fs.writeFileSync(filePath, buffer);
+
+        // Criar registro de documento
+        await prisma.clientDocument.create({
+          data: {
+            clientId: client.id,
+            type: 'SELFIE',
+            name: fileName,
+            fileName: fileName,
+            url: `/uploads/documents/${fileName}`,
+            size: buffer.length
+          }
+        });
+        console.log('✅ Foto facial salva para cliente:', client.id);
+      } catch (photoError) {
+        console.error('⚠️ Erro ao salvar foto facial:', photoError);
+        // Não falhar o cadastro se foto der erro
+      }
+    }
+
+    // Manter registro em memória para compatibilidade
     const registration: PendingRegistration = {
-      id: `REG_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+      id: client.id,
       type: type || 'PF',
       status: 'PENDING',
       createdAt: new Date().toISOString(),
       data: {
         ...data,
-        // Não armazenar base64 completo no log
         selfieBase64: data.selfieBase64 ? '[IMAGEM_CAPTURADA]' : null
       },
       validations
     };
-
     pendingRegistrations.push(registration);
     
-    console.log('📝 Novo cadastro pendente:', registration.id, '-', type);
+    console.log('✅ === CADASTRO CONCLUÍDO ===');
+    console.log('Cliente ID:', client.id);
+    console.log('Email:', email);
+    console.log('Status:', 'PENDING');
+    console.log('Tenant:', tenantId);
 
     return res.json({
       success: true,
-      registrationId: registration.id,
+      registrationId: client.id,
+      clientId: client.id,
       status: 'PENDING',
-      message: 'Cadastro recebido com sucesso! Aguardando aprovação da equipe.'
+      message: 'Cadastro recebido com sucesso! Aguardando aprovação da equipe.',
+      debug: {
+        tenantId,
+        email,
+        clientId: client.id
+      }
     });
 
   } catch (error: any) {
-    console.error('Erro ao salvar cadastro:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message || 'Erro ao salvar cadastro' 
-    });
+    console.error('❌ === ERRO AO SALVAR CADASTRO ===');
+    console.error('Tipo do erro:', error?.constructor?.name);
+    console.error('Mensagem:', error?.message);
+    console.error('Stack:', error?.stack);
+    console.error('Código do erro:', error?.code);
+    console.error('Erro completo:', error);
+    
+    // Garantir que sempre retornamos JSON válido
+    if (!res.headersSent) {
+      res.setHeader('Content-Type', 'application/json');
+      
+      const errorMessage = error?.message || String(error) || 'Erro desconhecido ao salvar cadastro';
+      const statusCode = error?.status || error?.statusCode || 500;
+      
+      res.status(statusCode).json({ 
+        success: false, 
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? {
+          type: error?.constructor?.name,
+          stack: error?.stack,
+          code: error?.code
+        } : undefined
+      });
+    } else {
+      console.error('⚠️ Resposta já foi enviada, não é possível enviar erro JSON');
+    }
   }
 });
 

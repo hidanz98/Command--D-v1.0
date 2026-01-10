@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import { handlePing } from "./routes/ping";
 import { handleDemo } from "./routes/demo";
-import { login, register, me, createTenant } from "./routes/auth";
+import { login, register, me, createTenant, debugUser } from "./routes/auth";
 import { 
   getProducts, 
   getProduct, 
@@ -87,6 +87,8 @@ import {
   getDashboard
 } from "./routes/master";
 import partnershipsRouter from "./routes/partnerships";
+import diagnosticsRouter from "./routes/diagnostics";
+import remoteAiRouter from "./routes/remote-ai";
 import { startHeartbeat } from "./jobs/heartbeat";
 import { getPublicProducts } from "./routes/public";
 import { startLicenseChecker } from "./jobs/licenseChecker";
@@ -100,7 +102,38 @@ export function createServer() {
 
   // Middleware
   app.use(cors());
-  app.use(express.json());
+  
+  // Middleware para garantir que rotas de API sempre retornem JSON
+  app.use('/api', (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    // Garantir Content-Type JSON para todas as rotas de API
+    res.setHeader('Content-Type', 'application/json');
+    next();
+  });
+  
+  // Aumentar limite do body para suportar imagens em base64
+  app.use(express.json({ 
+    limit: '50mb',
+    verify: (req: any, res: any, buf: Buffer) => {
+      // Log se o body for muito grande
+      if (buf.length > 10 * 1024 * 1024) {
+        console.log('⚠️ Body grande recebido:', (buf.length / 1024 / 1024).toFixed(2), 'MB');
+      }
+    }
+  }));
+  app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+  
+  // Middleware para capturar erros de parsing do JSON
+  app.use((err: any, req: any, res: any, next: any) => {
+    if (err instanceof SyntaxError && 'body' in err) {
+      console.error('❌ Erro ao parsear JSON:', err.message);
+      return res.status(400).json({
+        success: false,
+        error: 'JSON inválido no corpo da requisição',
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      });
+    }
+    next(err);
+  });
   
   // Servir arquivos estáticos da pasta uploads
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
@@ -134,6 +167,7 @@ export function createServer() {
   app.post("/api/auth/login", login);
   app.post("/api/auth/register", register);
   app.post("/api/auth/tenant", createTenant);
+  app.get("/api/auth/debug/user", debugUser); // Debug: verificar usuário
   
   // Protected Routes
   app.get("/api/auth/me", authenticateToken, me);
@@ -247,6 +281,17 @@ export function createServer() {
   app.use("/api/partnerships", authenticateToken, requireTenant, partnershipsRouter);
   
   // ==============================================
+  // ROTAS DE DIAGNÓSTICO DO SISTEMA
+  // ==============================================
+  // Monitoramento de logs, dispositivos e compatibilidade
+  app.use("/api/diagnostics", diagnosticsRouter);
+  
+  // ==============================================
+  // IA REMOTA - Controle do Cursor via iPhone
+  // ==============================================
+  app.use("/api/remote-ai", remoteAiRouter);
+  
+  // ==============================================
   // MIDDLEWARE DE VALIDAÇÃO DE LICENÇA
   // ==============================================
   // Aplicar em rotas protegidas (opcional, pode ser usado seletivamente)
@@ -257,6 +302,62 @@ export function createServer() {
   
   // Exemplo: Validar licença e verificar limites do plano
   // app.use("/api/*", checkLicenseStatus, checkPlanLimits);
+
+  // ==============================================
+  // HANDLER DE ERRO GLOBAL
+  // ==============================================
+  // IMPORTANTE: Deve ser o ÚLTIMO middleware registrado
+  // Garante que TODOS os erros retornem JSON, nunca HTML
+  
+  // Handler para rotas não encontradas (404) - ANTES do handler de erro
+  app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+    // Só retornar 404 se for uma rota de API
+    if (req.path.startsWith('/api/')) {
+      res.status(404).json({
+        success: false,
+        error: 'Rota não encontrada',
+        path: req.path
+      });
+    } else {
+      // Para rotas não-API, deixar o Vite/React lidar
+      next();
+    }
+  });
+  
+  // Handler de erro global - DEVE ser o último
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('❌ === ERRO NÃO TRATADO ===');
+    console.error('URL:', req.url);
+    console.error('Method:', req.method);
+    console.error('Headers:', req.headers);
+    console.error('Erro:', err);
+    console.error('Tipo do erro:', err?.constructor?.name);
+    console.error('Mensagem:', err?.message);
+    console.error('Stack:', err?.stack);
+    
+    // Sempre retornar JSON, nunca HTML
+    // Verificar se já foi enviada resposta
+    if (res.headersSent) {
+      console.error('⚠️ Headers já enviados, não é possível enviar resposta JSON');
+      return next(err);
+    }
+    
+    // Garantir Content-Type JSON
+    res.setHeader('Content-Type', 'application/json');
+    
+    const statusCode = err.status || err.statusCode || 500;
+    res.status(statusCode).json({
+      success: false,
+      error: err.message || 'Erro interno do servidor',
+      details: process.env.NODE_ENV === 'development' ? {
+        type: err?.constructor?.name,
+        stack: err?.stack,
+        url: req.url,
+        method: req.method,
+        code: err?.code
+      } : undefined
+    });
+  });
 
   return app;
 }

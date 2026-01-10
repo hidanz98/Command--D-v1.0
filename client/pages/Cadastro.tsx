@@ -75,10 +75,12 @@ export default function Cadastro() {
   // Handler de Login
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError("");
+    e.stopPropagation();
     
     try {
+      setIsLoading(true);
+      setError("");
+      
       const success = await login(loginEmail, loginPassword, rememberMe);
       if (success) {
         if (loginEmail.includes("admin") || loginEmail === "cabecadeefeitocine@gmail.com") {
@@ -482,13 +484,31 @@ export default function Cadastro() {
   };
 
   // Câmera - Parar
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
+  const stopCamera = useCallback(() => {
+    try {
+      if (stream) {
+        stream.getTracks().forEach(track => {
+          try {
+            track.stop();
+          } catch (error) {
+            // Ignorar erros se a track já foi parada
+            console.debug('Track já parada:', error);
+          }
+        });
+        setStream(null);
+      }
+      if (videoRef.current) {
+        try {
+          videoRef.current.srcObject = null;
+        } catch (error) {
+          console.debug('Erro ao limpar srcObject:', error);
+        }
+      }
+      setCameraReady(false);
+    } catch (error) {
+      console.debug('Erro ao parar câmera:', error);
     }
-    setCameraReady(false);
-  };
+  }, [stream]);
 
   // Capturar foto
   const capturePhoto = () => {
@@ -520,11 +540,12 @@ export default function Cadastro() {
   useEffect(() => {
     // Não inicia automaticamente - usuário precisa clicar
     return () => {
+      // Parar câmera quando sair da etapa 2 ou quando o componente desmontar
       if (step !== 2) {
         stopCamera();
       }
     };
-  }, [step]);
+  }, [step, stopCamera]);
 
   // Efeito para bloquear cadastro no desktop
   useEffect(() => {
@@ -548,16 +569,325 @@ export default function Cadastro() {
 
   // Finalizar cadastro
   const handleSubmit = async () => {
+    console.log('🚀 === INICIANDO FINALIZAÇÃO DE CADASTRO ===');
+    console.log('Step:', step);
+    console.log('Person Type:', personType);
+    console.log('Form:', personType === 'pf' ? form : formPJ);
+    console.log('Facial Photo:', facialPhoto ? 'SIM' : 'NÃO');
+    console.log('Agree Terms:', personType === 'pf' ? form.agreeTerms : formPJ.agreeTerms);
+    console.log('Agree Privacy:', personType === 'pf' ? form.agreePrivacy : formPJ.agreePrivacy);
+    
     setIsLoading(true);
+    setError("");
+    
     try {
-      // Simular envio para API
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Validar dados obrigatórios
+      if (personType === 'pf') {
+        if (!form.name || !form.email || !form.password || !form.cpf) {
+          throw new Error('Preencha todos os campos obrigatórios');
+        }
+        if (!form.agreeTerms || !form.agreePrivacy) {
+          throw new Error('Você precisa aceitar os termos e a política de privacidade');
+        }
+      } else {
+        if (!formPJ.cnpj || !formPJ.email || !formPJ.password || !formPJ.razaoSocial) {
+          throw new Error('Preencha todos os campos obrigatórios');
+        }
+        if (!formPJ.agreeTerms || !formPJ.agreePrivacy) {
+          throw new Error('Você precisa aceitar os termos e a política de privacidade');
+        }
+      }
+
+      console.log('✅ Validações passaram, preparando dados...');
+      
+      // Converter arquivos para base64 (com tratamento de erro)
+      let documentFileBase64 = null;
+      let addressProofBase64 = null;
+      
+      if (personType === 'pf') {
+        try {
+          if (form.documentFile) {
+            console.log('📄 Convertendo documento para base64...');
+            documentFileBase64 = await fileToBase64(form.documentFile);
+            console.log('✅ Documento convertido (tamanho base64):', documentFileBase64.length);
+          }
+        } catch (error) {
+          console.error('⚠️ Erro ao converter documento:', error);
+          // Continuar sem o documento
+        }
+        
+        try {
+          if (form.addressProof) {
+            console.log('📄 Convertendo comprovante para base64...');
+            addressProofBase64 = await fileToBase64(form.addressProof);
+            console.log('✅ Comprovante convertido (tamanho base64):', addressProofBase64.length);
+          }
+        } catch (error) {
+          console.error('⚠️ Erro ao converter comprovante:', error);
+          // Continuar sem o comprovante
+        }
+      }
+      
+      // Validar email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const email = personType === 'pf' ? form.email.toLowerCase().trim() : formPJ.email.toLowerCase().trim();
+      
+      if (!emailRegex.test(email)) {
+        throw new Error('Email inválido');
+      }
+      
+      // Preparar dados para envio
+      const registrationData: any = {
+        type: personType === 'pf' ? 'PF' : 'PJ',
+        data: personType === 'pf' ? {
+          name: form.name || '',
+          cpf: form.cpf ? form.cpf.replace(/\D/g, '') : '',
+          phone: form.phone ? form.phone.replace(/\D/g, '') : '',
+          email: email,
+          password: form.password || '',
+          address: '',
+          city: '',
+          state: '',
+          zipCode: '',
+          selfieBase64: facialPhoto || null,
+          documentType: form.documentType || '',
+          documentFile: documentFileBase64,
+          addressProof: addressProofBase64
+        } : {
+          cnpj: formPJ.cnpj.replace(/\D/g, ''),
+          razaoSocial: formPJ.razaoSocial,
+          nomeFantasia: formPJ.nomeFantasia,
+          responsavelNome: formPJ.responsavelNome,
+          responsavelCpf: formPJ.responsavelCpf.replace(/\D/g, ''),
+          phone: formPJ.phone.replace(/\D/g, ''),
+          email: formPJ.email.toLowerCase().trim(),
+          password: formPJ.password,
+          selfieBase64: facialPhoto,
+          contratoSocial: null,
+          documentoResponsavel: null,
+          addressProof: null
+        },
+        validations: {
+          cpfValid: personType === 'pf' ? cpfValidation.valid : null,
+          cnpjValid: personType === 'pj' ? cnpjValidation.valid : null,
+          emailBreach: personType === 'pf' ? emailBreach : null,
+          passwordBreach: personType === 'pf' ? passwordBreach : null,
+          faceDetected: faceDetected
+        }
+      };
+
+      console.log('📤 Enviando para API /api/identity/register...');
+      console.log('Dados enviados:', {
+        type: registrationData.type,
+        email: registrationData.data.email,
+        hasPassword: !!registrationData.data.password,
+        hasSelfie: !!registrationData.data.selfieBase64,
+        hasDocument: !!registrationData.data.documentFile,
+        hasAddressProof: !!registrationData.data.addressProof
+      });
+      
+      // Validar tamanho do JSON (evitar payload muito grande)
+      const jsonString = JSON.stringify(registrationData);
+      const sizeInMB = new Blob([jsonString]).size / (1024 * 1024);
+      console.log('📦 Tamanho do payload:', sizeInMB.toFixed(2), 'MB');
+      
+      if (sizeInMB > 10) {
+        console.warn('⚠️ Payload muito grande, removendo arquivos grandes...');
+        // Remover arquivos grandes do payload principal
+        registrationData.data.documentFile = null;
+        registrationData.data.addressProof = null;
+      }
+      
+      // Enviar para API
+      const response = await fetch('/api/identity/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(registrationData)
+      });
+
+      console.log('📥 Resposta recebida. Status:', response.status, response.statusText);
+      console.log('📥 Headers:', Object.fromEntries(response.headers.entries()));
+
+      let result;
+      let responseText = '';
+      
+      try {
+        responseText = await response.text();
+        console.log('📋 Resposta (texto completo):', responseText);
+        console.log('📋 Tamanho da resposta:', responseText.length, 'caracteres');
+        
+        if (!responseText || responseText.trim() === '') {
+          throw new Error('Resposta vazia do servidor');
+        }
+        
+        result = JSON.parse(responseText);
+        console.log('📋 Resultado (JSON parseado):', result);
+      } catch (parseError: any) {
+        console.error('❌ === ERRO AO PARSEAR RESPOSTA ===');
+        console.error('Erro:', parseError);
+        console.error('Texto recebido (primeiros 1000 chars):', responseText.substring(0, 1000));
+        console.error('Status da resposta:', response.status, response.statusText);
+        
+        // Tentar extrair mensagem de erro do HTML se for erro HTML
+        let errorMessage = 'Resposta inválida do servidor';
+        
+        if (responseText.includes('<html>') || responseText.includes('<!DOCTYPE')) {
+          errorMessage = 'Servidor retornou HTML ao invés de JSON. Pode ser erro 404 ou 500.';
+        } else if (responseText.length > 0) {
+          errorMessage = `Resposta inválida: ${responseText.substring(0, 200)}`;
+        }
+        
+        throw new Error(`${errorMessage} (Status: ${response.status})`);
+      }
+
+      if (!response.ok) {
+        console.error('❌ Erro na resposta:', result);
+        const errorMessage = result?.error || result?.message || `Erro ${response.status}: ${response.statusText}`;
+        throw new Error(errorMessage);
+      }
+
+      console.log('✅ Cadastro enviado com sucesso! ID:', result.registrationId || result.clientId);
+      
+      // Se tiver documentos, também enviar para /api/clients/register
+      if (personType === 'pf' && (form.documentFile || form.addressProof)) {
+        try {
+          const formData = new FormData();
+          formData.append('name', form.name);
+          formData.append('email', form.email.toLowerCase().trim());
+          formData.append('phone', form.phone);
+          formData.append('cpfCnpj', form.cpf.replace(/\D/g, ''));
+          formData.append('personType', 'fisica');
+          
+          const documentTypes: string[] = [];
+          if (form.documentFile) {
+            formData.append('documents', form.documentFile);
+            documentTypes.push(form.documentType || 'RG');
+          }
+          if (form.addressProof) {
+            formData.append('documents', form.addressProof);
+            documentTypes.push('PROOF_OF_ADDRESS');
+          }
+          
+          formData.append('documentTypes', JSON.stringify(documentTypes));
+          
+          // Se tiver foto facial, adicionar como documento
+          if (facialPhoto) {
+            const blob = await base64ToBlob(facialPhoto);
+            const facialFile = new File([blob], 'selfie.jpg', { type: 'image/jpeg' });
+            formData.append('documents', facialFile);
+            documentTypes.push('SELFIE');
+            formData.set('documentTypes', JSON.stringify(documentTypes));
+          }
+
+          const clientResponse = await fetch('/api/clients/register', {
+            method: 'POST',
+            body: formData
+          });
+
+          if (clientResponse.ok) {
+            const clientResult = await clientResponse.json();
+            console.log('✅ Documentos salvos:', clientResult);
+          }
+        } catch (docError) {
+          console.error('⚠️ Erro ao salvar documentos (mas cadastro foi criado):', docError);
+          // Não falhar o cadastro se documentos derem erro
+        }
+      }
+
+      console.log('✅ Tudo certo! Mudando para step 5...');
       setStep(5);
-    } catch (err) {
-      setError("Erro ao criar conta. Tente novamente.");
+    } catch (err: any) {
+      console.error('❌ === ERRO AO CRIAR CONTA ===');
+      console.error('Tipo do erro:', typeof err);
+      console.error('Erro completo:', err);
+      console.error('Mensagem:', err?.message);
+      console.error('Nome:', err?.name);
+      console.error('Stack:', err?.stack);
+      
+      let errorMessage = "Erro ao criar conta. Tente novamente.";
+      
+      if (err?.message) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      } else if (err?.error) {
+        errorMessage = err.error;
+      }
+      
+      // Tratar erros específicos
+      if (errorMessage.includes('pattern') || errorMessage.includes('match')) {
+        errorMessage = 'Formato de dados inválido. Verifique se todos os campos estão preenchidos corretamente.';
+      } else if (errorMessage.includes('email')) {
+        errorMessage = 'Email inválido. Verifique o formato do email.';
+      } else if (errorMessage.includes('password') || errorMessage.includes('senha')) {
+        errorMessage = 'Senha inválida. A senha deve ter no mínimo 6 caracteres.';
+      }
+      
+      setError(errorMessage);
+      
+      // Mostrar erro visualmente
+      setTimeout(() => {
+        alert(`❌ Erro ao criar conta:\n\n${errorMessage}\n\nVerifique o console para mais detalhes.`);
+      }, 100);
     } finally {
       setIsLoading(false);
+      console.log('🏁 Finalização concluída (sucesso ou erro)');
     }
+  };
+
+  // Função auxiliar para converter File para base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      try {
+        if (!file || !(file instanceof File)) {
+          reject(new Error('Arquivo inválido'));
+          return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result;
+          if (typeof result === 'string') {
+            resolve(result);
+          } else {
+            reject(new Error('Erro ao converter arquivo para base64'));
+          }
+        };
+        reader.onerror = (error) => {
+          console.error('Erro no FileReader:', error);
+          reject(new Error('Erro ao ler arquivo'));
+        };
+        reader.readAsDataURL(file);
+      } catch (error) {
+        console.error('Erro ao processar arquivo:', error);
+        reject(error);
+      }
+    });
+  };
+
+  // Função auxiliar para converter base64 para Blob
+  const base64ToBlob = (base64: string): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      try {
+        if (!base64 || typeof base64 !== 'string') {
+          reject(new Error('Base64 inválido'));
+          return;
+        }
+        
+        // Remover prefixo data: se existir
+        const base64Data = base64.includes(',') ? base64.split(',')[1] : base64;
+        
+        fetch(`data:image/jpeg;base64,${base64Data}`)
+          .then(res => res.blob())
+          .then(blob => resolve(blob))
+          .catch(reject);
+      } catch (error) {
+        console.error('Erro ao converter base64 para Blob:', error);
+        reject(error);
+      }
+    });
   };
 
   // Renderizar indicador de etapas
@@ -596,18 +926,26 @@ export default function Cadastro() {
         {/* Header */}
         <header className="p-4 flex items-center justify-between">
           <button 
-            onClick={() => {
-              if (mode === 'choose') navigate('/');
-              else if (mode === 'login') setMode('choose');
-              else if (mode === 'register') {
-                if (step > 1) {
-                  prevStep();
-                } else if (step === 1) {
-                  setStep(0);
-                } else if (step === 0) {
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              try {
+                if (mode === 'choose') {
+                  navigate('/');
+                } else if (mode === 'login') {
                   setMode('choose');
-                  setPersonType(null);
+                } else if (mode === 'register') {
+                  if (step > 1) {
+                    prevStep();
+                  } else if (step === 1) {
+                    setStep(0);
+                  } else if (step === 0) {
+                    setMode('choose');
+                    setPersonType(null);
+                  }
                 }
+              } catch (error) {
+                console.error('Erro ao navegar:', error);
               }
             }}
             className="w-10 h-10 rounded-full bg-zinc-800/50 flex items-center justify-center hover:bg-zinc-700/50 transition"
@@ -646,7 +984,15 @@ export default function Cadastro() {
 
               <div className="w-full space-y-4">
                 <button
-                  onClick={() => setMode('login')}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    try {
+                      setMode('login');
+                    } catch (error) {
+                      console.error('Erro ao mudar para modo login:', error);
+                    }
+                  }}
                   className="w-full h-14 bg-gradient-to-r from-amber-400 to-orange-500 text-black font-bold rounded-xl hover:shadow-lg hover:shadow-amber-500/25 transition-all flex items-center justify-center gap-2"
                 >
                   <User className="w-5 h-5" />
@@ -656,7 +1002,15 @@ export default function Cadastro() {
                 {/* Botão Criar conta - só aparece no mobile */}
                 {isMobile && (
                   <button
-                    onClick={() => setMode('register')}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      try {
+                        setMode('register');
+                      } catch (error) {
+                        console.error('Erro ao mudar para modo register:', error);
+                      }
+                    }}
                     className="w-full h-14 bg-zinc-800 text-white font-bold rounded-xl hover:bg-zinc-700 transition-all flex items-center justify-center gap-2 border border-zinc-700"
                   >
                     <FileText className="w-5 h-5" />
@@ -773,7 +1127,15 @@ export default function Cadastro() {
                 <div className="mt-6 text-center">
                   <p className="text-zinc-500 text-sm">Ainda não tem conta?</p>
                   <button
-                    onClick={() => setMode('register')}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      try {
+                        setMode('register');
+                      } catch (error) {
+                        console.error('Erro ao mudar para modo register:', error);
+                      }
+                    }}
                     className="text-amber-400 font-medium hover:underline"
                   >
                     Criar conta grátis
@@ -799,7 +1161,16 @@ export default function Cadastro() {
               <div className="w-full space-y-4">
                 {/* Pessoa Física */}
                 <button
-                  onClick={() => { setPersonType('pf'); setStep(1); }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    try {
+                      setPersonType('pf');
+                      setStep(1);
+                    } catch (error) {
+                      console.error('Erro ao selecionar pessoa física:', error);
+                    }
+                  }}
                   className="w-full p-5 bg-zinc-900/50 border border-zinc-800 rounded-2xl hover:border-amber-400 hover:bg-zinc-800/50 transition-all text-left group"
                 >
                   <div className="flex items-center gap-4">
@@ -816,7 +1187,16 @@ export default function Cadastro() {
 
                 {/* Pessoa Jurídica */}
                 <button
-                  onClick={() => { setPersonType('pj'); setStep(1); }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    try {
+                      setPersonType('pj');
+                      setStep(1);
+                    } catch (error) {
+                      console.error('Erro ao selecionar pessoa jurídica:', error);
+                    }
+                  }}
                   className="w-full p-5 bg-zinc-900/50 border border-zinc-800 rounded-2xl hover:border-amber-400 hover:bg-zinc-800/50 transition-all text-left group"
                 >
                   <div className="flex items-center gap-4">
@@ -1155,23 +1535,38 @@ export default function Cadastro() {
                         </p>
                         
                         {/* Usar câmera nativa do celular (funciona em HTTP) */}
-                        <label className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-600 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-purple-500/25 transition flex items-center gap-3 cursor-pointer">
+                        <label 
+                          htmlFor="camera-input-initial"
+                          className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-600 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-purple-500/25 transition flex items-center gap-3 cursor-pointer"
+                        >
                           <Camera className="w-6 h-6" />
                           Abrir Câmera
                           <input
+                            id="camera-input-initial"
                             type="file"
                             accept="image/*"
                             capture="user"
                             className="hidden"
                             onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                const reader = new FileReader();
-                                reader.onload = (event) => {
-                                  setFacialPhoto(event.target?.result as string);
-                                  setFaceDetected(true);
-                                };
-                                reader.readAsDataURL(file);
+                              try {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const reader = new FileReader();
+                                  reader.onload = (event) => {
+                                    if (event.target?.result) {
+                                      setFacialPhoto(event.target.result as string);
+                                      setFaceDetected(true);
+                                    }
+                                  };
+                                  reader.onerror = () => {
+                                    console.error('Erro ao ler arquivo');
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                                // Limpar o input para permitir selecionar o mesmo arquivo novamente
+                                e.target.value = '';
+                              } catch (error) {
+                                console.error('Erro ao processar arquivo:', error);
                               }
                             }}
                           />
@@ -1204,24 +1599,39 @@ export default function Cadastro() {
                         </p>
                         
                         {/* Input com capture="user" abre câmera frontal nativa */}
-                        <label className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-600 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-purple-500/25 transition flex items-center justify-center gap-3 cursor-pointer">
+                        <label 
+                          htmlFor="camera-input-error"
+                          className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-600 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-purple-500/25 transition flex items-center justify-center gap-3 cursor-pointer"
+                        >
                           <Camera className="w-6 h-6" />
                           Abrir Câmera
                           <input
+                            id="camera-input-error"
                             type="file"
                             accept="image/*"
                             capture="user"
                             className="hidden"
                             onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                const reader = new FileReader();
-                                reader.onload = (event) => {
-                                  setFacialPhoto(event.target?.result as string);
-                                  setFaceDetected(true);
-                                  setCameraError(null);
-                                };
-                                reader.readAsDataURL(file);
+                              try {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const reader = new FileReader();
+                                  reader.onload = (event) => {
+                                    if (event.target?.result) {
+                                      setFacialPhoto(event.target.result as string);
+                                      setFaceDetected(true);
+                                      setCameraError(null);
+                                    }
+                                  };
+                                  reader.onerror = () => {
+                                    console.error('Erro ao ler arquivo');
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                                // Limpar o input para permitir selecionar o mesmo arquivo novamente
+                                e.target.value = '';
+                              } catch (error) {
+                                console.error('Erro ao processar arquivo:', error);
                               }
                             }}
                           />
@@ -1475,6 +1885,13 @@ export default function Cadastro() {
               </div>
 
               <div className="space-y-4 flex-1">
+                {/* Mensagem de erro */}
+                {error && (
+                  <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-xl text-center text-sm">
+                    {error}
+                  </div>
+                )}
+
                 {/* Upload documento */}
                 <div className="bg-zinc-900/50 rounded-xl p-4 border border-zinc-800">
                   <p className="font-medium mb-3">Documento com foto</p>
@@ -1482,7 +1899,15 @@ export default function Cadastro() {
                     {['RG', 'CNH', 'Gov.br'].map((doc) => (
                       <button
                         key={doc}
-                        onClick={() => setForm({...form, documentType: doc})}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          try {
+                            setForm({...form, documentType: doc});
+                          } catch (error) {
+                            console.error('Erro ao selecionar tipo de documento:', error);
+                          }
+                        }}
                         className={`p-3 rounded-lg border text-sm font-medium transition ${
                           form.documentType === doc
                             ? 'border-amber-400 bg-amber-400/10 text-amber-400'
@@ -1493,15 +1918,25 @@ export default function Cadastro() {
                       </button>
                     ))}
                   </div>
-                  <label className="flex items-center justify-center gap-2 h-12 bg-zinc-800 rounded-lg cursor-pointer hover:bg-zinc-700 transition">
+                  <label 
+                    htmlFor="document-file-input"
+                    className="flex items-center justify-center gap-2 h-12 bg-zinc-800 rounded-lg cursor-pointer hover:bg-zinc-700 transition"
+                  >
                     <Upload className="w-5 h-5 text-zinc-400" />
                     <span className="text-zinc-400 text-sm">
                       {form.documentFile ? form.documentFile.name : 'Enviar arquivo'}
                     </span>
                     <input
+                      id="document-file-input"
                       type="file"
                       accept="image/*,.pdf"
-                      onChange={(e) => setForm({...form, documentFile: e.target.files?.[0] || null})}
+                      onChange={(e) => {
+                        try {
+                          setForm({...form, documentFile: e.target.files?.[0] || null});
+                        } catch (error) {
+                          console.error('Erro ao processar arquivo de documento:', error);
+                        }
+                      }}
                       className="hidden"
                     />
                   </label>
@@ -1511,15 +1946,25 @@ export default function Cadastro() {
                 <div className="bg-zinc-900/50 rounded-xl p-4 border border-zinc-800">
                   <p className="font-medium mb-3">Comprovante de endereço</p>
                   <p className="text-zinc-500 text-xs mb-3">Conta de luz, água ou extrato bancário (últimos 3 meses)</p>
-                  <label className="flex items-center justify-center gap-2 h-12 bg-zinc-800 rounded-lg cursor-pointer hover:bg-zinc-700 transition">
+                  <label 
+                    htmlFor="address-proof-input"
+                    className="flex items-center justify-center gap-2 h-12 bg-zinc-800 rounded-lg cursor-pointer hover:bg-zinc-700 transition"
+                  >
                     <Upload className="w-5 h-5 text-zinc-400" />
                     <span className="text-zinc-400 text-sm">
                       {form.addressProof ? form.addressProof.name : 'Enviar arquivo'}
                     </span>
                     <input
+                      id="address-proof-input"
                       type="file"
                       accept="image/*,.pdf"
-                      onChange={(e) => setForm({...form, addressProof: e.target.files?.[0] || null})}
+                      onChange={(e) => {
+                        try {
+                          setForm({...form, addressProof: e.target.files?.[0] || null});
+                        } catch (error) {
+                          console.error('Erro ao processar arquivo de comprovante:', error);
+                        }
+                      }}
                       className="hidden"
                     />
                   </label>
@@ -1531,7 +1976,10 @@ export default function Cadastro() {
                     <input
                       type="checkbox"
                       checked={form.agreeTerms}
-                      onChange={(e) => setForm({...form, agreeTerms: e.target.checked})}
+                      onChange={(e) => {
+                        console.log('📝 Checkbox Termos:', e.target.checked);
+                        setForm({...form, agreeTerms: e.target.checked});
+                      }}
                       className="mt-1 w-5 h-5 rounded bg-zinc-800 border-zinc-700 text-amber-400 focus:ring-amber-400"
                     />
                     <span className="text-sm text-zinc-400">
@@ -1544,7 +1992,10 @@ export default function Cadastro() {
                     <input
                       type="checkbox"
                       checked={form.agreePrivacy}
-                      onChange={(e) => setForm({...form, agreePrivacy: e.target.checked})}
+                      onChange={(e) => {
+                        console.log('📝 Checkbox Privacidade:', e.target.checked);
+                        setForm({...form, agreePrivacy: e.target.checked});
+                      }}
                       className="mt-1 w-5 h-5 rounded bg-zinc-800 border-zinc-700 text-amber-400 focus:ring-amber-400"
                     />
                     <span className="text-sm text-zinc-400">
@@ -1555,8 +2006,22 @@ export default function Cadastro() {
               </div>
 
               <button
-                onClick={handleSubmit}
-                disabled={!form.agreeTerms || !form.agreePrivacy || isLoading}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('🖱️ Botão Finalizar Cadastro clicado!');
+                  console.log('Estado atual:', {
+                    agreeTerms: personType === 'pf' ? form.agreeTerms : formPJ.agreeTerms,
+                    agreePrivacy: personType === 'pf' ? form.agreePrivacy : formPJ.agreePrivacy,
+                    isLoading,
+                    step
+                  });
+                  handleSubmit();
+                }}
+                disabled={
+                  (personType === 'pf' ? (!form.agreeTerms || !form.agreePrivacy) : (!formPJ.agreeTerms || !formPJ.agreePrivacy)) || 
+                  isLoading
+                }
                 className="w-full h-14 bg-gradient-to-r from-amber-400 to-orange-500 text-black font-bold rounded-xl mt-6 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-amber-500/25 transition-all flex items-center justify-center gap-2"
               >
                 {isLoading ? (

@@ -28,6 +28,9 @@ import {
   Trash2,
   Plus,
   Bell,
+  Shield,
+  ShieldAlert,
+  ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { GPSDiagnostic } from "./GPSDiagnostic";
@@ -117,30 +120,12 @@ interface CompanyLocation {
 const COMPANY_LOCATIONS: CompanyLocation[] = [
   {
     id: "1",
-    name: "Bil's Cinema - Sede Principal",
-    latitude: -19.9311, // Belo Horizonte - Savassi
-    longitude: -43.9380,
-    radius: 100, // 100 metros
-    address: "Av. Getúlio Vargas, 1500 - Savassi",
-    cep: "30112-021",
-  },
-  {
-    id: "2",
-    name: "Bil's Cinema - Filial Centro",
-    latitude: -19.9208,
-    longitude: -43.9378,
-    radius: 150,
-    address: "Rua da Bahia, 1148 - Centro",
-    cep: "30160-011",
-  },
-  {
-    id: "3",
-    name: "Bil's Cinema - Depósito",
-    latitude: -19.9537,
-    longitude: -43.9633,
-    radius: 200,
-    address: "Av. Pedro II, 2500 - Contagem",
-    cep: "32040-000",
+    name: "Bil's Cinema e Vídeo - Sede Principal",
+    latitude: -19.841520, // Floramar - BH (ERS Computer)
+    longitude: -43.933511,
+    radius: 150, // 150 metros de raio
+    address: "Rua Joaquim Soares, 125-B - Floramar (Fundo ERS Computer)",
+    cep: "31742-083",
   },
 ];
 
@@ -150,8 +135,196 @@ const DEFAULT_SCHEDULE: WorkSchedule = {
   wednesday: { start: "08:00", end: "17:00", enabled: true },
   thursday: { start: "08:00", end: "17:00", enabled: true },
   friday: { start: "08:00", end: "17:00", enabled: true },
-  saturday: { start: "08:00", end: "17:00", enabled: false }, // Trabalho com agendamento = hora extra
-  sunday: { start: "08:00", end: "17:00", enabled: false },    // Trabalho com agendamento = hora extra
+  saturday: { start: "08:00", end: "17:00", enabled: false },
+  sunday: { start: "08:00", end: "17:00", enabled: false },
+};
+
+// ============================================
+// SISTEMA DE SEGURANÇA ANTI-FRAUDE
+// ============================================
+interface SecurityValidation {
+  isValid: boolean;
+  trustScore: number; // 0-100
+  warnings: string[];
+  flags: {
+    possibleMockLocation: boolean;
+    suspiciousAccuracy: boolean;
+    impossibleSpeed: boolean;
+    vpnDetected: boolean;
+    devToolsOpen: boolean;
+    timestampMismatch: boolean;
+  };
+}
+
+// Detectar ferramentas de desenvolvedor abertas
+const detectDevTools = (): boolean => {
+  const threshold = 160;
+  const widthThreshold = window.outerWidth - window.innerWidth > threshold;
+  const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+  
+  // Verificar também se console está aberto via timing
+  const start = performance.now();
+  console.log('%c', 'font-size:0;');
+  console.clear();
+  const end = performance.now();
+  const consoleOpen = (end - start) > 100;
+  
+  return widthThreshold || heightThreshold || consoleOpen;
+};
+
+// Detectar possível GPS falso/mock
+const detectMockLocation = (location: Location): { isMock: boolean; reasons: string[] } => {
+  const reasons: string[] = [];
+  
+  // 1. Precisão muito exata (GPS real raramente é < 3m)
+  if (location.accuracy < 3) {
+    reasons.push("Precisão suspeita (< 3m)");
+  }
+  
+  // 2. Coordenadas com muitas casas decimais exatas (GPS real tem variação)
+  const latStr = location.latitude.toString();
+  const lngStr = location.longitude.toString();
+  if (latStr.endsWith('000') || lngStr.endsWith('000')) {
+    reasons.push("Coordenadas arredondadas suspeitas");
+  }
+  
+  // 3. Verificar se as coordenadas são exatamente iguais a locais conhecidos de teste
+  const testLocations = [
+    { lat: 0, lng: 0 }, // Null Island
+    { lat: 37.4220, lng: -122.0841 }, // Googleplex (comum em testes)
+    { lat: 40.7128, lng: -74.0060 }, // NYC padrão
+  ];
+  
+  for (const testLoc of testLocations) {
+    if (Math.abs(location.latitude - testLoc.lat) < 0.001 && 
+        Math.abs(location.longitude - testLoc.lng) < 0.001) {
+      reasons.push("Localização de teste detectada");
+    }
+  }
+  
+  return { isMock: reasons.length > 0, reasons };
+};
+
+// Calcular velocidade entre duas localizações (km/h)
+const calculateSpeed = (loc1: Location, loc2: Location): number => {
+  const distance = calculateDistance(loc1.latitude, loc1.longitude, loc2.latitude, loc2.longitude);
+  const timeDiff = Math.abs(loc2.timestamp.getTime() - loc1.timestamp.getTime()) / 1000 / 3600; // em horas
+  if (timeDiff === 0) return 0;
+  return distance / 1000 / timeDiff; // km/h
+};
+
+// Verificar velocidade impossível (teletransporte)
+const checkImpossibleSpeed = (currentLoc: Location, previousLoc: Location | null): { isImpossible: boolean; speed: number } => {
+  if (!previousLoc) return { isImpossible: false, speed: 0 };
+  
+  const speed = calculateSpeed(previousLoc, currentLoc);
+  // Velocidade máxima razoável: 200 km/h (avião regional = ~500km/h, mas muito raro)
+  const maxSpeed = 200;
+  
+  return { isImpossible: speed > maxSpeed, speed };
+};
+
+// Gerar fingerprint do dispositivo
+const generateDeviceFingerprint = (): string => {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    ctx.textBaseline = 'top';
+    ctx.font = '14px Arial';
+    ctx.fillText('fingerprint', 0, 0);
+  }
+  
+  const fingerprint = [
+    navigator.userAgent,
+    navigator.language,
+    screen.colorDepth,
+    screen.width + 'x' + screen.height,
+    new Date().getTimezoneOffset(),
+    navigator.hardwareConcurrency || 'unknown',
+    canvas.toDataURL(),
+  ].join('|');
+  
+  // Hash simples
+  let hash = 0;
+  for (let i = 0; i < fingerprint.length; i++) {
+    const char = fingerprint.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  
+  return Math.abs(hash).toString(36);
+};
+
+// Validação completa de segurança
+const validateLocationSecurity = (
+  location: Location, 
+  previousLocation: Location | null,
+  storedFingerprint: string | null
+): SecurityValidation => {
+  const warnings: string[] = [];
+  let trustScore = 100;
+  
+  const flags = {
+    possibleMockLocation: false,
+    suspiciousAccuracy: false,
+    impossibleSpeed: false,
+    vpnDetected: false,
+    devToolsOpen: false,
+    timestampMismatch: false,
+  };
+  
+  // 1. Verificar GPS mock
+  const mockCheck = detectMockLocation(location);
+  if (mockCheck.isMock) {
+    flags.possibleMockLocation = true;
+    warnings.push(...mockCheck.reasons);
+    trustScore -= 30;
+  }
+  
+  // 2. Verificar precisão suspeita
+  if (location.accuracy < 5) {
+    flags.suspiciousAccuracy = true;
+    warnings.push("Precisão muito alta pode indicar GPS simulado");
+    trustScore -= 15;
+  }
+  
+  // 3. Verificar velocidade impossível
+  const speedCheck = checkImpossibleSpeed(location, previousLocation);
+  if (speedCheck.isImpossible) {
+    flags.impossibleSpeed = true;
+    warnings.push(`Velocidade impossível detectada: ${speedCheck.speed.toFixed(0)} km/h`);
+    trustScore -= 40;
+  }
+  
+  // 4. Verificar DevTools
+  if (detectDevTools()) {
+    flags.devToolsOpen = true;
+    warnings.push("Ferramentas de desenvolvedor detectadas");
+    trustScore -= 10;
+  }
+  
+  // 5. Verificar fingerprint do dispositivo
+  const currentFingerprint = generateDeviceFingerprint();
+  if (storedFingerprint && storedFingerprint !== currentFingerprint) {
+    warnings.push("Dispositivo diferente do cadastrado");
+    trustScore -= 20;
+  }
+  
+  // 6. Verificar timestamp
+  const now = new Date();
+  const timeDiff = Math.abs(now.getTime() - location.timestamp.getTime());
+  if (timeDiff > 60000) { // Mais de 1 minuto de diferença
+    flags.timestampMismatch = true;
+    warnings.push("Timestamp inconsistente");
+    trustScore -= 15;
+  }
+  
+  return {
+    isValid: trustScore >= 50,
+    trustScore: Math.max(0, trustScore),
+    warnings,
+    flags,
+  };
 };
 
 export function AutoTimesheetSystem() {
@@ -178,18 +351,69 @@ export function AutoTimesheetSystem() {
     cep: ''
   });
   const [punchNotifications, setPunchNotifications] = useState<PunchNotification[]>([]);
+  const [currentAddress, setCurrentAddress] = useState<string>("");
+  
+  // Estados de Segurança Anti-Fraude
+  const [securityValidation, setSecurityValidation] = useState<SecurityValidation | null>(null);
+  const [previousLocation, setPreviousLocation] = useState<Location | null>(null);
+  const [deviceFingerprint] = useState<string>(() => generateDeviceFingerprint());
+  const [locationHistory, setLocationHistory] = useState<Location[]>([]);
+  
   const [employeeSchedules, setEmployeeSchedules] = useState<EmployeeSchedule[]>([
     {
       employeeId: "1",
-      employeeName: "João Silva Santos",
+      employeeName: "Felipe Nunes de Andrade",
       workStart: "08:00",
-      workEnd: "17:00",
+      workEnd: "18:00",
+      lunchStart: "12:00",
+      lunchEnd: "13:00",
+    },
+    {
+      employeeId: "2",
+      employeeName: "Otavio Almeida de Souza",
+      workStart: "08:00",
+      workEnd: "18:00",
       lunchStart: "12:00",
       lunchEnd: "13:00",
     },
   ]);
   const [showScheduleEditor, setShowScheduleEditor] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<EmployeeSchedule | null>(null);
+
+  // Função para obter endereço a partir das coordenadas (Geocodificação Reversa)
+  const getAddressFromCoordinates = useCallback(async (lat: number, lng: number) => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
+        {
+          headers: {
+            'Accept-Language': 'pt-BR',
+            'User-Agent': 'BilsCinema/1.0'
+          }
+        }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        const addr = data.address;
+        
+        // Montar endereço legível
+        const parts = [];
+        if (addr.road) parts.push(addr.road);
+        if (addr.house_number) parts[0] = `${parts[0]}, ${addr.house_number}`;
+        if (addr.suburb || addr.neighbourhood) parts.push(addr.suburb || addr.neighbourhood);
+        if (addr.city || addr.town || addr.village) parts.push(addr.city || addr.town || addr.village);
+        if (addr.state) parts.push(addr.state);
+        
+        const formattedAddress = parts.join(' - ') || data.display_name;
+        setCurrentAddress(formattedAddress);
+        return formattedAddress;
+      }
+    } catch (error) {
+      console.error('Erro ao obter endereço:', error);
+    }
+    return null;
+  }, []);
 
   // Verificar se está dentro da empresa
   const checkIfInCompany = useCallback((location: Location): boolean => {
@@ -619,7 +843,31 @@ export function AutoTimesheetSystem() {
       try {
         console.log("🔄 Verificando localização...");
         const location = await getCurrentLocation();
+        
+        // 🔒 VALIDAÇÃO DE SEGURANÇA
+        const storedFingerprint = localStorage.getItem(`device_fp_${user.id}`);
+        const validation = validateLocationSecurity(location, previousLocation, storedFingerprint);
+        setSecurityValidation(validation);
+        
+        // Salvar fingerprint se for a primeira vez
+        if (!storedFingerprint) {
+          localStorage.setItem(`device_fp_${user.id}`, deviceFingerprint);
+        }
+        
+        // Atualizar histórico de localização
+        setPreviousLocation(currentLocation);
+        setLocationHistory(prev => [...prev.slice(-10), location]);
+        
+        // Log de segurança
+        if (!validation.isValid) {
+          console.warn("⚠️ ALERTA DE SEGURANÇA:", validation.warnings);
+          toast.warning("⚠️ Localização com alertas de segurança", {
+            description: `Confiança: ${validation.trustScore}%`,
+          });
+        }
+        
         setCurrentLocation(location);
+        getAddressFromCoordinates(location.latitude, location.longitude);
         const inCompany = checkIfInCompany(location);
         setIsInCompany(inCompany);
         setLocationError(null);
@@ -627,15 +875,20 @@ export function AutoTimesheetSystem() {
         console.log("📍 Na empresa:", inCompany);
         console.log("⏰ Horário de trabalho:", isWorkingHours());
         console.log("📋 Registro atual:", currentEntry?.status);
+        console.log("🔒 Segurança - Confiança:", validation.trustScore + "%");
         
-        // Bater ponto automaticamente quando entrar na empresa
-        if (inCompany && isWorkingHours() && !currentEntry) {
+        // Bater ponto automaticamente quando entrar na empresa (APENAS SE SEGURO)
+        if (inCompany && isWorkingHours() && !currentEntry && validation.isValid) {
           console.log("✅ Batendo ponto automático (entrada na empresa)");
           toast.info("📍 Você entrou na área da empresa", {
             description: "Registrando ponto automático...",
             duration: 3000,
           });
           await autoClockIn();
+        } else if (inCompany && isWorkingHours() && !currentEntry && !validation.isValid) {
+          toast.error("🔒 Ponto não registrado - Localização suspeita", {
+            description: "Aguardando aprovação manual do gestor",
+          });
         }
         
         // Registrar saída automaticamente quando sair da empresa
@@ -679,8 +932,29 @@ export function AutoTimesheetSystem() {
       
       const location = await getCurrentLocation();
       console.log("📍 Localização obtida:", location);
+
+      // 🔒 VALIDAÇÃO DE SEGURANÇA INICIAL
+      const storedFingerprint = localStorage.getItem(`device_fp_${user?.id}`);
+      const validation = validateLocationSecurity(location, null, storedFingerprint);
+      setSecurityValidation(validation);
       
+      // Salvar fingerprint do dispositivo
+      if (user && !storedFingerprint) {
+        localStorage.setItem(`device_fp_${user.id}`, deviceFingerprint);
+        console.log("🔒 Fingerprint do dispositivo salvo");
+      }
+      
+      // Iniciar histórico de localização
+      setLocationHistory([location]);
+      
+      console.log("🔒 Validação de segurança:", {
+        trustScore: validation.trustScore,
+        isValid: validation.isValid,
+        warnings: validation.warnings
+      });
+
       setCurrentLocation(location);
+      getAddressFromCoordinates(location.latitude, location.longitude);
       setIsLocationEnabled(true);
       setLocationError(null);
       
@@ -815,6 +1089,11 @@ export function AutoTimesheetSystem() {
                           </span>
                         )}
                       </div>
+                      {currentAddress && (
+                        <div className="text-white text-sm mt-1">
+                          📌 {currentAddress}
+                        </div>
+                      )}
                       {currentLocation && (
                         <div className="text-gray-400 text-sm">
                           Precisão: {currentLocation.accuracy.toFixed(0)}m • {calculateDistanceFromCompany(currentLocation)}m da empresa
@@ -850,6 +1129,28 @@ export function AutoTimesheetSystem() {
                 <Badge variant="outline" className="text-green-400 border-green-400">
                   GPS Ativo
                 </Badge>
+                {/* Indicador de Segurança */}
+                {securityValidation && (
+                  <Badge 
+                    variant="outline" 
+                    className={`${
+                      securityValidation.trustScore >= 80 
+                        ? 'text-green-400 border-green-400' 
+                        : securityValidation.trustScore >= 50 
+                          ? 'text-yellow-400 border-yellow-400' 
+                          : 'text-red-400 border-red-400'
+                    }`}
+                    title={securityValidation.warnings.join(', ') || 'Localização verificada'}
+                  >
+                    {securityValidation.trustScore >= 80 ? (
+                      <><ShieldCheck className="w-3 h-3 mr-1" /> {securityValidation.trustScore}%</>
+                    ) : securityValidation.trustScore >= 50 ? (
+                      <><Shield className="w-3 h-3 mr-1" /> {securityValidation.trustScore}%</>
+                    ) : (
+                      <><ShieldAlert className="w-3 h-3 mr-1" /> {securityValidation.trustScore}%</>
+                    )}
+                  </Badge>
+                )}
                 <Button
                   onClick={requestLocationPermission}
                   size="sm"
@@ -948,27 +1249,23 @@ export function AutoTimesheetSystem() {
               <Settings className="w-4 h-4" />
             </Button>
             
-            {/* Botão de Configuração de Endereços - Apenas para Admin */}
-            {isAdmin && (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowAddressConfig(!showAddressConfig)}
-                  className="border-blue-600 text-blue-400 hover:bg-blue-700"
-                  title="Configurar Endereços da Empresa"
-                >
-                  <MapPin className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowScheduleEditor(!showScheduleEditor)}
-                  className="border-purple-600 text-purple-400 hover:bg-purple-700"
-                  title="Gerenciar Horários dos Funcionários"
-                >
-                  <User className="w-4 h-4" />
-                </Button>
-              </>
-            )}
+            {/* Botões de Admin */}
+            <Button
+              variant="outline"
+              onClick={() => setShowAddressConfig(!showAddressConfig)}
+              className="border-blue-600 text-blue-400 hover:bg-blue-700"
+              title="Configurar Endereços da Empresa"
+            >
+              <MapPin className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowScheduleEditor(!showScheduleEditor)}
+              className="border-purple-600 text-purple-400 hover:bg-purple-700"
+              title="Gerenciar Horários dos Funcionários"
+            >
+              <User className="w-4 h-4" />
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -1097,9 +1394,10 @@ export function AutoTimesheetSystem() {
         </Card>
       )}
 
-      {/* Editor de Horários - Apenas para Admin */}
-      {isAdmin && showScheduleEditor && (
-        <Card className="bg-gray-800 border-gray-700">
+      {/* Editor de Horários - Modal Flutuante */}
+      {showScheduleEditor && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999] p-4" onClick={() => setShowScheduleEditor(false)}>
+          <Card className="bg-gray-800 border-gray-700 w-full max-w-2xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
           <CardHeader>
             <CardTitle className="flex items-center justify-between text-white">
               <span className="flex items-center">
@@ -1217,21 +1515,23 @@ export function AutoTimesheetSystem() {
               </div>
             )}
           </CardContent>
-        </Card>
+          </Card>
+        </div>
       )}
 
-      {/* Configurações */}
+      {/* Configurações - Modal Flutuante */}
       {showSettings && (
-        <Card className="bg-gray-800 border-gray-700">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between text-white">
-              <span className="flex items-center">
-                <Settings className="w-5 h-5 mr-2" />
-                Configurações do Ponto
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999] p-4" onClick={() => setShowSettings(false)}>
+          <Card className="bg-gray-800 border-gray-700 w-full max-w-2xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between text-white">
+                <span className="flex items-center">
+                  <Settings className="w-5 h-5 mr-2" />
+                  Configurações do Ponto
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
                 onClick={() => setShowSettings(false)}
                 className="text-gray-400 hover:text-white"
               >
@@ -1260,14 +1560,23 @@ export function AutoTimesheetSystem() {
                 <div className="p-3 bg-gray-700 rounded">
                   <div className="text-white font-medium mb-2">Localização Atual</div>
                   {currentLocation ? (
-                    <div className="text-gray-400 text-sm">
-                      <MapPin className="w-4 h-4 inline mr-1" />
-                      {isInCompany ? '✅ Na empresa' : '📍 Trabalho remoto'}
-                      <div className="text-xs mt-1">
-                        Coordenadas: {currentLocation.latitude.toFixed(6)}, {currentLocation.longitude.toFixed(6)}
+                    <div className="text-gray-400 text-sm space-y-2">
+                      <div className="flex items-start gap-2">
+                        <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <div className={isInCompany ? 'text-green-400' : 'text-yellow-400'}>
+                            {isInCompany ? '✅ Na empresa' : '📍 Trabalho remoto'}
+                          </div>
+                          {currentAddress && (
+                            <div className="text-white text-sm mt-1">
+                              📌 {currentAddress}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-xs">
-                        Precisão: {currentLocation.accuracy.toFixed(0)}m
+                      <div className="text-xs border-t border-gray-600 pt-2 mt-2">
+                        <div>Coordenadas: {currentLocation.latitude.toFixed(6)}, {currentLocation.longitude.toFixed(6)}</div>
+                        <div>Precisão: {currentLocation.accuracy.toFixed(0)}m</div>
                       </div>
                     </div>
                   ) : (
@@ -1289,6 +1598,7 @@ export function AutoTimesheetSystem() {
                           toast.loading("Atualizando localização...", { id: "update-location" });
                           const location = await getCurrentLocation();
                           setCurrentLocation(location);
+                          getAddressFromCoordinates(location.latitude, location.longitude);
                           setIsInCompany(checkIfInCompany(location));
                           setLocationError(null);
                           toast.success("Localização atualizada!", { id: "update-location" });
@@ -1316,6 +1626,64 @@ export function AutoTimesheetSystem() {
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* 🔒 Status de Segurança */}
+            <div className="p-3 bg-gray-700 rounded border-l-4 border-blue-500">
+              <div className="text-white font-medium mb-2 flex items-center">
+                <Shield className="w-4 h-4 mr-2 text-blue-400" />
+                Segurança da Localização
+              </div>
+              {securityValidation ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-400 text-sm">Nível de Confiança:</span>
+                    <Badge 
+                      className={`${
+                        securityValidation.trustScore >= 80 
+                          ? 'bg-green-600' 
+                          : securityValidation.trustScore >= 50 
+                            ? 'bg-yellow-600' 
+                            : 'bg-red-600'
+                      }`}
+                    >
+                      {securityValidation.trustScore}%
+                    </Badge>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className={`p-2 rounded ${securityValidation.flags.possibleMockLocation ? 'bg-red-900/50' : 'bg-green-900/50'}`}>
+                      {securityValidation.flags.possibleMockLocation ? '❌' : '✅'} GPS Real
+                    </div>
+                    <div className={`p-2 rounded ${securityValidation.flags.suspiciousAccuracy ? 'bg-yellow-900/50' : 'bg-green-900/50'}`}>
+                      {securityValidation.flags.suspiciousAccuracy ? '⚠️' : '✅'} Precisão OK
+                    </div>
+                    <div className={`p-2 rounded ${securityValidation.flags.impossibleSpeed ? 'bg-red-900/50' : 'bg-green-900/50'}`}>
+                      {securityValidation.flags.impossibleSpeed ? '❌' : '✅'} Velocidade OK
+                    </div>
+                    <div className={`p-2 rounded ${securityValidation.flags.devToolsOpen ? 'bg-yellow-900/50' : 'bg-green-900/50'}`}>
+                      {securityValidation.flags.devToolsOpen ? '⚠️' : '✅'} Navegador OK
+                    </div>
+                  </div>
+                  
+                  {securityValidation.warnings.length > 0 && (
+                    <div className="mt-2 p-2 bg-red-900/30 rounded">
+                      <div className="text-red-400 text-xs font-medium mb-1">⚠️ Alertas:</div>
+                      {securityValidation.warnings.map((warning, idx) => (
+                        <div key={idx} className="text-red-300 text-xs">• {warning}</div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  <div className="text-gray-500 text-xs mt-2 border-t border-gray-600 pt-2">
+                    🔐 Dispositivo: {deviceFingerprint.slice(0, 8)}...
+                  </div>
+                </div>
+              ) : (
+                <div className="text-gray-400 text-sm">
+                  Aguardando localização para verificar segurança...
+                </div>
+              )}
             </div>
 
             {/* Configurações Administrativas (apenas para admins) */}
@@ -1361,7 +1729,8 @@ export function AutoTimesheetSystem() {
               </div>
             )}
           </CardContent>
-        </Card>
+          </Card>
+        </div>
       )}
 
       {/* Erro de Localização */}
@@ -1437,22 +1806,23 @@ export function AutoTimesheetSystem() {
         </Card>
       )}
 
-      {/* Configuração de Endereços da Empresa - Apenas para Admin */}
-      {showAddressConfig && isAdmin && (
-        <Card className="bg-gray-800 border-gray-700">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between text-white">
-              <span className="flex items-center">
-                <MapPin className="w-5 h-5 mr-2 text-blue-400" />
-                Configuração de Endereços da Empresa
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowAddressConfig(false)}
-                className="text-gray-400 hover:text-white"
-              >
-                <X className="w-4 h-4" />
+      {/* Configuração de Endereços da Empresa - Modal Flutuante */}
+      {showAddressConfig && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999] p-4" onClick={() => setShowAddressConfig(false)}>
+          <Card className="bg-gray-800 border-gray-700 w-full max-w-2xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between text-white">
+                <span className="flex items-center">
+                  <MapPin className="w-5 h-5 mr-2 text-blue-400" />
+                  Configuração de Endereços da Empresa
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAddressConfig(false)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
               </Button>
             </CardTitle>
           </CardHeader>
@@ -1689,7 +2059,8 @@ export function AutoTimesheetSystem() {
               </div>
             </div>
           </CardContent>
-        </Card>
+          </Card>
+        </div>
       )}
     </div>
   );

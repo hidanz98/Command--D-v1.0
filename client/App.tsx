@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -38,6 +38,29 @@ import Clientes from "./pages/Clientes";
 import Maintenances from "./pages/Maintenances";
 import Configuracoes from "./pages/Configuracoes";
 import Backups from "./pages/Backups";
+import Diagnostics from "./pages/Diagnostics";
+import Mobile from "./pages/Mobile";
+import Importacao from "./pages/Importacao";
+import DashboardPremium from "./pages/DashboardPremium";
+import Auditoria from "./pages/Auditoria";
+import Seguranca from "./pages/Seguranca";
+import Usuarios from "./pages/Usuarios";
+import Relatorios from "./pages/Relatorios";
+import Calendario from "./pages/Calendario";
+import Chat from "./pages/Chat";
+import Notificacoes from "./pages/Notificacoes";
+import Analytics from "./pages/Analytics";
+import Avaliacoes from "./pages/Avaliacoes";
+import Estoque from "./pages/Estoque";
+import FluxoCaixa from "./pages/FluxoCaixa";
+import Personalizacao from "./pages/Personalizacao";
+import IAAvancada from "./pages/IAAvancada";
+import RemoteControl from "./pages/RemoteControl";
+import { PermissionsProvider } from "./context/PermissionsContext";
+import { ThemeProvider } from "./context/ThemeContext";
+import { AIProvider } from "./context/AIContext";
+import AIAssistant from "./components/AIAssistant";
+import MobileAccess from "./pages/MobileAccess";
 
 // Create QueryClient instance with proper configuration
 // const queryClient = new QueryClient({
@@ -66,7 +89,47 @@ function AppWrapper() {
       setIsReady(true);
     }, 100);
 
-    return () => clearTimeout(timer);
+    // Handler global para erros de DOM
+    const handleError = (event: ErrorEvent) => {
+      if (event.error?.message?.includes('removeChild') || 
+          event.error?.message?.includes('Node')) {
+        console.warn('Erro de DOM capturado globalmente:', event.error);
+        event.preventDefault(); // Prevenir que o erro quebre a aplicação
+        // Tentar limpar elementos órfãos
+        try {
+          const orphanElements = document.querySelectorAll('[data-orphan]');
+          orphanElements.forEach(el => {
+            try {
+              if (el.parentNode && el.parentNode.contains(el)) {
+                el.parentNode.removeChild(el);
+              }
+            } catch (e) {
+              // Ignorar erros de limpeza
+            }
+          });
+        } catch (cleanupError) {
+          console.error('Erro ao limpar DOM:', cleanupError);
+        }
+      }
+    };
+
+    // Handler para rejeições de promises não tratadas
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      if (event.reason?.message?.includes('removeChild') || 
+          event.reason?.message?.includes('Node')) {
+        console.warn('Promise rejeitada com erro de DOM:', event.reason);
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
   }, []);
 
   if (!isReady) {
@@ -74,6 +137,9 @@ function AppWrapper() {
   }
 
   return (
+    <ThemeProvider>
+    <AIProvider>
+    <PermissionsProvider>
     <AuthProvider>
       <LogoProvider>
         <CompanyProvider>
@@ -111,6 +177,53 @@ function AppWrapper() {
                                 <Route path="/manutencoes" element={<Maintenances />} />
                                 <Route path="/configuracoes" element={<Configuracoes />} />
                                 <Route path="/backups" element={<Backups />} />
+                                <Route path="/diagnostico" element={<Diagnostics />} />
+                                <Route path="/diagnostics" element={<Diagnostics />} />
+                                <Route path="/mobile" element={<Mobile />} />
+                                <Route path="/importacao" element={<Importacao />} />
+                                <Route path="/importar" element={<Importacao />} />
+                                <Route path="/dashboard-premium" element={<DashboardPremium />} />
+                                <Route path="/painel" element={<DashboardPremium />} />
+                                <Route path="/auditoria" element={<Auditoria />} />
+                                <Route path="/logs" element={<Auditoria />} />
+                                <Route path="/seguranca" element={<Seguranca />} />
+                                <Route path="/security" element={<Seguranca />} />
+                                <Route path="/usuarios" element={<Usuarios />} />
+                                <Route path="/users" element={<Usuarios />} />
+                                <Route path="/permissoes" element={<Usuarios />} />
+                                <Route path="/relatorios" element={<Relatorios />} />
+                                <Route path="/reports" element={<Relatorios />} />
+                                <Route path="/contratos" element={<Relatorios />} />
+                                <Route path="/calendario" element={<Calendario />} />
+                                <Route path="/agenda" element={<Calendario />} />
+                                <Route path="/reservas" element={<Calendario />} />
+                                <Route path="/chat" element={<Chat />} />
+                                <Route path="/mensagens" element={<Chat />} />
+                                <Route path="/notificacoes" element={<Notificacoes />} />
+                                <Route path="/alertas" element={<Notificacoes />} />
+                                <Route path="/analytics" element={<Analytics />} />
+                                <Route path="/bi" element={<Analytics />} />
+                                <Route path="/inteligencia" element={<Analytics />} />
+                                <Route path="/avaliacoes" element={<Avaliacoes />} />
+                                <Route path="/reviews" element={<Avaliacoes />} />
+                                <Route path="/feedback" element={<Avaliacoes />} />
+                                <Route path="/estoque" element={<Estoque />} />
+                                <Route path="/inventario" element={<Estoque />} />
+                                <Route path="/fluxo-caixa" element={<FluxoCaixa />} />
+                                <Route path="/financeiro" element={<FluxoCaixa />} />
+                                <Route path="/caixa" element={<FluxoCaixa />} />
+                                <Route path="/personalizacao" element={<Personalizacao />} />
+                                <Route path="/personalizar" element={<Personalizacao />} />
+                                <Route path="/tema" element={<Personalizacao />} />
+                                <Route path="/ia" element={<IAAvancada />} />
+                                <Route path="/ia-avancada" element={<IAAvancada />} />
+                                <Route path="/assistente" element={<IAAvancada />} />
+                                <Route path="/ai" element={<IAAvancada />} />
+                                <Route path="/remote" element={<RemoteControl />} />
+                                <Route path="/controle-remoto" element={<RemoteControl />} />
+                                <Route path="/iphone" element={<RemoteControl />} />
+                                <Route path="/mobile" element={<MobileAccess />} />
+                                <Route path="/acesso-mobile" element={<MobileAccess />} />
                                 <Route path="/master-admin" element={<MasterAdminPanel />} />
                                 <Route path="/login" element={<Cadastro />} />
                                 <Route path="/cadastro" element={<Cadastro />} />
@@ -118,6 +231,7 @@ function AppWrapper() {
                                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                                 <Route path="*" element={<NotFound />} />
                               </Routes>
+                              <AIAssistant />
                             </BrowserRouter>
                             </AutoPunchWrapper>
                           </TooltipProvider>
@@ -132,6 +246,9 @@ function AppWrapper() {
         </CompanyProvider>
       </LogoProvider>
     </AuthProvider>
+    </PermissionsProvider>
+    </AIProvider>
+    </ThemeProvider>
   );
 }
 
