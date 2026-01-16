@@ -34,8 +34,12 @@ export const getPublicProducts: RequestHandler = async (_req, res) => {
             : ['/placeholder.svg'],
       internalImage: p.internalImage ?? '',
       tags: p.tags ?? [],
-      available: p.status === 'AVAILABLE',
+      available:
+        p.status === 'AVAILABLE' &&
+        (p.quantity ?? 0) - (p.maintenanceQuantity ?? 0) > 0,
       featured: p.featured ?? false,
+      inMaintenance: p.inMaintenance ?? false,
+      maintenanceQuantity: p.maintenanceQuantity ?? 0,
       description: p.description ?? '',
       visibility: p.visibility ?? 'PUBLIC',
     }));

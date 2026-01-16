@@ -168,6 +168,8 @@ export const updateProduct: RequestHandler = async (req: AuthenticatedRequest, r
     delete updateData.category;
     // 'quantityObservation' é apenas para histórico, não é um campo do produto
     delete updateData.quantityObservation;
+    // 'maintenanceObservation' é apenas para histórico, não é um campo do produto
+    delete updateData.maintenanceObservation;
     // Campos que podem vir vazios e causar problemas
     if (updateData.kitParentId === '') delete updateData.kitParentId;
     if (updateData.maintenanceStartDate === '') delete updateData.maintenanceStartDate;
@@ -195,8 +197,12 @@ export const updateProduct: RequestHandler = async (req: AuthenticatedRequest, r
 
     // Check if quantity is being changed
     const isQuantityChange = updateData.quantity !== undefined && updateData.quantity !== currentProduct.quantity;
-    // Guardar quantityObservation antes de deletar do updateData
+    const isMaintenanceQtyChange =
+      updateData.maintenanceQuantity !== undefined &&
+      updateData.maintenanceQuantity !== currentProduct.maintenanceQuantity;
+    // Guardar observações antes de deletar do updateData
     const quantityObservation = req.body.quantityObservation;
+    const maintenanceObservation = req.body.maintenanceObservation;
 
     if (isQuantityChange) {
       // Check permission
@@ -214,6 +220,18 @@ export const updateProduct: RequestHandler = async (req: AuthenticatedRequest, r
           error: 'Observação é obrigatória ao alterar a quantidade do produto.' 
         });
       }
+    }
+
+    if (isMaintenanceQtyChange && !maintenanceObservation) {
+      return res.status(400).json({
+        success: false,
+        error: 'Observação é obrigatória ao alterar a quantidade em manutenção.',
+      });
+    }
+
+    if (updateData.maintenanceExitBy === '') updateData.maintenanceExitBy = null;
+    if (updateData.maintenanceQuantity !== undefined) {
+      updateData.inMaintenance = updateData.maintenanceQuantity > 0;
     }
 
     // Update product
@@ -258,7 +276,12 @@ export const updateProduct: RequestHandler = async (req: AuthenticatedRequest, r
         field: change.field,
         oldValue: change.oldValue,
         newValue: change.newValue,
-        observation: change.field === 'quantity' ? quantityObservation : undefined,
+        observation:
+          change.field === 'quantity'
+            ? quantityObservation
+            : change.field === 'maintenanceQuantity'
+              ? maintenanceObservation
+              : undefined,
         userId: userId,
         userName: user.name,
         userEmail: user.email,

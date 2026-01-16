@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Upload, Save, X, Star, Package, Globe, Wrench, DollarSign, Settings, QrCode, Barcode, Calendar } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 interface ProductEditModalProps {
   open: boolean;
@@ -18,6 +19,7 @@ interface ProductEditModalProps {
 }
 
 export function ProductEditModal({ open, onClose, product, onSave }: ProductEditModalProps) {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     // ABA 1 - PRODUTO (Interno)
     internalName: "",
@@ -29,6 +31,10 @@ export function ProductEditModal({ open, onClose, product, onSave }: ProductEdit
     model: "",
     warehouse: "",
     internalImage: "",
+    quantity: 0,
+    quantityEntry: 0,
+    quantityExit: 0,
+    quantityObservation: "",
     
     // ABA 2 - E-COMMERCE (Público)
     name: "",
@@ -54,6 +60,11 @@ export function ProductEditModal({ open, onClose, product, onSave }: ProductEdit
     
     // ABA 5 - MANUTENÇÃO
     inMaintenance: false,
+    maintenanceQuantity: 0,
+    maintenanceEntry: "",
+    maintenanceReturn: "",
+    maintenanceObservation: "",
+    maintenanceExitBy: "",
     maintenanceStartDate: "",
     maintenanceEndDate: "",
     maintenanceNotes: "",
@@ -66,6 +77,8 @@ export function ProductEditModal({ open, onClose, product, onSave }: ProductEdit
   const [internalImagePreview, setInternalImagePreview] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [exchangeRate, setExchangeRate] = useState(5.50); // Cotação exemplo
+  const [history, setHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   // Preencher formulário quando produto mudar
   useEffect(() => {
@@ -81,6 +94,10 @@ export function ProductEditModal({ open, onClose, product, onSave }: ProductEdit
         model: product.model || "",
         warehouse: product.warehouse || "principal",
         internalImage: product.internalImage || "",
+        quantity: product.quantity ?? product.total ?? 0,
+        quantityEntry: 0,
+        quantityExit: 0,
+        quantityObservation: "",
         
         // ABA 2 - E-COMMERCE
         name: product.name || "",
@@ -106,6 +123,11 @@ export function ProductEditModal({ open, onClose, product, onSave }: ProductEdit
         
         // ABA 5 - MANUTENÇÃO
         inMaintenance: product.inMaintenance || false,
+        maintenanceQuantity: product.maintenanceQuantity ?? 0,
+        maintenanceEntry: "",
+        maintenanceReturn: "",
+        maintenanceObservation: "",
+        maintenanceExitBy: product.maintenanceExitBy || "",
         maintenanceStartDate: product.maintenanceStartDate || "",
         maintenanceEndDate: product.maintenanceEndDate || "",
         maintenanceNotes: product.maintenanceNotes || "",
@@ -133,6 +155,10 @@ export function ProductEditModal({ open, onClose, product, onSave }: ProductEdit
         model: "",
         warehouse: "principal",
         internalImage: "",
+        quantity: 0,
+        quantityEntry: 0,
+        quantityExit: 0,
+        quantityObservation: "",
         name: "",
         description: "",
         images: [],
@@ -150,6 +176,11 @@ export function ProductEditModal({ open, onClose, product, onSave }: ProductEdit
         costBRL: 0,
         exchangeRate: 5.50,
         inMaintenance: false,
+        maintenanceQuantity: 0,
+        maintenanceEntry: "",
+        maintenanceReturn: "",
+        maintenanceObservation: "",
+        maintenanceExitBy: "",
         maintenanceStartDate: "",
         maintenanceEndDate: "",
         maintenanceNotes: "",
@@ -160,6 +191,66 @@ export function ProductEditModal({ open, onClose, product, onSave }: ProductEdit
       setInternalImageFile(null);
     }
   }, [product]);
+
+  useEffect(() => {
+    if (!open || !product?.id) {
+      setHistory([]);
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setHistory([]);
+      return;
+    }
+
+    setHistoryLoading(true);
+    fetch(`/api/products/${product.id}/history`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((res) => res.json())
+      .then((json) => {
+        if (json?.success && Array.isArray(json.data)) {
+          setHistory(json.data);
+        } else {
+          setHistory([]);
+        }
+      })
+      .catch(() => setHistory([]))
+      .finally(() => setHistoryLoading(false));
+  }, [open, product?.id]);
+
+  const getNowLocalInput = () => {
+    const now = new Date();
+    const offsetMs = now.getTimezoneOffset() * 60000;
+    return new Date(now.getTime() - offsetMs).toISOString().slice(0, 16);
+  };
+
+  useEffect(() => {
+    if (!formData.inMaintenance) return;
+
+    const now = getNowLocalInput();
+    if (!formData.maintenanceStartDate) {
+      setFormData((prev) => ({ ...prev, maintenanceStartDate: now }));
+    }
+    if (!formData.maintenanceExitBy && user?.name) {
+      setFormData((prev) => ({ ...prev, maintenanceExitBy: user.name }));
+    }
+  }, [formData.inMaintenance, formData.maintenanceStartDate, formData.maintenanceExitBy, user?.name]);
+
+  useEffect(() => {
+    if (!formData.inMaintenance) return;
+
+    const now = getNowLocalInput();
+    if (Number(formData.maintenanceEntry || 0) > 0 && !formData.maintenanceStartDate) {
+      setFormData((prev) => ({ ...prev, maintenanceStartDate: now }));
+    }
+    if (Number(formData.maintenanceReturn || 0) > 0 && !formData.maintenanceEndDate) {
+      setFormData((prev) => ({ ...prev, maintenanceEndDate: now }));
+    }
+  }, [formData.inMaintenance, formData.maintenanceEntry, formData.maintenanceReturn, formData.maintenanceStartDate, formData.maintenanceEndDate]);
 
   // Handler para múltiplas imagens (e-commerce)
   const handleMultipleImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -218,9 +309,47 @@ export function ProductEditModal({ open, onClose, product, onSave }: ProductEdit
       return;
     }
 
+    const entryQty = Math.max(0, Number(formData.quantityEntry || 0));
+    const exitQty = Math.max(0, Number(formData.quantityExit || 0));
+    const maintenanceEntryQty = Math.max(0, Number(formData.maintenanceEntry || 0));
+    const maintenanceReturnQty = Math.max(0, Number(formData.maintenanceReturn || 0));
+    const baseQty = Number(formData.quantity || 0);
+    const quantityChanged = entryQty !== 0 || exitQty !== 0 || (!product && baseQty !== 0);
+    const newQuantity = baseQty + entryQty - exitQty;
+    const baseMaintenanceQty = Number(formData.maintenanceQuantity || 0);
+    const maintenanceChanged =
+      maintenanceEntryQty !== 0 || maintenanceReturnQty !== 0;
+    const newMaintenanceQty =
+      baseMaintenanceQty + maintenanceEntryQty - maintenanceReturnQty;
+
+    if (newQuantity < 0) {
+      toast.error("A saída não pode deixar a quantidade negativa.");
+      return;
+    }
+
+    if (newMaintenanceQty < 0) {
+      toast.error("A saída da manutenção não pode deixar negativo.");
+      return;
+    }
+
+    if (product && (entryQty !== 0 || exitQty !== 0) && !formData.quantityObservation?.trim()) {
+      toast.error("Informe a observação para a entrada/saída.");
+      return;
+    }
+
+    if (product && maintenanceChanged && !formData.maintenanceObservation?.trim()) {
+      toast.error("Informe a observação para a manutenção.");
+      return;
+    }
+
     setSaving(true);
     try {
       const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Sessão inválida. Faça login novamente.");
+        return;
+      }
+      toast.info("Salvando produto...");
       
       // Upload de imagens públicas (site)
       let uploadedImages: string[] = [...formData.images];
@@ -278,13 +407,15 @@ export function ProductEditModal({ open, onClose, product, onSave }: ProductEdit
         model: formData.model,
         warehouse: formData.warehouse,
         internalImage: internalImageUrl,
+        quantity: quantityChanged ? newQuantity : baseQty,
+        quantityObservation: quantityChanged ? formData.quantityObservation : undefined,
         
         // Dados públicos
         name: formData.name || formData.internalName,
         description: formData.description,
         images: uploadedImages,
         featured: formData.featured,
-        isActive: !formData.inMaintenance,
+        isActive: product?.isActive ?? true,
         visibility: formData.enableEcommerce ? "PUBLIC" : "PRIVATE",
         
         // Preços
@@ -303,7 +434,10 @@ export function ProductEditModal({ open, onClose, product, onSave }: ProductEdit
         exchangeRate: exchangeRate,
         
         // Manutenção
-        inMaintenance: formData.inMaintenance,
+        maintenanceQuantity: maintenanceChanged ? newMaintenanceQty : baseMaintenanceQty,
+        maintenanceObservation: maintenanceChanged ? formData.maintenanceObservation : undefined,
+        inMaintenance: (maintenanceChanged ? newMaintenanceQty : baseMaintenanceQty) > 0 || formData.inMaintenance,
+        maintenanceExitBy: formData.maintenanceExitBy,
         maintenanceStartDate: formData.maintenanceStartDate,
         maintenanceEndDate: formData.maintenanceEndDate,
         maintenanceNotes: formData.maintenanceNotes,
@@ -339,7 +473,17 @@ export function ProductEditModal({ open, onClose, product, onSave }: ProductEdit
           return;
         }
 
-        throw new Error("Erro ao salvar produto");
+        toast.error(errorText || "Erro ao salvar produto");
+        return;
+      }
+
+      if (maintenanceChanged) {
+        setFormData((prev) => ({
+          ...prev,
+          maintenanceQuantity: newMaintenanceQty,
+          maintenanceEntry: "",
+          maintenanceReturn: "",
+        }));
       }
 
       toast.success(product ? "Produto atualizado com sucesso!" : "Produto criado com sucesso!");
@@ -352,6 +496,20 @@ export function ProductEditModal({ open, onClose, product, onSave }: ProductEdit
       setSaving(false);
     }
   };
+
+  const entryQty = Math.max(0, Number(formData.quantityEntry || 0));
+  const exitQty = Math.max(0, Number(formData.quantityExit || 0));
+  const adjustedQuantity = Math.max(0, Number(formData.quantity || 0) + entryQty - exitQty);
+  const maintenanceEntryQty = Math.max(0, Number(formData.maintenanceEntry || 0));
+  const maintenanceReturnQty = Math.max(0, Number(formData.maintenanceReturn || 0));
+  const adjustedMaintenanceQuantity = Math.max(
+    0,
+    Number(formData.maintenanceQuantity || 0) + maintenanceEntryQty - maintenanceReturnQty,
+  );
+  const hasMaintenanceDelta = maintenanceEntryQty !== 0 || maintenanceReturnQty !== 0;
+  const displayMaintenanceQuantity = hasMaintenanceDelta
+    ? adjustedMaintenanceQuantity
+    : Number(formData.maintenanceQuantity || 0);
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -458,6 +616,69 @@ export function ProductEditModal({ open, onClose, product, onSave }: ProductEdit
                     <SelectItem value="manutencao">Manutenção</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="col-span-2 grid grid-cols-2 gap-4 p-4 bg-cinema-dark-lighter border border-cinema-gray-light rounded-lg">
+                <div className="space-y-2">
+                  <Label className="text-white">Quantidade Atual</Label>
+                  <Input
+                    type="number"
+                    value={formData.quantity}
+                    onChange={(e) => setFormData({ ...formData, quantity: Math.max(0, parseInt(e.target.value, 10) || 0) })}
+                    className="bg-cinema-dark border-cinema-gray-light text-white"
+                    readOnly={!!product}
+                  />
+                  <p className="text-xs text-gray-400">
+                    {product ? "Atualizada automaticamente via entrada/saída" : "Defina a quantidade inicial"}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-white">Quantidade após ajuste</Label>
+                  <Input
+                    type="number"
+                    value={adjustedQuantity}
+                    className="bg-cinema-dark border-cinema-gray-light text-white"
+                    readOnly
+                  />
+                  <p className="text-xs text-gray-400">Pré-visualização do saldo</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-white">Entrada</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={formData.quantityEntry}
+                    onChange={(e) => setFormData({ ...formData, quantityEntry: Math.max(0, parseInt(e.target.value, 10) || 0) })}
+                    className="bg-cinema-dark border-cinema-gray-light text-white"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-white">Saída</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={formData.quantityExit}
+                    onChange={(e) => setFormData({ ...formData, quantityExit: Math.max(0, parseInt(e.target.value, 10) || 0) })}
+                    className="bg-cinema-dark border-cinema-gray-light text-white"
+                  />
+                </div>
+
+                <div className="col-span-2 space-y-2">
+                  <Label className="text-white">Observação (entrada/saída)</Label>
+                  <Textarea
+                    value={formData.quantityObservation}
+                    onChange={(e) => setFormData({ ...formData, quantityObservation: e.target.value })}
+                    placeholder="Ex: Entrada por compra / Saída para manutenção"
+                    rows={2}
+                    className="bg-cinema-dark border-cinema-gray-light text-white"
+                  />
+                  <p className="text-xs text-gray-400">
+                    Obrigatório quando houver entrada/saída.
+                  </p>
+                </div>
               </div>
 
               <div className="col-span-2 space-y-2">
@@ -774,6 +995,56 @@ export function ProductEditModal({ open, onClose, product, onSave }: ProductEdit
                   </div>
                 </div>
               </div>
+
+              <div className="border-t border-cinema-gray-light pt-4">
+                <h3 className="text-white font-semibold mb-2">📜 Histórico de Movimentações</h3>
+                <p className="text-gray-400 text-sm mb-3">
+                  Registro automático de entradas/saídas e alterações de quantidade.
+                </p>
+
+                {historyLoading ? (
+                  <div className="text-sm text-gray-400">Carregando histórico...</div>
+                ) : history.length === 0 ? (
+                  <div className="text-sm text-gray-500">Nenhum registro encontrado.</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="border-b border-cinema-gray-light">
+                        <tr>
+                          <th className="text-left text-cinema-yellow font-medium py-2 pr-4">Data/Hora</th>
+                          <th className="text-left text-cinema-yellow font-medium py-2 pr-4">Usuário</th>
+                          <th className="text-left text-cinema-yellow font-medium py-2 pr-4">Alteração</th>
+                          <th className="text-left text-cinema-yellow font-medium py-2 pr-4">Observação</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {history.map((item) => (
+                          <tr key={item.id} className="border-b border-cinema-gray-light/50">
+                            <td className="py-2 pr-4 text-gray-300">
+                              {new Date(item.createdAt).toLocaleString("pt-BR")}
+                            </td>
+                            <td className="py-2 pr-4 text-gray-300">
+                              {item.userName || "Usuário"}
+                            </td>
+                            <td className="py-2 pr-4 text-gray-300">
+                              {item.field === "quantity" ? (
+                                <span>
+                                  {item.oldValue ?? "-"} → {item.newValue ?? "-"}
+                                </span>
+                              ) : (
+                                <span>{item.action}</span>
+                              )}
+                            </td>
+                            <td className="py-2 pr-4 text-gray-400">
+                              {item.observation || "-"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           </TabsContent>
 
@@ -885,7 +1156,7 @@ export function ProductEditModal({ open, onClose, product, onSave }: ProductEdit
           {/* ABA 5 - MANUTENÇÃO */}
           <TabsContent value="manutencao" className="max-h-[55vh] overflow-y-auto space-y-4 p-4">
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-cinema-dark-lighter rounded-lg border border-cinema-gray-light">
+              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent rounded-2xl border border-orange-500/20">
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="inMaintenance"
@@ -898,7 +1169,7 @@ export function ProductEditModal({ open, onClose, product, onSave }: ProductEdit
                   </Label>
                 </div>
                 {formData.inMaintenance && (
-                  <span className="px-3 py-1 bg-orange-500/20 text-orange-400 rounded text-sm font-semibold">
+                  <span className="px-3 py-1 bg-orange-500/20 text-orange-200 rounded-full text-xs font-semibold tracking-wide">
                     Em Manutenção
                   </span>
                 )}
@@ -906,7 +1177,94 @@ export function ProductEditModal({ open, onClose, product, onSave }: ProductEdit
 
               {formData.inMaintenance && (
                 <>
-                  <div className="bg-orange-900/20 border border-orange-500/30 rounded-lg p-4">
+                  <div className="bg-cinema-dark/40 border border-orange-500/15 rounded-2xl p-5">
+                    <h3 className="text-white font-semibold mb-4">Controle de Manutenção (Quantidade)</h3>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-white">Enviar para manutenção (quantidade)</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={formData.maintenanceEntry}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              maintenanceEntry: e.target.value,
+                            })
+                          }
+                          className="bg-cinema-dark/70 border-cinema-gray-light/60 text-white"
+                          placeholder="Ex: 2"
+                        />
+                        <p className="text-xs text-gray-400">
+                          Digite quantas unidades vão para manutenção.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-white">Retornar da manutenção (quantidade)</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={formData.maintenanceReturn}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              maintenanceReturn: e.target.value,
+                            })
+                          }
+                          className="bg-cinema-dark/70 border-cinema-gray-light/60 text-white"
+                          placeholder="Ex: 1"
+                        />
+                        <p className="text-xs text-gray-400">
+                          Digite quantas unidades voltaram do conserto.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-white">Quantidade em manutenção</Label>
+                        <Input
+                          type="number"
+                          value={displayMaintenanceQuantity}
+                          className="bg-cinema-dark/70 border-cinema-gray-light/60 text-white"
+                          readOnly
+                        />
+                        <p className="text-xs text-gray-400">
+                          {hasMaintenanceDelta
+                            ? "Prévia do total após salvar"
+                            : "Atualizada automaticamente por entrada/retorno"}
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-white">Quantidade após ajuste</Label>
+                        <Input
+                          type="number"
+                          value={adjustedMaintenanceQuantity}
+                          className="bg-cinema-dark/70 border-cinema-gray-light/60 text-white"
+                          readOnly
+                        />
+                        <p className="text-xs text-gray-400">Pré-visualização do saldo em manutenção</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 mt-4">
+                      <Label className="text-white">Observação (manutenção)</Label>
+                      <Textarea
+                        value={formData.maintenanceObservation}
+                        onChange={(e) =>
+                          setFormData({ ...formData, maintenanceObservation: e.target.value })
+                        }
+                        placeholder="Ex: Enviado 2 unidades para conserto / Retorno de 1 unidade"
+                        rows={2}
+                        className="bg-cinema-dark/70 border-cinema-gray-light/60 text-white"
+                      />
+                      <p className="text-xs text-gray-400">
+                        Obrigatório quando houver entrada/retorno de manutenção.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="bg-orange-900/20 border border-orange-500/30 rounded-2xl p-4">
                     <p className="text-orange-300 text-sm">
                       ⚠️ Quando marcado como "Em Manutenção", o produto:
                     </p>
@@ -917,33 +1275,45 @@ export function ProductEditModal({ open, onClose, product, onSave }: ProductEdit
                     </ul>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label className="text-white flex items-center gap-2">
                         <Calendar className="w-4 h-4" />
                         Data de Entrada
                       </Label>
                       <Input
-                        type="date"
+                        type="datetime-local"
                         value={formData.maintenanceStartDate}
                         onChange={(e) => setFormData({ ...formData, maintenanceStartDate: e.target.value })}
-                        className="bg-cinema-dark-lighter border-cinema-gray-light text-white"
+                        className="bg-cinema-dark/70 border-cinema-gray-light/60 text-white"
+                        readOnly
                       />
                     </div>
 
                     <div className="space-y-2">
                       <Label className="text-white flex items-center gap-2">
                         <Calendar className="w-4 h-4" />
-                        Data de Saída (Previsão)
+                        Data de Saída (Retorno)
                       </Label>
                       <Input
-                        type="date"
+                        type="datetime-local"
                         value={formData.maintenanceEndDate}
                         onChange={(e) => setFormData({ ...formData, maintenanceEndDate: e.target.value })}
-                        className="bg-cinema-dark-lighter border-cinema-gray-light text-white"
+                        className="bg-cinema-dark/70 border-cinema-gray-light/60 text-white"
                       />
-                      <p className="text-xs text-gray-400">Deixe vazio se não tiver previsão</p>
+                      <p className="text-xs text-gray-400">Deixe vazio se ainda não retornou</p>
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-white">Pessoa responsável pela saída</Label>
+                    <Input
+                      value={formData.maintenanceExitBy}
+                      onChange={(e) => setFormData({ ...formData, maintenanceExitBy: e.target.value })}
+                      placeholder="Ex: João da Silva"
+                      className="bg-cinema-dark/70 border-cinema-gray-light/60 text-white"
+                      readOnly
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -953,7 +1323,7 @@ export function ProductEditModal({ open, onClose, product, onSave }: ProductEdit
                       onChange={(e) => setFormData({ ...formData, maintenanceNotes: e.target.value })}
                       placeholder="Descreva o problema, peças trocadas, etc..."
                       rows={4}
-                      className="bg-cinema-dark-lighter border-cinema-gray-light text-white"
+                      className="bg-cinema-dark/70 border-cinema-gray-light/60 text-white"
                     />
                   </div>
                 </>

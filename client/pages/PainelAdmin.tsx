@@ -66,6 +66,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import Layout from "@/components/Layout";
 import { AdvancedPageEditor } from "@/components/AdvancedPageEditor";
 import FinancialERP from "@/components/FinancialERP";
@@ -302,6 +303,7 @@ export default function PainelAdmin() {
   
   // Estados para Configuração NFe/NFSe PBH
   const [showNFeModal, setShowNFeModal] = useState(false);
+  const [showStockFilters, setShowStockFilters] = useState(false);
   const [nfeConfig, setNfeConfig] = useState({
     ambiente: "homologacao" as "homologacao" | "producao",
     certificadoImportado: false,
@@ -855,27 +857,80 @@ export default function PainelAdmin() {
       try {
         const res = await fetch('/api/public/products');
         const json = await res.json();
+
+        const token = localStorage.getItem("token");
+        const openStatuses = new Set(["PENDING", "CONFIRMED", "IN_PROGRESS"]);
+        const reservedByProduct: Record<string, number> = {};
+        const maintenanceByProduct: Record<string, number> = {};
+
+        if (token) {
+          try {
+            const ordersRes = await fetch("/api/orders?limit=1000", {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            const ordersJson = await ordersRes.json();
+            const orders = ordersJson?.data?.orders ?? [];
+
+            orders.forEach((order: any) => {
+              if (!openStatuses.has(order.status)) return;
+              if (!Array.isArray(order.items)) return;
+              order.items.forEach((item: any) => {
+                if (!item.productId) return;
+                reservedByProduct[item.productId] =
+                  (reservedByProduct[item.productId] || 0) + (item.quantity || 0);
+              });
+            });
+          } catch {}
+
+          try {
+            const maintRes = await fetch("/api/maintenances?status=IN_PROGRESS", {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            const maintJson = await maintRes.json();
+            const maintenances = Array.isArray(maintJson) ? maintJson : [];
+
+            maintenances.forEach((m: any) => {
+              if (!m.productId) return;
+              maintenanceByProduct[m.productId] =
+                (maintenanceByProduct[m.productId] || 0) + 1;
+            });
+          } catch {}
+        }
+
         if (json?.success) {
-          const mapped = json.data.map((p: any, idx: number) => ({
-            id: p.id,
-            name: p.name,
-            code: p.sku ?? `REF-${String(idx + 1).padStart(3, '0')}`,
-            category: p.category ?? 'REFLETORES',
-            brand: (p.tags?.[0]) ?? '',
-            type: 'individual',
-            available: p.quantity ?? 0,
-            total: p.quantity ?? 0,
-            reserved: 0,
-            price: p.dailyPrice ?? 0,
-            dailyPrice: p.dailyPrice ?? 0,
-            description: p.description ?? '',
-            images: p.images ?? [],
-            internalImage: p.internalImage ?? '',
-            isKit: false,
-            kitItems: [],
-            owner: 'empresa',
-            featured: p.featured ?? false,
-          }));
+          const mapped = json.data.map((p: any, idx: number) => {
+            const total = p.quantity ?? 0;
+            const reserved = reservedByProduct[p.id] || 0;
+            const maintenanceCount = Math.max(
+              Number.isFinite(p.maintenanceQuantity) ? p.maintenanceQuantity : 0,
+              maintenanceByProduct[p.id] || 0,
+              p.inMaintenance ? 1 : 0,
+            );
+            const available = Math.max(total - reserved - maintenanceCount, 0);
+
+            return {
+              id: p.id,
+              name: p.name,
+              code: p.sku ?? `REF-${String(idx + 1).padStart(3, '0')}`,
+              category: p.category ?? 'REFLETORES',
+              brand: (p.tags?.[0]) ?? '',
+              type: 'individual',
+              available,
+              total,
+              quantity: total,
+              reserved,
+              maintenance: maintenanceCount,
+              price: p.dailyPrice ?? 0,
+              dailyPrice: p.dailyPrice ?? 0,
+              description: p.description ?? '',
+              images: p.images ?? [],
+              internalImage: p.internalImage ?? '',
+              isKit: false,
+              kitItems: [],
+              owner: 'empresa',
+              featured: p.featured ?? false,
+            };
+          });
           setStockData(mapped);
         }
       } catch {}
@@ -3342,7 +3397,7 @@ export default function PainelAdmin() {
                       Gerencie seus {stockData.length} produtos e controle de Estoque
                     </p>
                   </div>
-                  <div className="flex space-x-2">
+                  <div className="flex flex-wrap gap-2">
                     <Button
                       variant="outline"
                       className="text-gray-400 border-gray-400 hover:text-white hover:border-white"
@@ -3365,6 +3420,14 @@ export default function PainelAdmin() {
                       )}
                       {stockView === "grid" ? "Lista" : "Grid"}
                     </Button>
+                    <Button
+                      variant="outline"
+                      className="md:hidden text-cinema-yellow border-cinema-yellow"
+                      onClick={() => setShowStockFilters(true)}
+                    >
+                      <Filter className="w-4 h-4 mr-2" />
+                      Filtros
+                    </Button>
                     <Button 
                       onClick={() => setShowAddProductModal(true)}
                       className="bg-cinema-yellow text-cinema-dark hover:bg-cinema-yellow-dark"
@@ -3376,7 +3439,7 @@ export default function PainelAdmin() {
                 </div>
 
                 {/* Advanced Search and Filters */}
-                <Card className="bg-cinema-gray border-cinema-gray-light">
+                <Card className="bg-cinema-gray border-cinema-gray-light hidden md:block">
                   <CardContent className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-8 gap-4">
                       {/* Search */}
@@ -3544,6 +3607,163 @@ export default function PainelAdmin() {
                   </CardContent>
                 </Card>
 
+                {/* Mobile Filters Modal */}
+                <Dialog open={showStockFilters} onOpenChange={setShowStockFilters}>
+                  <DialogContent className="bg-cinema-gray border-cinema-gray-light max-w-lg">
+                    <DialogHeader>
+                      <DialogTitle className="text-white">Filtros</DialogTitle>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-white text-sm">Pesquisar</Label>
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                          <Input
+                            placeholder="Nome, Código, marca..."
+                            value={stockSearch}
+                            onChange={(e) => {
+                              setStockSearch(e.target.value);
+                              setCurrentPage(1);
+                            }}
+                            className="pl-10 bg-cinema-dark-lighter border-cinema-gray-light text-white"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label className="text-white text-sm">Categoria</Label>
+                        <select
+                          value={stockCategoryFilter}
+                          onChange={(e) => {
+                            setStockCategoryFilter(e.target.value);
+                            setCurrentPage(1);
+                          }}
+                          className="w-full bg-cinema-dark-lighter border border-cinema-gray-light text-white rounded-md px-3 py-2 text-sm"
+                        >
+                          <option value="todos">Todas</option>
+                          {getUniqueCategories().map((category) => (
+                            <option key={category} value={category}>
+                              {category}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <Label className="text-white text-sm">Tipo</Label>
+                        <select
+                          value={stockTypeFilter}
+                          onChange={(e) => {
+                            setStockTypeFilter(e.target.value);
+                            setCurrentPage(1);
+                          }}
+                          className="w-full bg-cinema-dark-lighter border border-cinema-gray-light text-white rounded-md px-3 py-2 text-sm"
+                        >
+                          <option value="todos">Todos</option>
+                          <option value="individual">Individual</option>
+                          <option value="kit">Kit</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <Label className="text-white text-sm">Disponibilidade</Label>
+                        <select
+                          value={stockStatusFilter}
+                          onChange={(e) => {
+                            setStockStatusFilter(e.target.value);
+                            setCurrentPage(1);
+                          }}
+                          className="w-full bg-cinema-dark-lighter border border-cinema-gray-light text-white rounded-md px-3 py-2 text-sm"
+                        >
+                          <option value="todos">Todos</option>
+                          <option value="disponivel">Disponível</option>
+                          <option value="indisponivel">Indisponível</option>
+                          <option value="em_locacao">Em Locação</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <Label className="text-white text-sm">Proprietário</Label>
+                        <select
+                          value={stockOwnerFilter}
+                          onChange={(e) => {
+                            setStockOwnerFilter(e.target.value);
+                            setCurrentPage(1);
+                          }}
+                          className="w-full bg-cinema-dark-lighter border border-cinema-gray-light text-white rounded-md px-3 py-2 text-sm"
+                        >
+                          <option value="todos">Todos</option>
+                          <option value="empresa">🏢 Empresa (Próprio)</option>
+                          {clientsData
+                            .filter(client => client.type === 'fornecedor' || client.type === 'ambos')
+                            .map(client => (
+                              <option key={client.id} value={client.id}>
+                                👤 {client.name} {client.company && `(${client.company})`}
+                              </option>
+                            ))
+                          }
+                        </select>
+                      </div>
+
+                      <div>
+                        <Label className="text-white text-sm">⭐ Em Destaque</Label>
+                        <select
+                          value={stockFeaturedFilter}
+                          onChange={(e) => {
+                            setStockFeaturedFilter(e.target.value);
+                            setCurrentPage(1);
+                          }}
+                          className="w-full bg-cinema-dark-lighter border border-cinema-gray-light text-white rounded-md px-3 py-2 text-sm"
+                        >
+                          <option value="todos">Todos</option>
+                          <option value="sim">✅ Sim (Destaque)</option>
+                          <option value="nao">❌ Não</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <Label className="text-white text-sm">Ordenar por</Label>
+                        <select
+                          value={stockSort}
+                          onChange={(e) => setStockSort(e.target.value)}
+                          className="w-full bg-cinema-dark-lighter border border-cinema-gray-light text-white rounded-md px-3 py-2 text-sm"
+                        >
+                          <option value="name">Nome</option>
+                          <option value="code">Codigo</option>
+                          <option value="category">Categoria</option>
+                          <option value="available">Disponibilidade</option>
+                          <option value="price">Preço</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <DialogFooter className="flex flex-col gap-2">
+                      <Button
+                        variant="outline"
+                        className="text-gray-400 border-gray-400"
+                        onClick={() => {
+                          setStockSearch("");
+                          setStockCategoryFilter("todos");
+                          setStockTypeFilter("todos");
+                          setStockStatusFilter("todos");
+                          setStockOwnerFilter("todos");
+                          setStockFeaturedFilter("todos");
+                          setCurrentPage(1);
+                        }}
+                      >
+                        Limpar Filtros
+                      </Button>
+                      <Button
+                        className="bg-cinema-yellow text-cinema-dark hover:bg-cinema-yellow-dark"
+                        onClick={() => setShowStockFilters(false)}
+                      >
+                        Aplicar Filtros
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+
                 {/* Results */}
                 {stockView === "grid" ? (
                   /* Grid View */
@@ -3565,11 +3785,6 @@ export default function PainelAdmin() {
                                   (e.target as HTMLImageElement).style.display = 'none';
                                 }}
                               />
-                              {item.featured && (
-                                <span className="absolute top-2 left-2 bg-cinema-yellow text-cinema-dark text-xs px-2 py-1 rounded font-semibold">
-                                  ⭐ Destaque
-                                </span>
-                              )}
                             </div>
                           )}
                           <div className="flex justify-between items-start mb-3">
@@ -3602,7 +3817,7 @@ export default function PainelAdmin() {
                           </div>
 
                           {/* Status Mini Grid */}
-                          <div className="grid grid-cols-3 gap-1 mb-3 text-center">
+                          <div className="grid grid-cols-4 gap-1 mb-3 text-center">
                             <div className="bg-cinema-dark-lighter rounded p-1">
                               <p className="text-green-400 font-bold text-sm">
                                 {item.available}
@@ -3614,6 +3829,12 @@ export default function PainelAdmin() {
                                 {item.reserved}
                               </p>
                               <p className="text-xs text-gray-400">Loc.</p>
+                            </div>
+                            <div className="bg-cinema-dark-lighter rounded p-1">
+                              <p className="text-orange-300 font-bold text-sm">
+                                {item.maintenance ?? 0}
+                              </p>
+                              <p className="text-xs text-gray-400">Manut.</p>
                             </div>
                             <div className="bg-cinema-dark-lighter rounded p-1">
                               <p className="text-cinema-yellow font-bold text-sm">
@@ -3657,7 +3878,13 @@ export default function PainelAdmin() {
                             <span className="text-cinema-yellow font-medium text-sm">
                               R$ {item.price.toFixed(2)}
                             </span>
-                            <div className="flex space-x-1">
+                            <div className="flex items-center space-x-4">
+                              {item.featured && (
+                                <Star
+                                  className="w-5 h-5 text-cinema-yellow fill-current"
+                                  aria-label="Destaque"
+                                />
+                              )}
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -3680,7 +3907,85 @@ export default function PainelAdmin() {
                   /* List View */
                   <Card className="bg-cinema-gray border-cinema-gray-light">
                     <CardContent className="p-0">
-                      <div className="overflow-x-auto">
+                      <div className="md:hidden p-4 space-y-3">
+                        {getPaginatedStock().map((item) => (
+                          <div
+                            key={item.id}
+                            className="bg-cinema-dark-lighter border border-cinema-gray-light rounded-lg p-4"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <h3 className="text-white font-semibold text-sm">
+                                    {item.name}
+                                  </h3>
+                                  {item.isKit && (
+                                    <span className="bg-purple-400/20 text-purple-400 text-xs px-2 py-0.5 rounded">
+                                      KIT
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-gray-400 text-xs mt-1">
+                                  {item.code} • {item.category}
+                                </p>
+                                <p className="text-gray-500 text-xs">
+                                  {item.brand || "Sem marca"}
+                                </p>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-cinema-yellow border-cinema-yellow hover:bg-cinema-yellow hover:text-cinema-dark h-7 w-7 p-0"
+                                onClick={() => {
+                                  setEditingProduct(item);
+                                  setShowAddProductModal(true);
+                                }}
+                                title="Ver / editar produto"
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+
+                            <div className="grid grid-cols-4 gap-2 text-center mt-3">
+                              <div className="bg-cinema-dark rounded p-2">
+                                <p className="text-green-400 font-semibold text-sm">
+                                  {item.available}
+                                </p>
+                                <p className="text-gray-400 text-[11px]">Disp.</p>
+                              </div>
+                              <div className="bg-cinema-dark rounded p-2">
+                                <p className="text-blue-400 font-semibold text-sm">
+                                  {item.reserved}
+                                </p>
+                                <p className="text-gray-400 text-[11px]">Loc.</p>
+                              </div>
+                              <div className="bg-cinema-dark rounded p-2">
+                                <p className="text-orange-300 font-semibold text-sm">
+                                  {item.maintenance ?? 0}
+                                </p>
+                                <p className="text-gray-400 text-[11px]">Manut.</p>
+                              </div>
+                              <div className="bg-cinema-dark rounded p-2">
+                                <p className="text-cinema-yellow font-semibold text-sm">
+                                  {item.total}
+                                </p>
+                                <p className="text-gray-400 text-[11px]">Total</p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between mt-3">
+                              <span className="text-cinema-yellow font-semibold text-sm">
+                                R$ {item.price.toFixed(2)}
+                              </span>
+                              {item.featured && (
+                                <Star className="w-4 h-4 text-cinema-yellow fill-current" />
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="hidden md:block overflow-x-auto">
                         <table className="w-full">
                           <thead className="border-b border-cinema-gray-light">
                             <tr>
@@ -3701,6 +4006,9 @@ export default function PainelAdmin() {
                               </th>
                               <th className="px-4 py-3 text-left text-cinema-yellow font-medium text-sm">
                                 Em Locação
+                              </th>
+                              <th className="px-4 py-3 text-left text-cinema-yellow font-medium text-sm">
+                                Manutenção
                               </th>
                               <th className="px-4 py-3 text-left text-cinema-yellow font-medium text-sm">
                                 Total
@@ -3759,6 +4067,9 @@ export default function PainelAdmin() {
                                 </td>
                                 <td className="px-4 py-3 text-blue-400 font-medium">
                                   {item.reserved}
+                                </td>
+                                <td className="px-4 py-3 text-orange-300 font-medium">
+                                  {item.maintenance ?? 0}
                                 </td>
                                 <td className="px-4 py-3 text-cinema-yellow font-medium">
                                   {item.total}

@@ -9,6 +9,9 @@ export default defineConfig(({ mode }) => ({
     host: "0.0.0.0", // Permite acesso via rede local (WiFi)
     port: 8080,
     hmr: {
+      host: "localhost",
+      protocol: "ws",
+      clientPort: 8080,
       overlay: false, // Disable Vite's error overlay to prevent dev overlay frame errors
     },
     fs: {

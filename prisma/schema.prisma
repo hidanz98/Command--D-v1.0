@@ -349,6 +349,8 @@ model Product {
   
   // Manutenção
   inMaintenance        Boolean   @default(false) // Está em manutenção?
+  maintenanceQuantity  Int       @default(0)     // Quantidade em manutenção
+  maintenanceExitBy    String?                  // Pessoa responsável pela saída p/ manutenção
   maintenanceStartDate String?                   // Data de entrada
   maintenanceEndDate   String?                   // Data de saída (previsão)
   maintenanceNotes     String?                   // Observações da manutenção

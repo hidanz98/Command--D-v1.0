@@ -1,4 +1,21 @@
 // Service Worker para PWA - Bil's Cinema e Vídeo
+// Em localhost/dev, desativar e sair para evitar cache e HMR quebrado
+if (self.location.hostname === "localhost" || self.location.hostname === "127.0.0.1") {
+  self.addEventListener("install", (event) => {
+    event.waitUntil(self.skipWaiting());
+  });
+
+  self.addEventListener("activate", (event) => {
+    event.waitUntil(
+      self.registration
+        .unregister()
+        .then(() => self.clients.matchAll())
+        .then((clients) => {
+          clients.forEach((client) => client.navigate(client.url));
+        })
+    );
+  });
+} else {
 const CACHE_NAME = 'bils-cinema-v1';
 const STATIC_CACHE = 'bils-static-v1';
 const DYNAMIC_CACHE = 'bils-dynamic-v1';
@@ -171,5 +188,7 @@ async function syncData() {
   } catch (e) {
     console.error('[SW] Erro na sincronização:', e);
   }
+}
+
 }
 
